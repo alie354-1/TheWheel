@@ -8,6 +8,7 @@ export interface QueryContext {
   useAbstraction?: boolean;
   useExistingModels?: boolean;
   context?: string;
+  conversationHistory?: Array<{role: 'system' | 'user' | 'assistant', content: string}>; // Add support for conversation history with correct types
 }
 
 export interface GeneralLLMService {
@@ -22,21 +23,31 @@ export class OpenAIGeneralLLMService implements GeneralLLMService {
     let completion;
     
     try {
-      // Generate response using OpenAI
-      completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `You are an AI assistant specialized in business idea generation and refinement.
+      // Create messages array with system prompt with proper typing
+      let messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [
+        {
+          role: "system",
+          content: `You are an AI assistant specialized in business idea generation and refinement.
                      ${context.useCompanyModel ? 'Use the company-specific context provided to tailor your response.' : ''}
                      ${context.useAbstraction ? 'Use patterns and insights from similar companies to inform your response.' : ''}
                      ${context.useExistingModels ? 'Use your general knowledge to provide a comprehensive response.' : ''}
                      
                      Provide a detailed and thoughtful response that is creative, specific, and actionable.`
-          },
-          { role: "user", content: input }
-        ]
+        }
+      ];
+      
+      // If conversation history exists, add it to messages
+      if (context.conversationHistory && context.conversationHistory.length > 0) {
+        messages = [...messages, ...context.conversationHistory];
+      } else {
+        // Otherwise, just add the current user message
+        messages.push({ role: "user", content: input });
+      }
+      
+      // Generate response using OpenAI
+      completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: messages
       });
       
       // Try to log the query, but don't block if it fails

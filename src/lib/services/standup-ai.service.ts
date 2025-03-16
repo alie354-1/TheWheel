@@ -29,6 +29,10 @@ export interface StandupSummary {
   strategic_recommendations: string[];
 }
 
+export interface SectionConversation {
+  messages: Array<{role: 'user' | 'assistant', content: string}>;
+}
+
 export interface StandupTask {
   id?: string;
   title: string;
@@ -69,6 +73,24 @@ export class StandupAIService {
     private generalLLMService: GeneralLLMService = generalLLMService,
     private companyModelService: CompanyModelService = companyModelService
   ) {}
+  
+  // New method to get section conversation from answers or create a new one
+  private getSectionConversation(
+    currentEntry: StandupEntry,
+    section: 'accomplished' | 'working_on' | 'blockers' | 'goals'
+  ): SectionConversation {
+    // Check if we have existing conversation in answers
+    if (currentEntry.answers && currentEntry.answers[`${section}_conversation`]) {
+      try {
+        return JSON.parse(currentEntry.answers[`${section}_conversation`]);
+      } catch (e) {
+        console.error('Error parsing section conversation:', e);
+      }
+    }
+    
+    // Return empty conversation if none exists or parsing failed
+    return { messages: [] };
+  }
   
   // Helper method to track questions for a user
   private trackQuestion(userId: string, question: string): void {
@@ -149,15 +171,61 @@ export class StandupAIService {
       // Get standup memory for context
       const standupMemory = await conversationMemoryService.getStandupMemory(context.userId);
       
+      // Get section conversation history
+      const sectionConversation = this.getSectionConversation(currentEntry, section);
+      
+      // Add current input to conversation history
+      sectionConversation.messages.push({ role: 'user', content: currentInput });
+      
       // Create section-specific prompt with memory context
-      const prompt = this.createSectionPrompt(section, currentInput, currentEntry, standupMemory);
+      const promptText = this.createSectionPrompt(section, currentInput, currentEntry, standupMemory);
       
       try {
-        // Get response using all three sources
-        const response = await this.generalLLMService.query(prompt, context);
+        // Prepare conversation history for LLM
+        const conversationHistory: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [];
+        
+        // If this is the first message in the conversation, add the prompt as system's first message
+        if (sectionConversation.messages.length <= 1) {
+          conversationHistory.push({ role: 'system', content: promptText });
+          conversationHistory.push({ role: 'user', content: currentInput });
+        } else {
+          // Add all previous messages in the conversation
+          // First message is system prompt
+          conversationHistory.push({ role: 'system', content: promptText });
+          
+          // Add the conversation history (skipping the current user message which was just added)
+          const previousMessages = sectionConversation.messages.slice(0, -1);
+          previousMessages.forEach(message => {
+            conversationHistory.push({ 
+              role: message.role as 'user' | 'assistant', 
+              content: message.content 
+            });
+          });
+          
+          // Add the current message
+          conversationHistory.push({ role: 'user', content: currentInput });
+        }
+        
+        // Add conversation history to context
+        const contextWithHistory: QueryContext = {
+          ...context,
+          conversationHistory: conversationHistory
+        };
+        
+        // Get response using all three sources with conversation history
+        const response = await this.generalLLMService.query('', contextWithHistory);
         
         // Parse the response
         const content = response.content || '';
+        
+        // Add assistant response to conversation history
+        sectionConversation.messages.push({ role: 'assistant', content });
+        
+        // Update the section conversation in the answers field
+        if (!currentEntry.answers) {
+          currentEntry.answers = {};
+        }
+        currentEntry.answers[`${section}_conversation`] = JSON.stringify(sectionConversation);
         
         // Extract follow-up questions
         let followUpQuestions = this.extractFollowUpQuestions(content);
@@ -512,6 +580,9 @@ You're a cofounder with real startup experience. Be direct but supportive.
 
 ${stageGuidance}
 
+- Maintain a coherent conversation by remembering previous exchanges
+- Refer back to what was discussed earlier in this conversation when relevant
+- Show continuity of thought from one message to the next
 - Be clear and concise - like a real cofounder would be
 - Use a mix of short and medium-length sentences
 - Get to the point but maintain a supportive tone

@@ -241,31 +241,38 @@ ${summary.strategic_recommendations.length > 0 ? `\n🎯 ${summary.strategic_rec
     };
     setMessages(prev => [...prev, userMessage]);
     
-    // Update current entry
-    setCurrentEntry(prev => ({
-      ...prev,
-      [currentSection]: currentInput
-    }));
+  // Update current entry
+  const updatedEntry = {
+    ...currentEntry,
+    [currentSection]: currentInput
+  };
+  
+  // Initialize answers field if it doesn't exist
+  if (!updatedEntry.answers) {
+    updatedEntry.answers = {};
+  }
 
-    setCurrentInput('');
-    setIsThinking(true);
+  setCurrentInput('');
+  setIsThinking(true);
 
-    try {
-      // Get user's company ID
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user?.id)
-        .single();
-      
-      const companyId = userProfile?.company_id;
-      
-      // Create context for AI service
-      const context = {
-        userId: user?.id || '',
-        companyId,
-        useExistingModels: true
-      };
+  try {
+    // Get user's company ID
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user?.id)
+      .single();
+    
+    const companyId = userProfile?.company_id;
+    
+    // Create context for AI service
+    const context = {
+      userId: user?.id || '',
+      companyId,
+      useExistingModels: true
+    };
+    
+    setCurrentEntry(updatedEntry);
       
       // Generate section-specific feedback using the standup AI service
       const feedback = await standupAIService.generateSectionFeedback(
