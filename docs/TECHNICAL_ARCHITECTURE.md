@@ -1,8 +1,38 @@
-# Technical Architecture Document
+# Wheel99 Technical Architecture
 
-## 1. System Overview
+## Table of Contents
+1. [System Overview](#system-overview)
+   - [Architecture Diagram](#architecture-diagram)
+   - [Major Components](#major-components)
+   - [Technology Stack](#technology-stack)
+2. [Component Architecture](#component-architecture)
+   - [Core Components](#core-components)
+   - [Feature Components](#feature-components)
+   - [Service Layer](#service-layer)
+   - [Context Providers](#context-providers)
+3. [Data Architecture](#data-architecture)
+   - [Database Schema](#database-schema)
+   - [TypeScript Type Definitions](#typescript-type-definitions)
+4. [API Interfaces](#api-interfaces)
+   - [Authentication API](#authentication-api)
+   - [Idea Playground API](#idea-playground-api)
+   - [AI Services API](#ai-services-api)
+   - [Feature Flags API](#feature-flags-api)
+5. [State Management](#state-management)
+   - [Zustand Store](#zustand-store)
+   - [React Context](#react-context)
+   - [XState State Machines](#xstate-state-machines)
+6. [Security Model](#security-model)
+   - [Authentication & Authorization](#authentication--authorization)
+   - [Data Privacy](#data-privacy)
+   - [API Security](#api-security)
+   - [Environment Security](#environment-security)
 
-### 1.1 Architecture Diagram
+## System Overview
+
+Wheel99 follows a modern web application architecture with clear separation of concerns:
+
+### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -41,138 +71,225 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 System Components
+### Major Components
 
-The Wheel99 platform consists of the following major components:
+1. **Client Application**: React-based SPA with modular components
+   - React components form the UI layer
+   - Zustand provides global state management
+   - React Router handles navigation
 
-1. **Client Application**: A React-based single-page application that provides the user interface and client-side logic.
-2. **Service Layer**: A collection of TypeScript services that handle business logic and external API communication.
-3. **AI Services**: Specialized services for AI-assisted features, including idea generation, refinement, and analysis.
-4. **Supabase Integration**: Backend-as-a-service providing database, authentication, and storage capabilities.
-5. **OpenAI Integration**: External AI service integration for natural language processing and content generation.
+2. **Service Layer**: TypeScript services for business logic
+   - Domain-specific services for feature functionality
+   - Abstraction layer between UI and data access
 
-### 1.3 Technology Stack
+3. **AI Services**: Specialized AI capabilities integration
+   - Multi-tiered AI service architecture
+   - OpenAI API integration
+   - Context management and prompt engineering
 
-- **Frontend**: React, TypeScript, Zustand, TailwindCSS
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **AI Integration**: OpenAI API
-- **Build Tools**: Vite, ESLint, Prettier
-- **Deployment**: Vercel (frontend), Supabase Cloud (backend)
+4. **Supabase Integration**: Backend-as-a-service for database and auth
+   - PostgreSQL database
+   - Authentication service
+   - Storage service for files and assets
 
-## 2. Component Architecture
+5. **OpenAI Integration**: AI services integration
+   - API clients for different models
+   - Prompt template management
+   - Response processing
 
-### 2.1 Frontend Components
+### Technology Stack
 
-#### 2.1.1 Core Components
+#### Frontend
+- **Framework**: React 18
+- **Language**: TypeScript 5.0+
+- **State Management**: Zustand
+- **Styling**: TailwindCSS
+- **Routing**: React Router 6
+- **Form Handling**: React Hook Form
+- **UI Components**: Custom components with Headless UI
 
-- **App**: The root component that sets up routing and global providers
-- **Layout**: The main layout component that provides consistent structure
-- **Router**: Handles navigation between different pages and features
+#### Backend
+- **BaaS**: Supabase
+- **Database**: PostgreSQL 14
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Serverless Functions**: Supabase Edge Functions
 
-#### 2.1.2 Feature Components
+#### AI Integration
+- **Provider**: OpenAI API
+- **Models**: GPT-4, GPT-3.5-Turbo
+- **Integration**: Custom AI service layer
 
-- **Idea Playground**: Components for idea generation and development
-  - **Canvas Management**: Components for creating and managing idea canvases
-  - **Idea Generation**: Components for AI-assisted idea creation
-  - **Idea Refinement**: Components for improving existing ideas
-  - **Pathway Components**: Specialized components for different development approaches
+#### Build Tools
+- **Bundler**: Vite
+- **Package Manager**: npm
+- **Linting**: ESLint
+- **Formatting**: Prettier
+- **Testing**: Jest, React Testing Library
 
-- **Admin Features**: Components for system administration
-  - **Feature Flags**: UI for managing feature flags
-  - **User Management**: Components for user administration
+#### Deployment
+- **Frontend**: Vercel
+- **Backend**: Supabase Cloud
 
-#### 2.1.3 Shared Components
+## Component Architecture
 
-- **UI Components**: Reusable UI elements like buttons, inputs, and cards
-- **AI-Assisted Components**: Components that integrate AI capabilities
-  - **SmartSuggestionButton**: Provides AI suggestions for form fields
-  - **AIAssistedInput**: Text input with integrated AI assistance
-  - **AIAssistedTextArea**: Text area with integrated AI assistance
-  - **ContextualAIPanel**: Provides context-specific AI guidance
+### Core Components
 
-### 2.2 State Management
+- **App**: Root component with routing and global providers
+  - Implementation: `App.tsx`
+  - Responsibility: Global providers, authentication state, main routing
 
-#### 2.2.1 Zustand Store
+- **Layout**: Main layout structure
+  - Implementation: `Layout.tsx`
+  - Responsibility: Header, footer, navigation, content areas
 
-The application uses Zustand for state management with the following stores:
+- **Router**: Navigation management
+  - Implementation: React Router configuration
+  - Responsibility: Route definitions, guards, redirects
 
-- **AuthStore**: Manages authentication state and user information
-  ```typescript
-  interface AuthState {
-    user: User | null;
-    isLoading: boolean;
-    featureFlags: FeatureFlags;
-    setUser: (user: User | null) => void;
-    setFeatureFlags: (flags: FeatureFlags) => void;
-  }
-  ```
+### Feature Components
 
-- **IdeaPlaygroundStore**: Manages state for the Idea Playground feature
-  ```typescript
-  interface IdeaPlaygroundState {
-    canvases: IdeaPlaygroundCanvas[];
-    currentCanvas: IdeaPlaygroundCanvas | null;
-    ideas: IdeaPlaygroundIdea[];
-    currentIdea: IdeaPlaygroundIdea | null;
-    setCurrentCanvas: (canvas: IdeaPlaygroundCanvas | null) => void;
-    setCurrentIdea: (idea: IdeaPlaygroundIdea | null) => void;
-    // Additional actions...
-  }
-  ```
+The application is organized into feature-specific components:
 
-#### 2.2.2 Context Providers
+#### Idea Playground Components
 
-React Context is used for specific feature areas:
+- **Canvas Management**:
+  - `CreateCanvasModal.tsx`: Modal for creating new canvases
+  - `CanvasSelector.tsx`: Interface for selecting between canvases
 
-- **AIContextProvider**: Provides AI capabilities to components
-- **IdeaPlaygroundContext**: Provides Idea Playground state and functions
-- **StandupContextProvider**: Provides standup-specific AI capabilities
+- **Idea Generation**:
+  - `IdeaGenerationForm.tsx`: Form for AI-assisted idea generation
+  - `IdeaPlaygroundWorkspace.tsx`: Container for the idea workspace
+  - `IdeaCaptureScreen.tsx`: Interface for manual idea capture
 
-### 2.3 Service Layer
+- **Idea Organization**:
+  - `IdeaList.tsx`: Component for displaying idea lists
+  - `IdeaCard.tsx`: Card display for individual ideas
+  - `IdeaExportModal.tsx`: Interface for exporting ideas
 
-#### 2.3.1 Core Services
+- **Idea Refinement**:
+  - `IdeaRefinementForm.tsx`: Form for AI-assisted refinement
+  - `SuggestionCard.tsx`: Display component for AI suggestions
+  - `SuggestionEditor.tsx`: Interface for editing suggestions
+  - `SuggestionMerger.tsx`: Tool for merging multiple suggestions
 
-- **AuthService**: Handles authentication and user management
-- **ProfileService**: Manages user profile information
-- **FeatureFlagsService**: Loads and saves feature flag configurations
+#### Pathway Components
 
-#### 2.3.2 Feature Services
+- **Pathway 1** (Problem-Solution):
+  - `ProblemSolutionScreen.tsx`: Interface for problem definition and solution ideation
+  - `TargetValueScreen.tsx`: Interface for target audience and value proposition
+  - `BusinessModelScreen.tsx`: Interface for business model development
+  - `GoToMarketScreen.tsx`: Interface for go-to-market strategy
+  - `SuggestionsScreen.tsx`: Display for AI-generated suggestions
 
-- **IdeaPlaygroundService**: Manages idea playground functionality
-  - Canvas creation and management
-  - Idea generation and refinement
-  - Component and tag management
+- **Pathway 2** (Industry-Based):
+  - `IndustrySelectionScreen.tsx`: Interface for industry selection and analysis
+  - `IdeaComparisonScreen.tsx`: Interface for comparing multiple approaches
+  - `IdeaRefinementScreen.tsx`: Refinement interface for Pathway 2
 
-- **GeneralLLMService**: Provides general language model capabilities
-  - Query handling
-  - Context management
-  - Response processing
+- **Pathway 3** (Idea Library):
+  - `IdeaLibraryScreen.tsx`: Interface for browsing idea templates
+  - `IdeaAnalysisScreen.tsx`: Interface for analyzing templates
+  - `IdeaRefinementScreen.tsx`: Refinement interface for Pathway 3
 
-#### 2.3.3 AI Services
+#### Enhanced Workflow Components
 
-- **AIServiceFactory**: Creates appropriate AI service instances
-- **MultiTieredAIService**: Implements the AI service interface with tiered capabilities
-- **MockAIService**: Provides mock implementations for development and testing
+- **Workspace Components**:
+  - `EnhancedWorkspace.tsx`: Container for the enhanced workflow
+  - `Dashboard.tsx`: Overview of ideas and progress
+  - `NavigationSidebar.tsx`: Navigation through workflow stages
 
-### 2.4 External Integrations
+- **Stage Components**:
+  - `IdeaGenerationStage.tsx`: Stage for initial idea creation
+  - `InitialAssessmentStage.tsx`: Stage for first-pass assessment
+  - `DetailedRefinementStage.tsx`: Stage for in-depth refinement
+  - `MarketValidationStage.tsx`: Stage for market analysis
+  - `BusinessModelStage.tsx`: Stage for business model development
+  - `GoToMarketStage.tsx`: Stage for go-to-market planning
+  - `CompanyFormationStage.tsx`: Stage for implementation planning
 
-#### 2.4.1 Supabase
+#### Shared Components
 
-- **Authentication**: User authentication and authorization
-- **Database**: PostgreSQL database for application data
-- **Storage**: File storage for user-generated content
-- **Functions**: Serverless functions for complex operations
+- **UI Components**:
+  - AI-assisted form inputs (`AIAssistedInput.tsx`, `AIAssistedTextArea.tsx`)
+  - Smart suggestion controls (`SmartSuggestionButton.tsx`)
+  - Contextual AI panels (`ContextualAIPanel.tsx`)
+  - Shared idea components (`BaseIdeaCard.tsx`, `BaseSuggestionCard.tsx`)
 
-#### 2.4.2 OpenAI
+- **Utility Components**:
+  - Onboarding components (`OnboardingTutorial.tsx`, `OnboardingContent.tsx`, `OnboardingWizard.tsx`)
+  - Feature flag controls (`FeatureFlagsToggle.tsx`)
 
-- **Chat Completions API**: Used for generating and refining ideas
-- **Models**: GPT-3.5 Turbo, GPT-4, GPT-4 Turbo based on tier
+### Service Layer
 
-## 3. Data Model
+#### Core Services
 
-### 3.1 Database Schema
+- **AuthService**: Authentication management
+  - Implementation: `auth.service.ts`
+  - Functionality: User sign-up, sign-in, session management
+  - Mock Implementation: `mock-auth.service.ts`
 
-#### 3.1.1 Core Tables
+- **ProfileService**: User profile management
+  - Implementation: `profile.service.ts`
+  - Functionality: Profile creation, retrieval, updates
+  - Mock Implementation: `mock-profile.service.ts`
+
+- **FeatureFlagsService**: Feature management
+  - Implementation: `feature-flags.service.ts`
+  - Functionality: Flag loading, toggling, user-specific access
+  - Mock Implementation: N/A
+
+#### Feature Services
+
+- **IdeaPlaygroundService**: Core idea management
+  - Implementation: `idea-playground.service.ts`
+  - Functionality: Canvas and idea CRUD operations, component management
+  - Mock Implementation: `mock-idea-playground.service.ts`
+
+- **GeneralLLMService**: Language model integration
+  - Implementation: `general-llm.service.ts`
+  - Functionality: OpenAI API communication, context management
+  - Mock Implementation: `mock-general-llm.service.ts`
+
+#### AI Services
+
+- **AIServiceFactory**: Service creation based on configuration
+  - Implementation: `ai-service.factory.ts`
+  - Functionality: Service instance management based on configuration
+
+- **MultiTieredAIService**: Tiered AI capabilities
+  - Implementation: `multi-tiered-ai.service.ts`
+  - Functionality: Model selection based on user tier
+  - Mock Implementation: `mock-ai.service.ts`
+
+- **StandupService**: AI for standup interactions
+  - Implementation: `standup-ai.service.ts`
+  - Functionality: Standup feedback, summarization, task generation
+  - Mock Implementation: Included in general mock service
+
+### Context Providers
+
+- **AIContextProvider**: AI capabilities for components
+  - Implementation: `ai-context-provider.tsx`
+  - Functionality: Smart suggestions, contextual help
+  - Base Implementation: `BaseAIContextProvider.tsx`
+
+- **IdeaPlaygroundContext**: Idea playground state and functions
+  - Implementation: `IdeaPlaygroundContext.tsx`
+  - Functionality: Workflow management, stage transitions
+
+- **StandupContextProvider**: Standup-specific AI capabilities
+  - Implementation: `standup-context-provider.tsx`
+  - Functionality: Feedback generation, summary creation
+  - Base Implementation: Extends `BaseAIContextProvider.tsx`
+
+## Data Architecture
+
+### Database Schema
+
+The database is implemented in PostgreSQL via Supabase with the following key tables:
+
+#### Core Tables
 
 - **profiles**: User profile information
   ```sql
@@ -209,7 +326,7 @@ React Context is used for specific feature areas:
   );
   ```
 
-#### 3.1.2 Idea Playground Tables
+#### Idea Playground Tables
 
 - **idea_playground_canvases**: Containers for related ideas
   ```sql
@@ -225,7 +342,7 @@ React Context is used for specific feature areas:
   );
   ```
 
-- **idea_playground_ideas**: Business ideas with comprehensive details
+- **idea_playground_ideas**: Business ideas with details
   ```sql
   CREATE TABLE public.idea_playground_ideas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -244,6 +361,8 @@ React Context is used for specific feature areas:
     used_company_context BOOLEAN NOT NULL DEFAULT false,
     company_relevance JSONB,
     is_archived BOOLEAN NOT NULL DEFAULT false,
+    status TEXT,
+    current_stage_id TEXT,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -258,6 +377,8 @@ React Context is used for specific feature areas:
     component_type TEXT NOT NULL,
     content TEXT NOT NULL,
     is_selected BOOLEAN NOT NULL DEFAULT false,
+    rating INTEGER,
+    notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
@@ -267,9 +388,18 @@ React Context is used for specific feature areas:
   ```sql
   CREATE TABLE public.idea_playground_tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+- **idea_playground_idea_tags**: Many-to-many relationship between ideas and tags
+  ```sql
+  CREATE TABLE public.idea_playground_idea_tags (
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES public.idea_playground_tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (idea_id, tag_id)
   );
   ```
 
@@ -284,9 +414,120 @@ React Context is used for specific feature areas:
   );
   ```
 
-#### 3.1.3 AI-Related Tables
+#### Enhanced Workflow Tables
 
-- **llm_query_logs**: Logs of AI queries for analytics and debugging
+- **idea_playground_stages**: Stages in the idea development workflow
+  ```sql
+  CREATE TABLE public.idea_playground_stages (
+    id TEXT PRIMARY KEY,
+    key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    order_index INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ
+  );
+  ```
+
+- **idea_playground_progress**: Tracking progress through stages
+  ```sql
+  CREATE TABLE public.idea_playground_progress (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    stage_id TEXT NOT NULL REFERENCES public.idea_playground_stages(id),
+    is_completed BOOLEAN NOT NULL DEFAULT false,
+    completion_data JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+#### Additional Workflow Tables
+
+- **idea_playground_validation_experiments**: Experiments for idea validation
+  ```sql
+  CREATE TABLE public.idea_playground_validation_experiments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    hypothesis TEXT NOT NULL,
+    methodology TEXT NOT NULL,
+    success_criteria TEXT NOT NULL,
+    results TEXT,
+    is_successful BOOLEAN,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+- **idea_playground_customer_segments**: Customer segment definitions
+  ```sql
+  CREATE TABLE public.idea_playground_customer_segments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    pain_points TEXT NOT NULL,
+    needs TEXT NOT NULL,
+    demographics JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+- **idea_playground_competitors**: Competitor analysis
+  ```sql
+  CREATE TABLE public.idea_playground_competitors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    strengths TEXT,
+    weaknesses TEXT,
+    market_share TEXT,
+    pricing_model TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+- **idea_playground_business_models**: Business model details
+  ```sql
+  CREATE TABLE public.idea_playground_business_models (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    revenue_streams TEXT[] NOT NULL,
+    cost_structure TEXT[] NOT NULL,
+    key_resources TEXT[] NOT NULL,
+    key_activities TEXT[] NOT NULL,
+    key_partners TEXT[],
+    channels TEXT[],
+    customer_relationships TEXT[],
+    unit_economics JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+- **idea_playground_milestones**: Implementation milestones
+  ```sql
+  CREATE TABLE public.idea_playground_milestones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    idea_id UUID NOT NULL REFERENCES public.idea_playground_ideas(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    target_date TIMESTAMPTZ,
+    is_completed BOOLEAN NOT NULL DEFAULT false,
+    completion_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ```
+
+#### AI-Related Tables
+
+- **llm_query_logs**: Logs of AI queries
   ```sql
   CREATE TABLE public.llm_query_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -300,253 +541,13 @@ React Context is used for specific feature areas:
   );
   ```
 
-### 3.2 Database Functions
+### TypeScript Type Definitions
 
-- **create_idea_playground_canvas**: Creates a new canvas
-  ```sql
-  CREATE OR REPLACE FUNCTION public.create_idea_playground_canvas(
-    p_user_id UUID,
-    p_company_id UUID DEFAULT NULL,
-    p_name TEXT,
-    p_description TEXT DEFAULT NULL
-  ) RETURNS UUID AS $$
-  DECLARE
-    v_canvas_id UUID;
-  BEGIN
-    INSERT INTO public.idea_playground_canvases (
-      user_id,
-      company_id,
-      name,
-      description
-    ) VALUES (
-      p_user_id,
-      p_company_id,
-      p_name,
-      p_description
-    ) RETURNING id INTO v_canvas_id;
-    
-    RETURN v_canvas_id;
-  END;
-  $$ LANGUAGE plpgsql SECURITY DEFINER;
-  ```
-
-- **archive_idea_playground_canvas**: Archives a canvas
-  ```sql
-  CREATE OR REPLACE FUNCTION public.archive_idea_playground_canvas(
-    p_canvas_id UUID
-  ) RETURNS BOOLEAN AS $$
-  BEGIN
-    UPDATE public.idea_playground_canvases
-    SET is_archived = true,
-        updated_at = NOW()
-    WHERE id = p_canvas_id;
-    
-    RETURN FOUND;
-  END;
-  $$ LANGUAGE plpgsql SECURITY DEFINER;
-  ```
-
-- **duplicate_idea_playground_idea**: Duplicates an idea with all components
-  ```sql
-  CREATE OR REPLACE FUNCTION public.duplicate_idea_playground_idea(
-    p_idea_id UUID,
-    p_new_title TEXT DEFAULT NULL
-  ) RETURNS UUID AS $$
-  DECLARE
-    v_original_idea public.idea_playground_ideas%ROWTYPE;
-    v_new_idea_id UUID;
-    v_component public.idea_playground_components%ROWTYPE;
-    v_tag public.idea_playground_tags%ROWTYPE;
-  BEGIN
-    -- Get the original idea
-    SELECT * INTO v_original_idea
-    FROM public.idea_playground_ideas
-    WHERE id = p_idea_id;
-    
-    -- Create a duplicate idea
-    INSERT INTO public.idea_playground_ideas (
-      canvas_id,
-      title,
-      description,
-      problem_statement,
-      solution_concept,
-      target_audience,
-      unique_value,
-      business_model,
-      marketing_strategy,
-      revenue_model,
-      go_to_market,
-      market_size,
-      used_company_context,
-      company_relevance,
-      version
-    ) VALUES (
-      v_original_idea.canvas_id,
-      COALESCE(p_new_title, v_original_idea.title || ' (Copy)'),
-      v_original_idea.description,
-      v_original_idea.problem_statement,
-      v_original_idea.solution_concept,
-      v_original_idea.target_audience,
-      v_original_idea.unique_value,
-      v_original_idea.business_model,
-      v_original_idea.marketing_strategy,
-      v_original_idea.revenue_model,
-      v_original_idea.go_to_market,
-      v_original_idea.market_size,
-      v_original_idea.used_company_context,
-      v_original_idea.company_relevance,
-      v_original_idea.version
-    ) RETURNING id INTO v_new_idea_id;
-    
-    -- Duplicate components
-    FOR v_component IN
-      SELECT * FROM public.idea_playground_components
-      WHERE idea_id = p_idea_id
-    LOOP
-      INSERT INTO public.idea_playground_components (
-        idea_id,
-        component_type,
-        content,
-        is_selected
-      ) VALUES (
-        v_new_idea_id,
-        v_component.component_type,
-        v_component.content,
-        v_component.is_selected
-      );
-    END LOOP;
-    
-    -- Duplicate tags
-    FOR v_tag IN
-      SELECT * FROM public.idea_playground_tags
-      WHERE idea_id = p_idea_id
-    LOOP
-      INSERT INTO public.idea_playground_tags (
-        idea_id,
-        name
-      ) VALUES (
-        v_new_idea_id,
-        v_tag.name
-      );
-    END LOOP;
-    
-    RETURN v_new_idea_id;
-  END;
-  $$ LANGUAGE plpgsql SECURITY DEFINER;
-  ```
-
-### 3.3 Row-Level Security Policies
-
-- **Canvas Policies**:
-  ```sql
-  CREATE POLICY "Users can view their own canvases"
-    ON public.idea_playground_canvases
-    FOR SELECT
-    USING (auth.uid() = user_id);
-
-  CREATE POLICY "Users can create their own canvases"
-    ON public.idea_playground_canvases
-    FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-  CREATE POLICY "Users can update their own canvases"
-    ON public.idea_playground_canvases
-    FOR UPDATE
-    USING (auth.uid() = user_id);
-  ```
-
-- **Idea Policies**:
-  ```sql
-  CREATE POLICY "Users can view ideas in their canvases"
-    ON public.idea_playground_ideas
-    FOR SELECT
-    USING (
-      EXISTS (
-        SELECT 1 FROM public.idea_playground_canvases
-        WHERE id = canvas_id AND user_id = auth.uid()
-      )
-    );
-
-  CREATE POLICY "Users can create ideas in their canvases"
-    ON public.idea_playground_ideas
-    FOR INSERT
-    WITH CHECK (
-      EXISTS (
-        SELECT 1 FROM public.idea_playground_canvases
-        WHERE id = canvas_id AND user_id = auth.uid()
-      )
-    );
-
-  CREATE POLICY "Users can update ideas in their canvases"
-    ON public.idea_playground_ideas
-    FOR UPDATE
-    USING (
-      EXISTS (
-        SELECT 1 FROM public.idea_playground_canvases
-        WHERE id = canvas_id AND user_id = auth.uid()
-      )
-    );
-  ```
-
-## 4. API Documentation
-
-### 4.1 Service Interfaces
-
-#### 4.1.1 IdeaPlaygroundService
+The type system is well-defined with interfaces that match the database schema:
 
 ```typescript
-interface IdeaPlaygroundService {
-  // Canvas Management
-  createCanvas(userId: string, name: string, description?: string, companyId?: string): Promise<IdeaPlaygroundCanvas | null>;
-  getCanvases(userId: string, includeArchived?: boolean): Promise<IdeaPlaygroundCanvas[]>;
-  getCanvas(canvasId: string): Promise<IdeaPlaygroundCanvas | null>;
-  updateCanvas(canvasId: string, updates: Partial<IdeaPlaygroundCanvas>): Promise<boolean>;
-  archiveCanvas(canvasId: string): Promise<boolean>;
-  
-  // Idea Management
-  generateIdeas(userId: string, canvasId: string, params: IdeaGenerationParams): Promise<IdeaPlaygroundIdea[]>;
-  getIdeasForCanvas(canvasId: string, includeArchived?: boolean): Promise<IdeaPlaygroundIdea[]>;
-  getIdea(ideaId: string): Promise<IdeaPlaygroundIdea | null>;
-  updateIdea(ideaId: string, updates: Partial<IdeaPlaygroundIdea>): Promise<boolean>;
-  archiveIdea(ideaId: string): Promise<boolean>;
-  duplicateIdea(ideaId: string, newTitle?: string): Promise<IdeaPlaygroundIdea | null>;
-  moveIdeaToCanvas(ideaId: string, targetCanvasId: string): Promise<boolean>;
-  
-  // Component Management
-  createComponent(ideaId: string, componentType: string, content: string): Promise<IdeaPlaygroundComponent | null>;
-  getComponentsForIdea(ideaId: string, componentType?: string): Promise<IdeaPlaygroundComponent[]>;
-  updateComponent(componentId: string, updates: Partial<IdeaPlaygroundComponent>): Promise<boolean>;
-  
-  // Feedback Management
-  createFeedback(ideaId: string, feedback: Partial<IdeaPlaygroundFeedback>): Promise<IdeaPlaygroundFeedback | null>;
-  getFeedbackForIdea(ideaId: string): Promise<IdeaPlaygroundFeedback[]>;
-  
-  // Idea Refinement
-  refineIdea(userId: string, params: IdeaRefinementParams): Promise<IdeaPlaygroundIdea | null>;
-}
-```
-
-#### 4.1.2 AIServiceInterface
-
-```typescript
-interface AIServiceInterface {
-  generateIdeas(params: IdeaGenerationParams, context: AIServiceContext): Promise<IdeaResponse[]>;
-  refineIdea(idea: IdeaPlaygroundIdea, params: IdeaRefinementParams, context: AIServiceContext): Promise<IdeaRefinementResponse>;
-  enhanceIdea(params: IdeaEnhancementParams, context: AIServiceContext): Promise<IdeaEnhancementResponse>;
-  analyzeMarket(idea: IdeaPlaygroundIdea, params: MarketAnalysisParams, context: AIServiceContext): Promise<MarketAnalysisResponse>;
-  validateIdea(idea: IdeaPlaygroundIdea, params: IdeaValidationParams, context: AIServiceContext): Promise<ValidationResponse>;
-  generateBusinessModel(idea: IdeaPlaygroundIdea, params: BusinessModelParams, context: AIServiceContext): Promise<BusinessModelResponse>;
-  createGoToMarketPlan(idea: IdeaPlaygroundIdea, params: GoToMarketParams, context: AIServiceContext): Promise<GoToMarketResponse>;
-  generateMilestones(idea: IdeaPlaygroundIdea, params: MilestoneParams, context: AIServiceContext): Promise<MilestoneResponse[]>;
-}
-```
-
-### 4.2 Data Types
-
-#### 4.2.1 Idea Playground Types
-
-```typescript
-interface IdeaPlaygroundCanvas {
+// Core Canvas and Idea types
+export interface IdeaPlaygroundCanvas {
   id: string;
   user_id: string;
   company_id?: string;
@@ -557,7 +558,7 @@ interface IdeaPlaygroundCanvas {
   updated_at: string;
 }
 
-interface IdeaPlaygroundIdea {
+export interface IdeaPlaygroundIdea {
   id: string;
   canvas_id: string;
   title: string;
@@ -574,246 +575,335 @@ interface IdeaPlaygroundIdea {
   used_company_context: boolean;
   company_relevance?: CompanyRelevance;
   is_archived: boolean;
+  status?: string;
+  current_stage_id?: string;
   version: number;
   created_at: string;
   updated_at: string;
 }
 
-interface IdeaPlaygroundComponent {
+// Component and Tag types
+export interface IdeaPlaygroundComponent {
   id: string;
   idea_id: string;
   component_type: string;
   content: string;
   is_selected: boolean;
+  rating?: number;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
 
-interface IdeaPlaygroundTag {
+export interface IdeaPlaygroundTag {
   id: string;
-  idea_id: string;
   name: string;
   created_at: string;
 }
 
-interface IdeaPlaygroundFeedback {
+// Enhanced workflow types
+export interface IdeaPlaygroundStage {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  order_index: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface IdeaPlaygroundProgress {
   id: string;
   idea_id: string;
-  feedback_type: string;
-  content: string;
+  stage_id: string;
+  is_completed: boolean;
+  completion_data?: any;
   created_at: string;
-}
-```
-
-#### 4.2.2 AI Service Types
-
-```typescript
-interface AIServiceContext {
-  userId: string;
-  tier: 'free' | 'standard' | 'premium';
-  [key: string]: any;
+  updated_at: string;
 }
 
-interface IdeaGenerationParams {
-  count?: number;
+// Parameter types for API calls
+export interface IdeaGenerationParams {
+  topic?: string;
   industry?: string;
-  target_audience?: string;
   problem_area?: string;
+  target_audience?: string;
   technology?: string;
   business_model_preference?: string;
   market_size_preference?: string;
-  innovation_level?: 'incremental' | 'disruptive' | 'radical';
+  innovation_level?: string;
   resource_constraints?: string[];
+  count?: number;
   useCompanyContext?: boolean;
+  market_focus?: 'existing' | 'adjacent' | 'new';
 }
 
-interface IdeaRefinementParams {
+export interface IdeaRefinementParams {
   idea_id: string;
-  focus_areas: string[];
+  focus_areas: ('problem' | 'solution' | 'market' | 'business_model' | 'go_to_market')[];
   specific_questions?: string[];
   improvement_direction?: string;
+  detailed_feedback?: string;
+}
+
+// Additional business logic types
+export interface CompanyRelevance {
+  existingMarkets: string[];
+  customerSynergies: string[];
+  complementaryProducts: string[];
+  strategicFit: string;
 }
 ```
 
-## 5. State Management
+## API Interfaces
 
-### 5.1 Zustand Store
+### Authentication API
 
-The application uses Zustand for state management, which provides a simple and efficient way to manage global state.
+The Authentication API is implemented through Supabase's Auth service and provides the following endpoints:
 
-#### 5.1.1 Store Structure
+#### User Management
+
+- **Sign Up**: Create a new user account
+  ```typescript
+  async signUp(email: string, password: string): Promise<AuthResponse>
+  ```
+
+- **Sign In**: Authenticate an existing user
+  ```typescript
+  async signIn(email: string, password: string): Promise<AuthResponse>
+  ```
+
+- **Sign Out**: End a user session
+  ```typescript
+  async signOut(): Promise<void>
+  ```
+
+- **Reset Password**: Initiate password reset process
+  ```typescript
+  async resetPassword(email: string): Promise<ResetPasswordResponse>
+  ```
+
+#### Session Management
+
+- **Get Session**: Retrieve the current user session
+  ```typescript
+  async getSession(): Promise<Session | null>
+  ```
+
+- **Refresh Session**: Refresh an existing session
+  ```typescript
+  async refreshSession(): Promise<Session>
+  ```
+
+- **Get User**: Get the current authenticated user
+  ```typescript
+  async getUser(): Promise<User | null>
+  ```
+
+### Idea Playground API
+
+The Idea Playground API provides endpoints for managing canvases, ideas, and related components:
+
+#### Canvas Management
+
+- **Create Canvas**: Create a new idea canvas
+  ```typescript
+  async createCanvas(data: CreateCanvasParams): Promise<IdeaPlaygroundCanvas>
+  ```
+
+- **Get Canvases**: Get all canvases for the current user
+  ```typescript
+  async getCanvases(): Promise<IdeaPlaygroundCanvas[]>
+  ```
+
+- **Update Canvas**: Update an existing canvas
+  ```typescript
+  async updateCanvas(id: string, data: UpdateCanvasParams): Promise<IdeaPlaygroundCanvas>
+  ```
+
+- **Archive Canvas**: Archive a canvas
+  ```typescript
+  async archiveCanvas(id: string): Promise<void>
+  ```
+
+#### Idea Management
+
+- **Generate Ideas**: Generate new ideas using AI
+  ```typescript
+  async generateIdeas(params: IdeaGenerationParams): Promise<IdeaPlaygroundIdea[]>
+  ```
+
+- **Create Idea**: Create a new idea manually
+  ```typescript
+  async createIdea(data: CreateIdeaParams): Promise<IdeaPlaygroundIdea>
+  ```
+
+- **Get Ideas**: Get all ideas for a canvas
+  ```typescript
+  async getIdeas(canvasId: string): Promise<IdeaPlaygroundIdea[]>
+  ```
+
+- **Update Idea**: Update an existing idea
+  ```typescript
+  async updateIdea(id: string, data: UpdateIdeaParams): Promise<IdeaPlaygroundIdea>
+  ```
+
+- **Refine Idea**: Refine specific aspects of an idea
+  ```typescript
+  async refineIdea(params: IdeaRefinementParams): Promise<IdeaRefinementResult>
+  ```
+
+#### Component Management
+
+- **Create Component**: Create a new idea component
+  ```typescript
+  async createComponent(data: CreateComponentParams): Promise<IdeaPlaygroundComponent>
+  ```
+
+- **Get Components**: Get all components for an idea
+  ```typescript
+  async getComponents(ideaId: string): Promise<IdeaPlaygroundComponent[]>
+  ```
+
+- **Update Component**: Update an existing component
+  ```typescript
+  async updateComponent(id: string, data: UpdateComponentParams): Promise<IdeaPlaygroundComponent>
+  ```
+
+#### Workflow Management
+
+- **Get Stages**: Get all stages in the idea workflow
+  ```typescript
+  async getStages(): Promise<IdeaPlaygroundStage[]>
+  ```
+
+- **Update Idea Stage**: Update the current stage of an idea
+  ```typescript
+  async updateIdeaStage(ideaId: string, stageId: string): Promise<void>
+  ```
+
+- **Complete Stage**: Mark a stage as completed for an idea
+  ```typescript
+  async completeStage(ideaId: string, stageId: string, data?: any): Promise<void>
+  ```
+
+- **Get Idea Progress**: Get progress tracking for an idea
+  ```typescript
+  async getIdeaProgress(ideaId: string): Promise<IdeaPlaygroundProgress[]>
+  ```
+
+### AI Services API
+
+The AI Services API provides endpoints for interacting with AI capabilities:
+
+#### General LLM Service
+
+- **Generate Text**: Generate text using language models
+  ```typescript
+  async generateText(prompt: string, options?: GenerateTextOptions): Promise<string>
+  ```
+
+- **Generate With Structure**: Generate text with structured output
+  ```typescript
+  async generateWithStructure<T>(prompt: string, schema: Schema<T>, options?: GenerateOptions): Promise<T>
+  ```
+
+- **Generate Variations**: Generate multiple variations
+  ```typescript
+  async generateVariations(prompt: string, count: number, options?: GenerateOptions): Promise<string[]>
+  ```
+
+#### AI Context Provider
+
+- **Get Suggestions**: Get suggestions for a given input
+  ```typescript
+  async getSuggestions(text: string, contextType: string): Promise<string[]>
+  ```
+
+- **Get Contextual Help**: Get contextual help for a UI element
+  ```typescript
+  async getContextualHelp(elementId: string, currentState: any): Promise<string>
+  ```
+
+- **Enhance Content**: Enhance existing content
+  ```typescript
+  async enhanceContent(content: string, enhancementType: string): Promise<string>
+  ```
+
+### Feature Flags API
+
+The Feature Flags API provides endpoints for managing feature flags:
+
+#### Flag Management
+
+- **Get Feature Flags**: Get all feature flags
+  ```typescript
+  async getFeatureFlags(): Promise<FeatureFlags>
+  ```
+
+- **Update Feature Flag**: Update a feature flag
+  ```typescript
+  async updateFeatureFlag(key: string, value: boolean): Promise<void>
+  ```
+
+- **Is Feature Enabled**: Check if a feature is enabled
+  ```typescript
+  async isFeatureEnabled(key: string): Promise<boolean>
+  ```
+
+## State Management
+
+Wheel99 uses a combination of Zustand, React Context, and XState for state management.
+
+### Zustand Store
+
+Zustand is used for global application state that needs to be accessed across different components. The store is defined in `src/lib/store.ts`:
 
 ```typescript
-// Auth Store
-export const useAuthStore = create<AuthState>((set) => ({
+interface AppState {
+  // User state
+  user: User | null;
+  profile: Profile | null;
+  
+  // Feature flag state
+  featureFlags: Record<string, boolean>;
+  
+  // UI state
+  activeIdea: string | null;
+  sidebarOpen: boolean;
+  
+  // Actions
+  setUser: (user: User | null) => void;
+  setProfile: (profile: Profile | null) => void;
+  setFeatureFlags: (flags: Record<string, boolean>) => void;
+  setActiveIdea: (ideaId: string | null) => void;
+  toggleSidebar: () => void;
+}
+
+export const useStore = create<AppState>((set) => ({
+  // Initial state
   user: null,
-  isLoading: true,
+  profile: null,
   featureFlags: {},
+  activeIdea: null,
+  sidebarOpen: true,
+  
+  // Actions
   setUser: (user) => set({ user }),
+  setProfile: (profile) => set({ profile }),
   setFeatureFlags: (flags) => set({ featureFlags: flags }),
-}));
-
-// Idea Playground Store
-export const useIdeaPlaygroundStore = create<IdeaPlaygroundState>((set) => ({
-  canvases: [],
-  currentCanvas: null,
-  ideas: [],
-  currentIdea: null,
-  setCanvases: (canvases) => set({ canvases }),
-  setCurrentCanvas: (currentCanvas) => set({ currentCanvas }),
-  setIdeas: (ideas) => set({ ideas }),
-  setCurrentIdea: (currentIdea) => set({ currentIdea }),
+  setActiveIdea: (ideaId) => set({ activeIdea: ideaId }),
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 }));
 ```
 
-#### 5.1.2 Store Usage
+#### Store Selectors
+
+Selectors are used to derive specific parts of the state:
 
 ```typescript
-// Using the store in components
-const { user, featureFlags } = useAuthStore();
-const { currentCanvas, setCurrentCanvas } = useIdeaPlaygroundStore();
-
-// Updating the store
-setCurrentCanvas(selectedCanvas);
-```
-
-### 5.2 Feature Flags
-
-Feature flags are used to control the availability of features and enable/disable functionality.
-
-#### 5.2.1 Feature Flag Structure
-
-```typescript
-interface FeatureFlag {
-  enabled: boolean;
-  visible: boolean;
-}
-
-interface FeatureFlags {
-  [key: string]: FeatureFlag;
-}
-
-// Example feature flags
-const defaultFeatureFlags: FeatureFlags = {
-  useRealAI: { enabled: false, visible: true },
-  useMockAI: { enabled: true, visible: true },
-  multiTieredAI: { enabled: false, visible: true },
-  enhancedIdeaPlayground: { enabled: false, visible: true },
-};
-```
-
-#### 5.2.2 Feature Flag Management
-
-```typescript
-// Loading feature flags
-async loadFeatureFlags(): Promise<void> {
-  try {
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'feature_flags')
-      .maybeSingle();
-    
-    if (data?.value) {
-      const { setFeatureFlags } = useAuthStore.getState();
-      setFeatureFlags(data.value);
-    }
-  } catch (error) {
-    console.error('Error loading feature flags:', error);
-  }
-}
-
-// Saving feature flags
-async saveFeatureFlags(flags: Partial<FeatureFlags>): Promise<void> {
-  try {
-    const { featureFlags } = useAuthStore.getState();
-    const updatedFlags = { ...featureFlags };
-    
-    // Update flags
-    Object.entries(flags).forEach(([key, value]) => {
-      if (updatedFlags[key]) {
-        updatedFlags[key] = { ...updatedFlags[key], ...value };
-      } else {
-        updatedFlags[key] = value as { enabled: boolean; visible: boolean };
-      }
-    });
-    
-    // Save to database
-    await supabase
-      .from('app_settings')
-      .upsert({
-        key: 'feature_flags',
-        value: updatedFlags,
-        updated_at: new Date().toISOString()
-      });
-    
-    // Update store
-    const { setFeatureFlags } = useAuthStore.getState();
-    setFeatureFlags(updatedFlags);
-  } catch (error) {
-    console.error('Error saving feature flags:', error);
-  }
-}
-```
-
-## 6. Deployment Architecture
-
-### 6.1 Frontend Deployment
-
-The frontend application is deployed using Vercel, which provides:
-
-- Continuous deployment from Git
-- Preview deployments for pull requests
-- Global CDN for fast content delivery
-- Serverless functions for API endpoints
-
-### 6.2 Backend Deployment
-
-The backend is deployed using Supabase Cloud, which provides:
-
-- PostgreSQL database
-- Authentication service
-- Storage service
-- Realtime subscriptions
-- Edge functions
-
-### 6.3 Environment Configuration
-
-The application uses environment variables for configuration:
-
-```
-# Frontend environment variables
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_OPENAI_API_KEY=your-openai-key
-
-# Backend environment variables (Supabase)
-DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
-JWT_SECRET=your-jwt-secret
-```
-
-## 7. Security Considerations
-
-### 7.1 Authentication and Authorization
-
-- **Authentication**: Supabase Auth provides secure user authentication
-- **Authorization**: Row-level security policies control data access
-- **JWT Tokens**: Used for secure API communication
-
-### 7.2 Data Protection
-
-- **Encryption**: Sensitive data is encrypted at rest and in transit
-- **API Keys**: Stored securely and not exposed to clients
-- **Input Validation**: All user inputs are validated before processing
-
-### 7.3 API Security
-
-- **CORS**: Configured to allow only specific origins
-- **Rate Limiting**: Prevents abuse of API endpoints
-- **Request Validation**: Ensures requests conform to expected formats
-
-### 7.4 AI Service Security
-
-- **Prompt Injection Prevention**: Careful prompt design to prevent injection attacks
-- **Content Filtering**: Ensures generated content meets safety standards
-- **Usage Monitoring**: Tracks API usage to detect and prevent abuse
+// Select user with profile
+export const useUserWithProfile = () => 
+  useStore(state => ({ 
+    user: state.user, 
+    profile

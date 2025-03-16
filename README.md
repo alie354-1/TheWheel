@@ -2,6 +2,19 @@
 
 Wheel99 is a platform for idea generation, refinement, and development. It provides tools for users to create, explore, and refine business ideas with AI assistance.
 
+## Documentation
+
+Comprehensive documentation for the project is available in the following files:
+
+- [Comprehensive Documentation](./docs/COMPREHENSIVE_DOCUMENTATION.md) - Main documentation with overview and references to detailed docs
+- [Core Features](./docs/CORE_FEATURES.md) - Detailed description of all implemented features
+- [Technical Architecture](./docs/TECHNICAL_ARCHITECTURE.md) - System design and component architecture
+- [AI Implementation](./docs/AI_IMPLEMENTATION.md) - AI integration details and context-aware features
+- [Roadmap](./docs/ROADMAP.md) - Planned improvements and future features
+- [User Stories](./docs/USER_STORIES.md) - Detailed user stories with acceptance criteria
+- [Standup Bot](./docs/STANDUP_BOT.md) - Documentation for the Standup Bot feature
+- [Task Generation](./docs/TASK_GENERATION.md) - Documentation for the Task Generation feature
+
 ## Project Structure
 
 The project is organized as follows:
@@ -68,3 +81,5 @@ To apply the schema to a new Supabase project:
 This repository has been cleaned up to remove temporary fix scripts, old migrations, and unused files. All of these files have been moved to the `archive` directory, which is excluded from git.
 
 A manifest of all archived files can be found in `archive/ARCHIVE_MANIFEST.md`.
+
+Older documentation files have been archived and replaced with updated versions with a more organized structure.
