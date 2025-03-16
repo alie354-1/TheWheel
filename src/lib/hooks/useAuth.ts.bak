@@ -1,0 +1,41 @@
+import { useEffect } from 'react';
+import { useAuthStore } from '../store';
+import { authService } from '../services/auth.service';
+import { profileService } from '../services/profile.service';
+
+export function useAuth() {
+  const { setUser, setProfile } = useAuthStore();
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Always use the real auth service
+        console.log('Initializing authentication');
+        const session = await authService.getSession();
+        if (session?.user) {
+          console.log('User authenticated:', session.user.email);
+          setUser(session.user);
+          try {
+            const profile = await profileService.getProfile(session.user.id);
+            if (profile) {
+              console.log('Profile loaded');
+              setProfile(profile);
+            } else {
+              console.log('No profile found for user');
+            }
+          } catch (profileError) {
+            console.error('Error loading profile:', profileError);
+          }
+        } else {
+          console.log('No active session found');
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  return useAuthStore();
+}

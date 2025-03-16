@@ -1,0 +1,53 @@
+import { supabase } from '../supabase';
+import { User } from '@supabase/supabase-js';
+
+export interface AuthService {
+  signIn: (email: string, password: string) => Promise<User | null>;
+  signUp: (email: string, password: string, userData: any) => Promise<User | null>;
+  signOut: () => Promise<void>;
+  getCurrentUser: () => Promise<User | null>;
+  getSession: () => Promise<any>;
+}
+
+class SupabaseAuthService implements AuthService {
+  async signIn(email: string, password: string): Promise<User | null> {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (error) throw error;
+    return data.user;
+  }
+
+  async signUp(email: string, password: string, userData: any): Promise<User | null> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData
+      }
+    });
+    if (error) throw error;
+    return data.user;
+  }
+
+  async signOut(): Promise<void> {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  }
+
+  async getCurrentUser(): Promise<User | null> {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  }
+
+  async getSession(): Promise<any> {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return session;
+  }
+}
+
+// Always use the real auth service
+export const authService = new SupabaseAuthService();
