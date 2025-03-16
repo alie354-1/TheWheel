@@ -5,6 +5,13 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
+import OnboardingPage from './pages/OnboardingPage';
+import OnboardingWizardPage from './pages/OnboardingWizardPage';
+import InitialOnboardingPage from './pages/InitialOnboardingPage';
+import { EnhancedOnboardingPage } from './pages/EnhancedOnboardingPage';
+import OnboardingDemoPage from './pages/OnboardingDemoPage';
+import PersonaManagementPage from './pages/profile/PersonaManagementPage';
+import { CreatePersonaForm } from './components/profile/CreatePersonaForm';
 import Directory from './pages/Directory';
 import CofounderBot from './pages/idea-hub/CofounderBot';
 import AIDiscussion from './pages/idea-hub/AIDiscussion';
@@ -15,6 +22,7 @@ import IdeaCanvas from './pages/idea-hub/IdeaCanvas';
 import TestComponent from './pages/idea-hub/TestComponent';
 import TestPage from './pages/TestPage';
 import AdminPanel from './pages/AdminPanel';
+import SettingsPage from './pages/SettingsPage';
 import CompanySetup from './pages/company/CompanySetup';
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import CompanySettings from './pages/company/CompanySettings';
@@ -50,6 +58,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/test" element={<TestPage />} />
+          <Route path="/onboarding-demo" element={<OnboardingDemoPage />} />
+          <Route path="/initial-onboarding" element={<InitialOnboardingPage />} />
           <Route path="/idea-hub/refinement" element={
             <div className="min-h-screen bg-gray-100">
               <Refinement />
@@ -85,6 +95,36 @@ function App() {
   if (!profile?.full_name && window.location.pathname !== '/profile-setup') {
     return <Navigate to="/profile-setup" replace />;
   }
+  
+  // Check if the user has gone through onboarding
+  const hasCompletedOnboarding = profile?.setup_progress?.completed_steps?.includes('complete');
+  
+  // Check if the user has completed the initial onboarding
+  const hasCompletedInitialOnboarding = profile?.setup_progress?.form_data?.initialOnboardingComplete === true;
+  
+  // If user is logged in and has completed profile setup but hasn't gone through onboarding,
+  // redirect to onboarding, but allow access to demo pages
+  if (profile?.full_name && 
+      !hasCompletedInitialOnboarding && 
+      window.location.pathname !== '/initial-onboarding' &&
+      window.location.pathname !== '/onboarding-demo') {
+    
+    // Redirect to initial onboarding 
+    return <Navigate to="/initial-onboarding" replace />;
+  }
+  
+  // If user has completed initial onboarding but not full onboarding,
+  // redirect to main onboarding, but allow access to demo pages
+  if (profile?.full_name && 
+      hasCompletedInitialOnboarding &&
+      !hasCompletedOnboarding && 
+      window.location.pathname !== '/onboarding' &&
+      !window.location.pathname.startsWith('/onboarding/') &&
+      window.location.pathname !== '/onboarding-demo') {
+    
+    // Redirect to general onboarding which will handle personas
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return (
     <AIProvider>
@@ -103,6 +143,12 @@ function App() {
             <Route index element={<Navigate to="/dashboard" />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="profile" element={<Profile />} />
+          <Route path="personas">
+            <Route index element={<PersonaManagementPage />} />
+            <Route path="new" element={<CreatePersonaForm />} />
+            <Route path="edit/:personaId" element={<CreatePersonaForm />} />
+          </Route>
+          <Route path="onboarding/:personaId" element={<OnboardingPage />} />
             <Route path="directory" element={<Directory />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tasks">
@@ -145,6 +191,14 @@ function App() {
               <Route path="settings" element={<CompanySettings />} />
             </Route>
             <Route path="admin" element={<AdminPanel />} />
+            <Route path="settings" element={<SettingsPage />} />
+            {/* Onboarding Routes */}
+          <Route path="onboarding" element={<OnboardingPage />} />
+          <Route path="onboarding/:personaId" element={<OnboardingPage />} />
+          <Route path="initial-onboarding" element={<InitialOnboardingPage />} />
+            <Route path="onboarding-wizard" element={<OnboardingWizardPage />} />
+            <Route path="onboarding/enhanced" element={<EnhancedOnboardingPage />} />
+            <Route path="onboarding-demo" element={<OnboardingDemoPage />} />
             <Route path="standup-test" element={
               <React.Suspense fallback={<div>Loading...</div>}>
                 <StandupTestPage />

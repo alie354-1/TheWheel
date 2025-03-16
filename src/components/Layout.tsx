@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
+import SignOutButton from './ui/SignOutButton';
+import { PersonaSelector } from './profile/PersonaSelector';
 import { 
   LayoutDashboard,
   Building2,
@@ -32,7 +34,9 @@ interface NavItem {
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, isAdmin, signOut } = useAuthStore();
+  const { user, profile } = useAuthStore();
+  // Admin check - could be expanded in a real implementation
+  const isAdmin = profile?.role === 'admin';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [hasCompany, setHasCompany] = useState(false);
@@ -79,9 +83,9 @@ export default function Layout() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+  // SignOutButton component handles the actual signout now
+  const closeProfileMenu = () => {
+    setIsProfileMenuOpen(false);
   };
 
   const navigation: NavItem[] = [
@@ -178,8 +182,15 @@ export default function Layout() {
               <div className="flex-shrink-0 flex items-center">
                 <Shield className="h-8 w-8 text-indigo-600" />
               </div>
+              {/* PersonaSelector hidden for all users per request */}
               <div className="hidden lg:ml-6 lg:flex lg:items-center">
-                <div className="max-w-lg w-full lg:max-w-xs">
+                {/* Persona selector is temporarily hidden
+                {!location.pathname.includes('/initial-onboarding') && (
+                  <PersonaSelector />
+                )} */}
+              </div>
+              <div className="hidden lg:ml-6 lg:flex lg:items-center">
+                <div className="max-w-lg w-full lg:max-w-xs ml-4">
                   <label htmlFor="search" className="sr-only">Search</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -260,16 +271,19 @@ export default function Layout() {
                         Admin Panel
                       </Link>
                     )}
-                    <button
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        handleSignOut();
-                      }}
-                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    {/* Temporarily hide Personas-related menu items */}
+                    <Link
+                      to="/onboarding/demo"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileMenuOpen(false)}
                     >
-                      <LogOut className="h-4 w-4 mr-3" />
-                      Sign Out
-                    </button>
+                      <Lightbulb className="h-4 w-4 mr-3" />
+                      Onboarding Wizard
+                    </Link>
+                    <SignOutButton
+                      variant="text" 
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 justify-start"
+                    />
                   </div>
                 )}
               </div>

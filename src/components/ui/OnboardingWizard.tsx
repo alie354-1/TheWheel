@@ -1,176 +1,247 @@
-import React, { useState } from 'react';
-
-// Feature configuration type that will be passed to the component
-export interface FeatureConfig {
-  id: string;
-  name: string;
-  description: string;
-  steps: FeatureStep[];
-  features?: FeatureHighlight[];
-}
-
-// Step configuration for the feature
-export interface FeatureStep {
-  title: string;
-  description: string;
-}
-
-// Feature highlight configuration for the UI cards
-export interface FeatureHighlight {
-  title: string;
-  description: string;
-  icon?: React.ReactNode; // Optional icon element
-  colorScheme?: 'blue' | 'indigo' | 'purple' | 'green' | 'red' | 'yellow'; // Different color schemes
-}
-
-// Tutorial step for OnboardingTutorial integration
-export interface TutorialStep {
-  target: string;  // CSS selector for the target element
-  title: string;   // Title of the tooltip
-  content: string; // Content of the tooltip
-  position: 'top' | 'right' | 'bottom' | 'left'; // Position of the tooltip
-}
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../lib/store';
+import { enhancedOnboardingService } from '../../lib/services/enhanced-onboarding.service';
+import { enhancedProfileService } from '../../lib/services/enhanced-profile.service';
+import { UserRoleType, CompanyStageType } from '../../lib/types/enhanced-profile.types';
+import { SimpleProgressBar } from '../onboarding/SimpleProgressBar';
 
 interface OnboardingWizardProps {
-  feature: FeatureConfig;
-  onStart: () => void;
-  onSkip?: () => void;
-  primaryColor?: string; // Primary color for the header
-  tutorialSteps?: TutorialStep[]; // Optional tutorial steps for OnboardingTutorial integration
-  showTutorialOption?: boolean; // Whether to show the tutorial checkbox
-  startButtonText?: string; // Custom text for the start button
-  skipButtonText?: string; // Custom text for the skip button
-  className?: string; // Additional CSS classes
+  onClose?: () => void;
+  onComplete?: () => void;
 }
 
 /**
- * A reusable onboarding wizard component that can be used across different features
+ * A simplified onboarding wizard for the UI
+ * This is a standalone component that can be shown in a modal or dialog
  */
-const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
-  feature,
-  onStart,
-  onSkip,
-  primaryColor = 'bg-indigo-600',
-  tutorialSteps,
-  showTutorialOption = true,
-  startButtonText = 'Get Started',
-  skipButtonText = 'Skip',
-  className = '',
-}) => {
-  const [showTutorial, setShowTutorial] = useState(true);
+export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onClose, onComplete }) => {
+  const [step, setStep] = useState<number>(1);
+  const [selectedRole, setSelectedRole] = useState<UserRoleType | null>(null);
+  const [companyStage, setCompanyStage] = useState<CompanyStageType | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const userId = useAuthStore(state => state.user?.id);
+  const navigate = useNavigate();
 
-  // Map color scheme to tailwind classes
-  const getColorClasses = (scheme: string = 'indigo'): { bg: string; text: string } => {
-    switch (scheme) {
-      case 'blue':
-        return { bg: 'bg-blue-50', text: 'text-blue-800' };
-      case 'purple':
-        return { bg: 'bg-purple-50', text: 'text-purple-800' };
-      case 'green':
-        return { bg: 'bg-green-50', text: 'text-green-800' };
-      case 'red':
-        return { bg: 'bg-red-50', text: 'text-red-800' };
-      case 'yellow':
-        return { bg: 'bg-yellow-50', text: 'text-yellow-800' };
-      case 'indigo':
-      default:
-        return { bg: 'bg-indigo-50', text: 'text-indigo-800' };
+  // Role options
+  const roleOptions = [
+    {
+      id: 'founder' as UserRoleType,
+      title: 'Founder',
+      description: 'You have a business idea or already founded a company',
+      icon: 'lightbulb'
+    },
+    {
+      id: 'company_member' as UserRoleType,
+      title: 'Company Member',
+      description: 'You work at a company and want to join your team',
+      icon: 'users'
+    },
+    {
+      id: 'service_provider' as UserRoleType,
+      title: 'Service Provider',
+      description: 'You provide professional services to companies',
+      icon: 'briefcase'
+    }
+  ];
+
+  // Company stage options
+  const stageOptions = [
+    {
+      id: 'idea_stage' as CompanyStageType,
+      title: 'Idea Stage',
+      description: 'You have an idea but haven\'t formally established a company yet',
+      icon: 'lightbulb',
+      featuredModule: 'Idea Playground'
+    },
+    {
+      id: 'solid_idea' as CompanyStageType,
+      title: 'Solid Idea',
+      description: 'You have a well-defined concept and are ready to establish your company',
+      icon: 'clipboard-check',
+      featuredModule: 'Company Formation'
+    },
+    {
+      id: 'existing_company' as CompanyStageType,
+      title: 'Existing Company',
+      description: 'You already have an established company and want to enter its information',
+      icon: 'building',
+      featuredModule: 'Team Management'
+    }
+  ];
+
+  const saveAndContinue = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    try {
+      if (step === 1 && selectedRole) {
+        // Save role selection
+        await enhancedOnboardingService.saveOnboardingData(userId, 'role_selection', {
+          primaryRole: selectedRole
+        });
+        
+        // If founder, show company stage step
+        if (selectedRole === 'founder') {
+          setStep(2);
+        } else if (selectedRole === 'company_member') {
+          // If company member, redirect to invite code step in the full onboarding
+          navigate('/onboarding/enhanced');
+        } else if (selectedRole === 'service_provider') {
+          // If service provider, redirect to service categories step in the full onboarding
+          navigate('/onboarding/enhanced');
+        }
+      } else if (step === 2 && companyStage) {
+        // Save company stage selection
+        await enhancedOnboardingService.saveOnboardingData(userId, 'company_stage', {
+          companyStage: companyStage
+        });
+
+        // Complete onboarding
+        if (onComplete) {
+          onComplete();
+        } else {
+          // Redirect to the appropriate feature based on company stage
+          if (companyStage === 'idea_stage') {
+            navigate('/idea-hub/playground');
+          } else if (companyStage === 'solid_idea') {
+            navigate('/company/setup');
+          } else {
+            navigate('/company/team');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving onboarding data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle the start button click
-  const handleStart = () => {
-    // Pass along the showTutorial preference
-    onStart();
+  const handleSkip = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/dashboard');
+    }
   };
 
+  // Calculate progress
+  const totalSteps = selectedRole === 'founder' ? 2 : 1;
+  const progress = (step / totalSteps) * 100;
+
   return (
-    <div className={`max-w-2xl mx-auto bg-white rounded-xl shadow-md overflow-hidden ${className}`}>
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden max-w-4xl mx-auto">
       {/* Header */}
-      <div className={`${primaryColor} px-6 py-4`}>
-        <h2 className="text-xl font-bold text-white">Welcome to {feature.name}</h2>
-        <p className="text-white text-opacity-90 text-sm mt-1">
-          {feature.description}
-        </p>
+      <div className="bg-blue-50 p-4 border-b border-blue-100">
+        <h2 className="text-xl font-semibold text-blue-800">Quick Setup</h2>
+        <p className="text-blue-600">Tell us about yourself to get the most out of Wheel99</p>
+        
+        <div className="mt-4">
+          <SimpleProgressBar progress={progress} height={4} color="bg-blue-500" />
+        </div>
       </div>
       
+      {/* Content */}
       <div className="p-6">
-        {/* Feature introduction */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">About {feature.name}</h3>
-          <p className="text-gray-600">
-            {feature.description}
-          </p>
-        </div>
-        
-        {/* Steps section */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">What You'll Do</h3>
-          <ol className="list-decimal pl-5 space-y-2 text-gray-600">
-            {feature.steps.map((step, index) => (
-              <li key={index}>
-                <span className="font-medium">{step.title}</span>
-                {step.description && <span> - {step.description}</span>}
-              </li>
-            ))}
-          </ol>
-        </div>
-        
-        {/* Feature highlights section */}
-        {feature.features && feature.features.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Features to Explore</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {feature.features.map((item, index) => {
-                const colorClasses = getColorClasses(item.colorScheme);
-                return (
-                  <div key={index} className={`${colorClasses.bg} rounded-md p-3`}>
-                    <div className="flex items-center">
-                      {item.icon && <div className="mr-2">{item.icon}</div>}
-                      <div className={`font-medium ${colorClasses.text} mb-1`}>{item.title}</div>
+        {step === 1 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4">What best describes your role?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {roleOptions.map((role) => (
+                <div
+                  key={role.id}
+                  onClick={() => setSelectedRole(role.id)}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    selectedRole === role.id
+                      ? 'border-blue-500 bg-blue-50 shadow-sm'
+                      : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center mb-2">
+                    <div className={`rounded-full p-2 mr-2 ${
+                      selectedRole === role.id ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                    }`}>
+                      <i className={`fas fa-${role.icon} text-sm`}></i>
                     </div>
-                    <p className="text-sm text-gray-600">{item.description}</p>
+                    <h4 className="font-medium">{role.title}</h4>
                   </div>
-                );
-              })}
+                  <p className="text-sm text-gray-600">{role.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
         
-        {/* Footer with buttons */}
-        <div className="flex justify-between items-center border-t border-gray-200 pt-6">
-          <div className="text-sm text-gray-500">
-            {showTutorialOption && tutorialSteps && (
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="form-checkbox h-4 w-4 text-indigo-600"
-                  checked={showTutorial}
-                  onChange={(e) => setShowTutorial(e.target.checked)}
-                />
-                <span className="ml-2">Show tutorial tips as I go</span>
-              </label>
-            )}
+        {step === 2 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4">What stage is your company in?</h3>
+            <div className="space-y-4">
+              {stageOptions.map((stage) => (
+                <div
+                  key={stage.id}
+                  onClick={() => setCompanyStage(stage.id)}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    companyStage === stage.id
+                      ? 'border-blue-500 bg-blue-50 shadow-sm'
+                      : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start">
+                    <div className={`rounded-full p-2 mr-3 mt-1 ${
+                      companyStage === stage.id ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                    }`}>
+                      <i className={`fas fa-${stage.icon} text-sm`}></i>
+                    </div>
+                    <div>
+                      <h4 className="font-medium">{stage.title}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{stage.description}</p>
+                      
+                      {companyStage === stage.id && (
+                        <div className="mt-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full inline-flex items-center">
+                          <i className="fas fa-star mr-1"></i>
+                          Recommended: {stage.featuredModule}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex space-x-3">
-            {onSkip && (
-              <button
-                type="button"
-                onClick={onSkip}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                {skipButtonText}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleStart}
-              className={`px-4 py-2 ${primaryColor.replace('bg-', 'bg-')} text-white rounded-md hover:opacity-90`}
-            >
-              {startButtonText}
-            </button>
-          </div>
-        </div>
+        )}
+      </div>
+      
+      {/* Footer */}
+      <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between">
+        <button
+          onClick={handleSkip}
+          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+        >
+          Skip for now
+        </button>
+        
+        <button
+          onClick={saveAndContinue}
+          disabled={step === 1 ? !selectedRole : !companyStage || loading}
+          className={`px-6 py-2 rounded-md ${
+            (step === 1 ? selectedRole : companyStage) && !loading
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {loading ? (
+            <div className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </div>
+          ) : (
+            'Continue'
+          )}
+        </button>
       </div>
     </div>
   );

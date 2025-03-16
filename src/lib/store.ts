@@ -52,6 +52,7 @@ interface AuthState {
   setFeatureFlags: (flags: Partial<FeatureFlags>) => void;
   fetchProfile: (userId: string) => Promise<void>;
   updateSetupProgress: (progress: any) => Promise<void>;
+  clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -106,7 +107,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error updating setup progress:', error);
     }
-  }
+  },
+  clearAuth: () => set({ user: null, profile: null })
 }));
 
 interface IdeaPlaygroundState {
