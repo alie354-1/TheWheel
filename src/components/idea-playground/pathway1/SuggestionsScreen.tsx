@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../lib/store';
-import { useAIContext } from '../../../lib/services/ai/ai-context.provider';
+import { useAIContext } from '../../../lib/services/ai/ai-context-provider';
 import { ideaPlaygroundService } from '../../../lib/services/idea-playground.service';
+import { ideaPathway1AIService } from '../../../lib/services/idea-pathway1-ai.service';
 import { IdeaPlaygroundIdea } from '../../../lib/types/idea-playground.types';
 import SuggestionCard, { Suggestion } from './SuggestionCard';
 import SuggestionEditor from './SuggestionEditor';
@@ -78,104 +79,14 @@ const SuggestionsScreen: React.FC = () => {
     try {
       setIsGenerating(true);
       
-      // Mock suggestions for now - in a real implementation, this would call the AI service
-      const mockSuggestions: Suggestion[] = [
-        {
-          title: `${ideaData.title} - Enhanced Version`,
-          description: `An enhanced version of ${ideaData.title} with additional features.`,
-          problem_statement: ideaData.problem_statement || 'Problem statement not provided',
-          solution_concept: ideaData.solution_concept || 'Solution concept not provided',
-          target_audience: 'Small to medium businesses looking to improve efficiency',
-          unique_value: 'Combines AI with user-friendly interface for maximum productivity',
-          business_model: 'SaaS subscription with tiered pricing',
-          marketing_strategy: 'Content marketing and industry partnerships',
-          revenue_model: 'Monthly subscription fees with premium features',
-          go_to_market: 'Freemium model with limited features for free users',
-          market_size: 'Estimated $5B market with 12% annual growth',
-          competition: ['Competitor A', 'Competitor B', 'Competitor C'],
-          revenue_streams: ['Subscription fees', 'Premium features', 'Enterprise contracts'],
-          cost_structure: ['Development', 'Marketing', 'Customer support', 'Infrastructure'],
-          key_metrics: ['Monthly active users', 'Conversion rate', 'Customer lifetime value']
-        },
-        {
-          title: `${ideaData.title} - Premium Edition`,
-          description: `A premium version of ${ideaData.title} targeting enterprise customers.`,
-          problem_statement: ideaData.problem_statement || 'Problem statement not provided',
-          solution_concept: ideaData.solution_concept || 'Solution concept not provided',
-          target_audience: 'Enterprise companies with complex workflows',
-          unique_value: 'Enterprise-grade security with advanced analytics',
-          business_model: 'Enterprise licensing with annual contracts',
-          marketing_strategy: 'Direct sales and industry conferences',
-          revenue_model: 'Annual licensing fees with implementation services',
-          go_to_market: 'Pilot programs with key industry players',
-          market_size: 'Enterprise segment valued at $2B with 8% growth',
-          competition: ['Enterprise Solution X', 'Corporate Tool Y'],
-          revenue_streams: ['Licensing', 'Implementation services', 'Training', 'Support contracts'],
-          cost_structure: ['Enterprise sales team', 'R&D', 'Security compliance', 'Support staff'],
-          key_metrics: ['Annual recurring revenue', 'Customer retention', 'Upsell rate']
-        },
-        {
-          title: `${ideaData.title} - Lite Version`,
-          description: `A simplified version of ${ideaData.title} for individual users.`,
-          problem_statement: ideaData.problem_statement || 'Problem statement not provided',
-          solution_concept: ideaData.solution_concept || 'Solution concept not provided',
-          target_audience: 'Individual professionals and freelancers',
-          unique_value: 'Affordable solution with essential features',
-          business_model: 'Freemium with in-app purchases',
-          marketing_strategy: 'Social media and influencer marketing',
-          revenue_model: 'In-app purchases and premium upgrades',
-          go_to_market: 'App store launch with promotional pricing',
-          market_size: 'Consumer segment estimated at $1.5B',
-          competition: ['Free App A', 'Consumer Tool B'],
-          revenue_streams: ['Premium upgrades', 'Add-on features', 'Data insights'],
-          cost_structure: ['App development', 'Digital marketing', 'Server costs'],
-          key_metrics: ['Download rate', 'Conversion to paid', 'User engagement']
-        },
-        {
-          title: `${ideaData.title} - Industry Specific`,
-          description: `A specialized version of ${ideaData.title} for the healthcare industry.`,
-          problem_statement: ideaData.problem_statement || 'Problem statement not provided',
-          solution_concept: ideaData.solution_concept || 'Solution concept not provided',
-          target_audience: 'Healthcare providers and medical practices',
-          unique_value: 'HIPAA compliant with healthcare-specific features',
-          business_model: 'Industry-specific SaaS with compliance features',
-          marketing_strategy: 'Healthcare conferences and industry publications',
-          revenue_model: 'Per-provider licensing with volume discounts',
-          go_to_market: 'Partnership with healthcare IT consultants',
-          market_size: 'Healthcare vertical valued at $800M',
-          competition: ['Medical Solution X', 'Healthcare System Y'],
-          revenue_streams: ['Provider licenses', 'Compliance modules', 'Integration services'],
-          cost_structure: ['Compliance certification', 'Industry experts', 'Secure infrastructure'],
-          key_metrics: ['Compliance score', 'Provider adoption', 'Integration rate']
-        },
-        {
-          title: `${ideaData.title} - Global Expansion`,
-          description: `An internationalized version of ${ideaData.title} for global markets.`,
-          problem_statement: ideaData.problem_statement || 'Problem statement not provided',
-          solution_concept: ideaData.solution_concept || 'Solution concept not provided',
-          target_audience: 'International businesses across multiple regions',
-          unique_value: 'Multi-language support with localized features',
-          business_model: 'Region-specific pricing with local partnerships',
-          marketing_strategy: 'Local market campaigns and regional partners',
-          revenue_model: 'Region-adjusted subscription pricing',
-          go_to_market: 'Phased rollout starting with key markets',
-          market_size: 'Global opportunity of $12B across regions',
-          competition: ['Global Platform A', 'Regional Solution B', 'Local Provider C'],
-          revenue_streams: ['Regional subscriptions', 'Localization services', 'Partner commissions'],
-          cost_structure: ['Localization', 'Regional compliance', 'International marketing'],
-          key_metrics: ['Regional adoption', 'Localization coverage', 'Cross-border usage']
-        }
-      ];
+      // Use the AI service to generate suggestions
+      const generatedSuggestions = await ideaPathway1AIService.generateCompanySuggestions(
+        ideaData,
+        user?.id || 'anonymous',
+        5 // Generate 5 suggestions
+      );
       
-      // In a real implementation, you would call the AI service to generate suggestions
-      // For example:
-      // const generatedSuggestions = await aiService.generateCompanySuggestions({
-      //   idea: ideaData,
-      //   useCompanyContext: ideaData.used_company_context,
-      //   companyId: ideaData.company_id
-      // });
-      
-      setSuggestions(mockSuggestions);
+      setSuggestions(generatedSuggestions);
       
       // Select the first suggestion by default
       setSelectedSuggestionIndex(0);
@@ -209,10 +120,31 @@ const SuggestionsScreen: React.FC = () => {
   };
   
   // Handle regenerating a suggestion
-  const handleRegenerateSuggestion = (index: number) => {
-    // In a real implementation, you would call the AI service to regenerate the suggestion
-    // For now, we'll just show an alert
-    alert(`Regenerating suggestion ${index + 1}. This would call the AI service in a real implementation.`);
+  const handleRegenerateSuggestion = async (index: number) => {
+    if (!idea) return;
+    
+    try {
+      setIsGenerating(true);
+      const originalSuggestion = suggestions[index];
+      
+      // Use the AI service to regenerate the suggestion
+      const regeneratedSuggestion = await ideaPathway1AIService.regenerateSuggestion(
+        originalSuggestion,
+        idea,
+        user?.id || 'anonymous'
+      );
+      
+      // Update the suggestion in the list
+      const updatedSuggestions = [...suggestions];
+      updatedSuggestions[index] = regeneratedSuggestion;
+      setSuggestions(updatedSuggestions);
+      
+    } catch (err) {
+      console.error('Error regenerating suggestion:', err);
+      setError('Failed to regenerate suggestion. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
   
   // Handle toggling a suggestion for merging
@@ -237,10 +169,11 @@ const SuggestionsScreen: React.FC = () => {
   // Handle saving a merged suggestion
   const handleSaveMergedSuggestion = (mergedSuggestion: Suggestion) => {
     // Add the merged suggestion to the list
-    setSuggestions([...suggestions, mergedSuggestion]);
+    const updatedSuggestions = [...suggestions, mergedSuggestion];
+    setSuggestions(updatedSuggestions);
     
     // Select the new merged suggestion
-    setSelectedSuggestionIndex(suggestions.length);
+    setSelectedSuggestionIndex(updatedSuggestions.length - 1);
     
     // Reset merge state
     setIsMerging(false);

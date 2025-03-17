@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Suggestion } from './SuggestionCard';
+import { useAuthStore } from '../../../lib/store';
+import { ideaPathway1AIService } from '../../../lib/services/idea-pathway1-ai.service';
 
 interface SuggestionMergerProps {
   suggestions: Suggestion[];
@@ -8,60 +10,101 @@ interface SuggestionMergerProps {
 }
 
 /**
- * Component for merging multiple suggestions into one
+ * Component for merging multiple suggestions into a single concept
  */
 const SuggestionMerger: React.FC<SuggestionMergerProps> = ({
   suggestions,
   onSave,
   onCancel
 }) => {
-  // Create a new suggestion with empty fields
-  const emptySuggestion: Suggestion = {
-    title: '',
-    description: '',
-    problem_statement: '',
-    solution_concept: '',
-    target_audience: '',
-    unique_value: '',
-    business_model: '',
-    marketing_strategy: '',
-    revenue_model: '',
-    go_to_market: '',
-    market_size: '',
-    competition: [],
-    revenue_streams: [],
-    cost_structure: [],
-    key_metrics: []
+  const { user } = useAuthStore();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Generate default merged suggestion by combining elements from all suggestions
+  const generateInitialMerged = (): Suggestion => {
+    // Start with the first suggestion as a base
+    const baseSuggestion = suggestions[0];
+    
+    return {
+      title: `${baseSuggestion.title} (Merged Concept)`,
+      description: baseSuggestion.description,
+      problem_statement: baseSuggestion.problem_statement,
+      solution_concept: baseSuggestion.solution_concept,
+      target_audience: baseSuggestion.target_audience,
+      unique_value: baseSuggestion.unique_value,
+      business_model: baseSuggestion.business_model || '',
+      marketing_strategy: baseSuggestion.marketing_strategy || '',
+      revenue_model: baseSuggestion.revenue_model || '',
+      go_to_market: baseSuggestion.go_to_market || '',
+      market_size: baseSuggestion.market_size || '',
+      competition: baseSuggestion.competition || [],
+      revenue_streams: baseSuggestion.revenue_streams || [],
+      cost_structure: baseSuggestion.cost_structure || [],
+      key_metrics: baseSuggestion.key_metrics || []
+    };
   };
   
-  // Initialize merged suggestion with empty fields
-  const [mergedSuggestion, setMergedSuggestion] = useState<Suggestion>(emptySuggestion);
+  const [mergedSuggestion, setMergedSuggestion] = useState<Suggestion>(generateInitialMerged());
+  const [activeField, setActiveField] = useState<keyof Suggestion>('title');
   
-  // Handle selecting a field from a suggestion
-  const handleSelectField = (field: keyof Suggestion, suggestionIndex: number) => {
-    const selectedSuggestion = suggestions[suggestionIndex];
+  // Reset merged suggestion and generate AI suggested merge when input suggestions change
+  useEffect(() => {
+    // Start with a basic merged suggestion
+    setMergedSuggestion(generateInitialMerged());
     
-    if (field === 'competition' || field === 'revenue_streams' || field === 'cost_structure' || field === 'key_metrics') {
-      // For array fields, merge with existing arrays
-      const existingArray = mergedSuggestion[field] as string[] || [];
-      const newArray = selectedSuggestion[field] as string[] || [];
+    // Generate AI-powered merged suggestion
+    const generateAIMergedSuggestion = async () => {
+      if (suggestions.length < 2) return;
       
-      // Combine arrays and remove duplicates
-      const combinedArray = [...existingArray, ...newArray].filter((item, index, self) => 
-        self.indexOf(item) === index
-      );
-      
+      try {
+        setIsGenerating(true);
+        setError(null);
+        
+        // Call the AI service to generate a merged suggestion
+        const aiMergedSuggestion = await ideaPathway1AIService.mergeSuggestions(
+          suggestions,
+          user?.id || 'anonymous'
+        );
+        
+        // Update the merged suggestion with the AI-generated one
+        setMergedSuggestion(aiMergedSuggestion);
+      } catch (err) {
+        console.error('Error generating AI-merged suggestion:', err);
+        setError('Failed to generate AI-merged suggestion. Using basic merge instead.');
+        // Keep using the basic merged suggestion if AI fails
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+    
+    generateAIMergedSuggestion();
+  }, [suggestions, user?.id]);
+  
+  // Handle selecting a value from a specific suggestion
+  const selectValueFromSuggestion = (field: keyof Suggestion, suggestionIndex: number) => {
+    const value = suggestions[suggestionIndex][field];
+    
+    if (value !== undefined) {
       setMergedSuggestion(prev => ({
         ...prev,
-        [field]: combinedArray
-      }));
-    } else {
-      // For text fields, replace with selected value
-      setMergedSuggestion(prev => ({
-        ...prev,
-        [field]: selectedSuggestion[field]
+        [field]: value
       }));
     }
+  };
+  
+  // Handle direct changes to fields
+  const handleFieldChange = (field: keyof Suggestion, value: string | string[]) => {
+    setMergedSuggestion(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  // Handle array-type field changes
+  const handleArrayChange = (field: keyof Suggestion, value: string) => {
+    const items = value.split('\n').map(item => item.trim()).filter(item => item.length > 0);
+    handleFieldChange(field, items);
   };
   
   // Handle form submission
@@ -70,216 +113,374 @@ const SuggestionMerger: React.FC<SuggestionMergerProps> = ({
     onSave(mergedSuggestion);
   };
   
-  // Generate a title for the suggestion card
-  const getSuggestionTitle = (suggestion: Suggestion, index: number) => {
-    return suggestion.title || `Suggestion ${index + 1}`;
+  // Generate a combined unique list from all suggestions for a given field
+  const getCombinedList = (field: keyof Suggestion): string[] => {
+    const allItems: string[] = [];
+    
+    suggestions.forEach(suggestion => {
+      const items = suggestion[field];
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (!allItems.includes(item)) {
+            allItems.push(item);
+          }
+        });
+      }
+    });
+    
+    return allItems;
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-5xl mx-auto">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Merge Suggestions</h2>
-      <p className="text-gray-600 mb-6">
-        Select the best elements from each suggestion to create a merged version.
-        Click on any field from the suggestions below to add it to your merged suggestion.
-      </p>
+    <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Merge Suggestions</h2>
       
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column: Source suggestions */}
-          <div className="lg:col-span-2 space-y-6">
-            <h3 className="text-lg font-medium text-gray-900">Source Suggestions</h3>
-            
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        {/* Source Suggestions */}
+        <div className="lg:col-span-2 border-r pr-6">
+          <h3 className="text-lg font-medium mb-4 text-gray-900">Source Suggestions</h3>
+          
+          <div className="space-y-6">
             {suggestions.map((suggestion, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-800 mb-2">
-                  {getSuggestionTitle(suggestion, index)}
-                </h4>
+              <div 
+                key={index}
+                className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+              >
+                <h4 className="font-medium text-gray-900 mb-2">Suggestion {index + 1}: {suggestion.title}</h4>
                 
                 <div className="space-y-3">
-                  {/* Text fields */}
-                  {Object.entries(suggestion).map(([key, value]) => {
-                    // Skip array fields and id
-                    if (
-                      key === 'id' || 
-                      key === 'competition' || 
-                      key === 'revenue_streams' || 
-                      key === 'cost_structure' || 
-                      key === 'key_metrics'
-                    ) {
-                      return null;
-                    }
-                    
-                    return (
-                      <div key={key} className="border-b border-gray-100 pb-2">
-                        <div className="flex justify-between items-start">
-                          <span className="text-xs font-medium text-gray-500 capitalize">
-                            {key.replace(/_/g, ' ')}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectField(key as keyof Suggestion, index)}
-                            className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"
-                          >
-                            Use This
-                          </button>
-                        </div>
-                        <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                          {value as string}
-                        </p>
-                      </div>
-                    );
-                  })}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('title', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Title
+                    </button>
+                    <p className="text-sm text-gray-700 truncate">{suggestion.title}</p>
+                  </div>
                   
-                  {/* Array fields */}
-                  {['competition', 'revenue_streams', 'cost_structure', 'key_metrics'].map(key => {
-                    const arrayValue = suggestion[key as keyof Suggestion] as string[] | undefined;
-                    if (!arrayValue || arrayValue.length === 0) return null;
-                    
-                    return (
-                      <div key={key} className="border-b border-gray-100 pb-2">
-                        <div className="flex justify-between items-start">
-                          <span className="text-xs font-medium text-gray-500 capitalize">
-                            {key.replace(/_/g, ' ')}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectField(key as keyof Suggestion, index)}
-                            className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"
-                          >
-                            Use These
-                          </button>
-                        </div>
-                        <ul className="text-sm text-gray-700 mt-1 list-disc list-inside">
-                          {arrayValue.slice(0, 3).map((item, i) => (
-                            <li key={i} className="line-clamp-1">{item}</li>
-                          ))}
-                          {arrayValue.length > 3 && (
-                            <li className="text-gray-500">+{arrayValue.length - 3} more</li>
-                          )}
-                        </ul>
-                      </div>
-                    );
-                  })}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('description', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Description
+                    </button>
+                    <p className="text-sm text-gray-700 line-clamp-2">{suggestion.description}</p>
+                  </div>
+                  
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('problem_statement', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Problem Statement
+                    </button>
+                    <p className="text-sm text-gray-700 line-clamp-2">{suggestion.problem_statement}</p>
+                  </div>
+                  
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('solution_concept', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Solution Concept
+                    </button>
+                    <p className="text-sm text-gray-700 line-clamp-2">{suggestion.solution_concept}</p>
+                  </div>
+                  
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('target_audience', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Target Audience
+                    </button>
+                    <p className="text-sm text-gray-700 line-clamp-2">{suggestion.target_audience}</p>
+                  </div>
+                  
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => selectValueFromSuggestion('unique_value', index)}
+                      className="text-sm text-indigo-600 hover:underline"
+                    >
+                      Use Unique Value
+                    </button>
+                    <p className="text-sm text-gray-700 line-clamp-2">{suggestion.unique_value}</p>
+                  </div>
+                  
+                  {suggestion.business_model && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => selectValueFromSuggestion('business_model', index)}
+                        className="text-sm text-indigo-600 hover:underline"
+                      >
+                        Use Business Model
+                      </button>
+                      <p className="text-sm text-gray-700 line-clamp-1">{suggestion.business_model}</p>
+                    </div>
+                  )}
+                  
+                  {suggestion.revenue_model && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => selectValueFromSuggestion('revenue_model', index)}
+                        className="text-sm text-indigo-600 hover:underline"
+                      >
+                        Use Revenue Model
+                      </button>
+                      <p className="text-sm text-gray-700 line-clamp-1">{suggestion.revenue_model}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
           
-          {/* Right column: Merged suggestion */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Merged Suggestion</h3>
+          {/* Combined Lists */}
+          <div className="mt-6 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+            <h4 className="font-medium text-indigo-900 mb-2">Combined Unique Lists</h4>
+            
+            <div className="space-y-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('competition', getCombinedList('competition'))}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Use Combined Competition
+                </button>
+                <p className="text-sm text-gray-700">
+                  {getCombinedList('competition').length} unique items
+                </p>
+              </div>
+              
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('revenue_streams', getCombinedList('revenue_streams'))}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Use Combined Revenue Streams
+                </button>
+                <p className="text-sm text-gray-700">
+                  {getCombinedList('revenue_streams').length} unique items
+                </p>
+              </div>
+              
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('cost_structure', getCombinedList('cost_structure'))}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Use Combined Cost Structure
+                </button>
+                <p className="text-sm text-gray-700">
+                  {getCombinedList('cost_structure').length} unique items
+                </p>
+              </div>
+              
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('key_metrics', getCombinedList('key_metrics'))}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Use Combined Key Metrics
+                </button>
+                <p className="text-sm text-gray-700">
+                  {getCombinedList('key_metrics').length} unique items
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Merged Result Form */}
+        <div className="lg:col-span-3">
+          <form onSubmit={handleSubmit}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Merged Concept</h3>
+              {isGenerating && (
+                <div className="flex items-center text-indigo-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>
+                  <span className="text-sm">AI is merging concepts...</span>
+                </div>
+              )}
+              {error && (
+                <div className="text-sm text-red-600">{error}</div>
+              )}
+            </div>
             
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label htmlFor="merged-title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input
                   type="text"
-                  id="merged-title"
+                  id="title"
                   value={mergedSuggestion.title}
-                  onChange={(e) => setMergedSuggestion(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  onChange={(e) => handleFieldChange('title', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                   required
+                  onFocus={() => setActiveField('title')}
                 />
               </div>
               
               {/* Description */}
               <div>
-                <label htmlFor="merged-description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
-                  id="merged-description"
+                  id="description"
                   value={mergedSuggestion.description}
-                  onChange={(e) => setMergedSuggestion(prev => ({ ...prev, description: e.target.value }))}
-                  rows={2}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  onChange={(e) => handleFieldChange('description', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
                   required
+                  onFocus={() => setActiveField('description')}
                 />
               </div>
               
-              {/* Other text fields */}
-              {[
-                'problem_statement',
-                'solution_concept',
-                'target_audience',
-                'unique_value',
-                'business_model',
-                'marketing_strategy',
-                'revenue_model',
-                'go_to_market',
-                'market_size'
-              ].map(field => (
-                <div key={field}>
-                  <label 
-                    htmlFor={`merged-${field}`} 
-                    className="block text-sm font-medium text-gray-700 mb-1 capitalize"
-                  >
-                    {field.replace(/_/g, ' ')}
-                  </label>
+              {/* Problem Statement */}
+              <div>
+                <label htmlFor="problem_statement" className="block text-sm font-medium text-gray-700 mb-1">Problem Statement</label>
+                <textarea
+                  id="problem_statement"
+                  value={mergedSuggestion.problem_statement}
+                  onChange={(e) => handleFieldChange('problem_statement', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
+                  required
+                  onFocus={() => setActiveField('problem_statement')}
+                />
+              </div>
+              
+              {/* Solution Concept */}
+              <div>
+                <label htmlFor="solution_concept" className="block text-sm font-medium text-gray-700 mb-1">Solution Concept</label>
+                <textarea
+                  id="solution_concept"
+                  value={mergedSuggestion.solution_concept}
+                  onChange={(e) => handleFieldChange('solution_concept', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
+                  required
+                  onFocus={() => setActiveField('solution_concept')}
+                />
+              </div>
+              
+              {/* Target Audience */}
+              <div>
+                <label htmlFor="target_audience" className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+                <textarea
+                  id="target_audience"
+                  value={mergedSuggestion.target_audience}
+                  onChange={(e) => handleFieldChange('target_audience', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={2}
+                  required
+                  onFocus={() => setActiveField('target_audience')}
+                />
+              </div>
+              
+              {/* Unique Value */}
+              <div>
+                <label htmlFor="unique_value" className="block text-sm font-medium text-gray-700 mb-1">Unique Value Proposition</label>
+                <textarea
+                  id="unique_value"
+                  value={mergedSuggestion.unique_value}
+                  onChange={(e) => handleFieldChange('unique_value', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={2}
+                  required
+                  onFocus={() => setActiveField('unique_value')}
+                />
+              </div>
+              
+              {/* Business Model */}
+              <div>
+                <label htmlFor="business_model" className="block text-sm font-medium text-gray-700 mb-1">Business Model</label>
+                <textarea
+                  id="business_model"
+                  value={mergedSuggestion.business_model || ''}
+                  onChange={(e) => handleFieldChange('business_model', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={2}
+                  onFocus={() => setActiveField('business_model')}
+                />
+              </div>
+              
+              {/* Revenue Model */}
+              <div>
+                <label htmlFor="revenue_model" className="block text-sm font-medium text-gray-700 mb-1">Revenue Model</label>
+                <textarea
+                  id="revenue_model"
+                  value={mergedSuggestion.revenue_model || ''}
+                  onChange={(e) => handleFieldChange('revenue_model', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={2}
+                  onFocus={() => setActiveField('revenue_model')}
+                />
+              </div>
+              
+              {/* List Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Competition */}
+                <div>
+                  <label htmlFor="competition" className="block text-sm font-medium text-gray-700 mb-1">Competition (one per line)</label>
                   <textarea
-                    id={`merged-${field}`}
-                    value={mergedSuggestion[field as keyof Suggestion] as string}
-                    onChange={(e) => setMergedSuggestion(prev => ({ 
-                      ...prev, 
-                      [field]: e.target.value 
-                    }))}
-                    rows={2}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    required
+                    id="competition"
+                    value={Array.isArray(mergedSuggestion.competition) ? mergedSuggestion.competition.join('\n') : ''}
+                    onChange={(e) => handleArrayChange('competition', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    rows={3}
+                    onFocus={() => setActiveField('competition')}
                   />
                 </div>
-              ))}
-              
-              {/* Array fields */}
-              {[
-                { key: 'competition', label: 'Competition' },
-                { key: 'revenue_streams', label: 'Revenue Streams' },
-                { key: 'cost_structure', label: 'Cost Structure' },
-                { key: 'key_metrics', label: 'Key Metrics' }
-              ].map(({ key, label }) => {
-                const arrayValue = mergedSuggestion[key as keyof Suggestion] as string[] || [];
                 
-                return (
-                  <div key={key}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {label}
-                    </label>
-                    <ul className="text-sm text-gray-700 mt-1 list-disc list-inside bg-white p-2 rounded border border-gray-200 min-h-[40px]">
-                      {arrayValue.length > 0 ? (
-                        arrayValue.map((item, i) => (
-                          <li key={i} className="mb-1">{item}</li>
-                        ))
-                      ) : (
-                        <li className="text-gray-400 italic">No items selected</li>
-                      )}
-                    </ul>
-                  </div>
-                );
-              })}
+                {/* Revenue Streams */}
+                <div>
+                  <label htmlFor="revenue_streams" className="block text-sm font-medium text-gray-700 mb-1">Revenue Streams (one per line)</label>
+                  <textarea
+                    id="revenue_streams"
+                    value={Array.isArray(mergedSuggestion.revenue_streams) ? mergedSuggestion.revenue_streams.join('\n') : ''}
+                    onChange={(e) => handleArrayChange('revenue_streams', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    rows={3}
+                    onFocus={() => setActiveField('revenue_streams')}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+            
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
+                Save Merged Concept
+              </button>
+            </div>
+          </form>
         </div>
-        
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Save Merged Suggestion
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };
