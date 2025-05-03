@@ -48,7 +48,8 @@ const featureGroups: FeatureGroup[] = [
     description: 'Control features of the Idea Playground',
     features: [
       { key: 'enhancedIdeaPlayground', name: 'Enhanced Idea Playground', description: 'Guided workflow for idea development' },
-      { key: 'useRealAI', name: 'Use Real AI', description: 'Use real AI instead of mock AI for all AI components throughout the application' },
+      { key: 'useRealAI', name: 'Real AI Only Mode', description: 'Generate only real AI suggestions without any mock examples' },
+      { key: 'useMockAI', name: 'Use Mock Examples', description: 'Allow mock examples as fallback when AI generation fails' },
       { key: 'multiTieredAI', name: 'Multi-tiered AI', description: 'Use different AI models based on user tier' }
     ]
   }

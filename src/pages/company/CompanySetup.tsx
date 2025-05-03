@@ -121,7 +121,7 @@ export default function CompanySetup() {
 
   const handleAddIndustry = (industry: string) => {
     if (!formData.industries.includes(industry)) {
-      setFormData(prev => ({
+      setFormData((prev: typeof formData) => ({
         ...prev,
         industries: [...prev.industries, industry]
       }));
@@ -130,9 +130,9 @@ export default function CompanySetup() {
   };
 
   const handleRemoveIndustry = (industry: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      industries: prev.industries.filter(i => i !== industry)
+      industries: prev.industries.filter((i: string) => i !== industry)
     }));
   };
 
@@ -158,14 +158,6 @@ export default function CompanySetup() {
         setIsLoading(true);
         setError('');
 
-        // Check if user owns any companies
-        const { data: ownedCompanies, error: ownedError } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('owner_id', user.id);
-
-        if (ownedError) throw ownedError;
-
         // Check if user is a member of any companies
         const { data: memberships, error: memberError } = await supabase
           .from('company_members')
@@ -174,9 +166,8 @@ export default function CompanySetup() {
 
         if (memberError) throw memberError;
 
-        // If user has any companies or memberships, redirect to dashboard
-        if ((ownedCompanies && ownedCompanies.length > 0) || 
-            (memberships && memberships.length > 0)) {
+        // If user is a member of any companies, redirect to dashboard
+        if (memberships && memberships.length > 0) {
           navigate('/company/dashboard');
         }
       } catch (error: any) {
@@ -190,11 +181,14 @@ export default function CompanySetup() {
     checkExistingCompany();
   }, [user, navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Unified input handler for all input, textarea, and select elements
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target;
     if (name.startsWith('social_links.')) {
       const network = name.split('.')[1];
-      setFormData(prev => ({
+      setFormData((prev: typeof formData) => ({
         ...prev,
         social_links: {
           ...prev.social_links,
@@ -202,7 +196,7 @@ export default function CompanySetup() {
         }
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev: typeof formData) => ({
         ...prev,
         [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
       }));
@@ -214,6 +208,32 @@ export default function CompanySetup() {
 
     setIsLoading(true);
     setError('');
+
+    // Prepare data for saving, separating direct columns and metadata
+    const companyData = {
+      name: formData.name,
+      industries: formData.industries, // Now matches TEXT[] in DB
+      website: formData.website,
+      target_market: formData.target_market, // New column
+      business_model: formData.business_model, // New column
+      revenue_model: formData.revenue_model, // New column
+      team_size: formData.team_size, // New column
+      description: formData.description,
+      mission: formData.mission, // New column
+      is_public: formData.is_public, // New column
+      social_links: formData.social_links, // New JSONB column
+      metadata: { // Store remaining fields in metadata
+        market_size: formData.market_size,
+        competition: formData.competition,
+        pricing_strategy: formData.pricing_strategy,
+        product_description: formData.product_description,
+        features: formData.features,
+        tech_stack: formData.tech_stack,
+        culture: formData.culture,
+        remote_policy: formData.remote_policy,
+        // Add any other fields not directly mapped to columns
+      }
+    };
     
     try {
       if (companyId) {
@@ -221,16 +241,8 @@ export default function CompanySetup() {
         const { error: updateError } = await supabase
           .from('companies')
           .update({
-            name: formData.name,
-            industries: formData.industries,
-            website: formData.website,
-            target_market: formData.target_market,
-            business_model: formData.business_model,
-            description: formData.description,
-            mission: formData.mission,
-            is_public: formData.is_public,
-            social_links: formData.social_links,
-            updated_at: new Date().toISOString()
+            ...companyData, // Spread the prepared data
+            updated_at: new Date().toISOString() // Keep updated_at logic
           })
           .eq('id', companyId);
 
@@ -239,18 +251,7 @@ export default function CompanySetup() {
         // Create new company
         const { data: company, error: companyError } = await supabase
           .from('companies')
-          .insert([{
-            name: formData.name,
-            industries: formData.industries,
-            website: formData.website,
-            target_market: formData.target_market,
-            business_model: formData.business_model,
-            description: formData.description,
-            mission: formData.mission,
-            is_public: formData.is_public,
-            social_links: formData.social_links,
-            owner_id: user.id
-          }])
+          .insert([companyData]) // Insert the prepared data
           .select()
           .single();
 
@@ -269,7 +270,7 @@ export default function CompanySetup() {
           .insert({
             company_id: company.id,
             user_id: user.id,
-            role: 'owner',
+            // role: 'owner', // Removed: Role is handled by RBAC trigger
             title: 'Founder',
             joined_at: new Date().toISOString()
           });
@@ -313,9 +314,7 @@ export default function CompanySetup() {
   };
 
   const handleExit = () => {
-    if (window.confirm('Are you sure you want to exit? Your progress will be saved.')) {
-      navigate('/dashboard');
-    }
+    handleSave(true);
   };
 
   const renderStepContent = () => {
@@ -346,7 +345,7 @@ export default function CompanySetup() {
               
               {/* Selected Industries */}
               <div className="mt-2 flex flex-wrap gap-2">
-                {formData.industries.map((industry) => (
+                {formData.industries.map((industry: string) => (
                   <span
                     key={industry}
                     className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"

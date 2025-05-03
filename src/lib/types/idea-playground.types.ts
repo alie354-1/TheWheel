@@ -1,266 +1,143 @@
-export interface IdeaPlaygroundCanvas {
-  id: string;
-  user_id: string;
-  company_id?: string;
-  name: string;
-  description?: string;
-  is_archived: boolean;
-  created_at: string;
-  updated_at: string;
+/**
+ * Core type definitions for the Idea Playground functionality
+ */
+
+import { IdeaGenerationResult, RefinementResult } from './idea-generation.types';
+
+/**
+ * Represents the status of an idea in its lifecycle
+ */
+export enum IdeaStatus {
+  DRAFT = 'draft',
+  IN_PROGRESS = 'in_progress',
+  REFINED = 'refined',
+  VALIDATED = 'validated',
+  IMPLEMENTED = 'implemented',
+  ARCHIVED = 'archived'
 }
 
+/**
+ * Protection level for intellectual property
+ */
+export enum ProtectionLevel {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+  CONFIDENTIAL = 'confidential'
+}
+
+/**
+ * Canvas types for idea visualization
+ */
+export enum CanvasType {
+  STANDARD = 'standard',
+  BUSINESS_MODEL = 'business-model',
+  PROBLEM_SOLUTION = 'problem-solution',
+  CUSTOMER_JOURNEY = 'customer-journey',
+  VALUE_PROPOSITION = 'value-proposition'
+}
+
+/**
+ * Idea types for categorization
+ */
+export enum IdeaType {
+  NEW_COMPANY = 'new_company',
+  NEW_PRODUCT = 'new_product',
+  NEW_FEATURE = 'new_feature',
+  IMPROVEMENT = 'improvement'
+}
+
+/**
+ * Structure matching the database schema for ideas
+ * Note: Uses snake_case for database compatibility
+ */
 export interface IdeaPlaygroundIdea {
   id: string;
-  canvas_id: string;
   title: string;
   description: string;
   problem_statement: string;
   solution_concept: string;
-  target_audience: string;
+  target_audience: string[];
   unique_value: string;
   business_model: string;
-  marketing_strategy: string;
-  revenue_model: string;
-  go_to_market: string;
-  market_size: string;
-  used_company_context: boolean;
-  company_relevance?: CompanyRelevance;
-  is_archived: boolean;
-  version: number;
+  canvas_data?: Record<string, any>;
+  canvas_type?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  parent_idea_id?: string;
+  refinement_feedback?: string;
+  protection_level: string;
   status?: string;
-  current_stage_id?: string;
-  created_at: string;
-  updated_at: string;
+  is_saved?: boolean; // Whether the idea is saved by the user
+  used_company_context?: boolean; // Whether company context was used to generate this idea
+  idea_type?: string; // Type of idea (company, product, feature, improvement)
+  company_id?: string; // ID of the company this idea is associated with (for product/feature)
+  last_edited?: string; // Timestamp of when the idea was last edited
 }
 
-export interface IdeaPlaygroundComponent {
-  id: string;
-  idea_id: string;
-  component_type: string;
-  content: string;
-  is_selected: boolean;
-  rating?: number;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundTag {
+/**
+ * Interface for company information
+ */
+export interface Company {
   id: string;
   name: string;
-  created_at: string;
-}
-
-export interface IdeaPlaygroundIdeaTag {
-  idea_id: string;
-  tag_id: string;
-  created_at: string;
-}
-
-export interface IdeaPlaygroundFeedback {
-  id: string;
-  idea_id: string;
-  feedback_type: 'strength' | 'weakness' | 'opportunity' | 'threat' | 'general' | 'refinement';
-  content: string;
-  created_at: string;
-}
-
-export interface CompanyRelevance {
-  existingMarkets: string[];
-  customerSynergies: string[];
-  complementaryProducts: string[];
-  strategicFit: string;
-}
-
-// New types for the enhanced Idea Playground
-export interface IdeaPlaygroundStage {
-  id: string;
-  key: string;
-  name: string;
+  slug?: string;
   description?: string;
-  order_index: number;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface IdeaPlaygroundProgress {
-  id: string;
-  idea_id: string;
-  stage_id: string;
-  is_completed: boolean;
-  completion_data?: any;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundValidationExperiment {
-  id: string;
-  idea_id: string;
-  name: string;
-  hypothesis: string;
-  methodology: string;
-  success_criteria: string;
-  results?: string;
-  is_successful?: boolean;
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundCustomerSegment {
-  id: string;
-  idea_id: string;
-  name: string;
-  description: string;
-  pain_points: string;
-  needs: string;
-  demographics?: {
-    age_range?: string;
-    gender?: string;
-    income_level?: string;
-    location?: string;
-    education?: string;
-    occupation?: string;
-    [key: string]: any;
-  };
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundCompetitor {
-  id: string;
-  idea_id: string;
-  name: string;
-  description: string;
-  strengths?: string;
-  weaknesses?: string;
-  market_share?: string;
-  pricing_model?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundBusinessModel {
-  id: string;
-  idea_id: string;
-  revenue_streams: string[];
-  cost_structure: string[];
-  key_resources: string[];
-  key_activities: string[];
-  key_partners?: string[];
-  channels?: string[];
-  customer_relationships?: string[];
-  unit_economics?: {
-    cac?: number;
-    ltv?: number;
-    margin?: number;
-    payback_period?: number;
-    [key: string]: any;
-  };
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IdeaPlaygroundMilestone {
-  id: string;
-  idea_id: string;
-  name: string;
-  description: string;
-  target_date?: string;
-  is_completed: boolean;
-  completion_date?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Parameter interfaces for API calls
-export interface IdeaGenerationParams {
-  topic?: string;
+  logo_url?: string;
+  website?: string;
   industry?: string;
-  problem_area?: string;
-  target_audience?: string;
-  technology?: string;
-  business_model_preference?: string;
-  market_size_preference?: string;
-  innovation_level?: string;
-  resource_constraints?: string[];
-  count?: number;
-  useCompanyContext?: boolean;
-  market_focus?: 'existing' | 'adjacent' | 'new';
+  size?: string;
+  stage?: string;
+  founded_date?: string;
+  is_formed?: boolean;
+  created_at: string;
+  updated_at: string;
+  metadata?: Record<string, any>;
 }
 
-export interface IdeaRefinementParams {
-  idea_id: string;
-  focus_areas: ('problem' | 'solution' | 'market' | 'business_model' | 'go_to_market')[];
-  specific_questions?: string[];
-  improvement_direction?: string;
-  detailed_feedback?: string;
+/**
+ * Business model canvas sections
+ */
+export interface BusinessModelCanvas {
+  id: string;
+  ideaId: string;
+  keyPartners: string[];
+  keyActivities: string[];
+  keyResources: string[];
+  valuePropositions: string[];
+  customerRelationships: string[];
+  channels: string[];
+  customerSegments: string[];
+  costStructure: string[];
+  revenueStreams: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface IdeaExportParams {
-  idea_id: string;
-  format: 'pdf' | 'docx' | 'slides' | 'canvas';
-  include_sections: string[];
+/**
+ * Value proposition canvas sections
+ */
+export interface ValuePropositionCanvas {
+  id: string;
+  ideaId: string;
+  customerJobs: string[];
+  customerPains: string[];
+  customerGains: string[];
+  products: string[];
+  painRelievers: string[];
+  gainCreators: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface StageAdvanceParams {
-  idea_id: string;
-  completion_data?: any;
-}
-
-export interface ValidationExperimentParams {
-  idea_id: string;
-  name: string;
-  hypothesis: string;
-  methodology: string;
-  success_criteria: string;
-}
-
-export interface ValidationExperimentResultParams {
-  experiment_id: string;
-  results: string;
-  is_successful: boolean;
-}
-
-export interface CustomerSegmentParams {
-  idea_id: string;
-  name: string;
-  description: string;
-  pain_points: string;
-  needs: string;
-  demographics?: any;
-}
-
-export interface CompetitorParams {
-  idea_id: string;
-  name: string;
-  description: string;
-  strengths?: string;
-  weaknesses?: string;
-  market_share?: string;
-  pricing_model?: string;
-}
-
-export interface BusinessModelParams {
-  idea_id: string;
-  revenue_streams: string[];
-  cost_structure: string[];
-  key_resources: string[];
-  key_activities: string[];
-  key_partners?: string[];
-  channels?: string[];
-  customer_relationships?: string[];
-  unit_economics?: any;
-}
-
-export interface MilestoneParams {
-  idea_id: string;
-  name: string;
-  description: string;
-  target_date?: string;
-}
-
-export interface MilestoneCompletionParams {
-  milestone_id: string;
-  completion_date?: string;
+/**
+ * Interface for company member (company_members table)
+ */
+export interface CompanyMember {
+  id: string;
+  company_id: string;
+  user_id: string;
+  title?: string;
+  joined_at: string;
+  invited_by?: string;
 }

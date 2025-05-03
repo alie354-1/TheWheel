@@ -76,6 +76,30 @@ To apply the schema to a new Supabase project:
 - Collaborative features
 - AI-powered refinement and validation
 
+## Recent Updates
+
+### Dashboard Loading Fix
+
+We've implemented a comprehensive fix for dashboard loading issues that includes:
+
+- Enhanced error boundaries for better error isolation
+- Improved component-level error handling
+- Proper React.Suspense implementation for async components
+- Better loading states and fallback UIs
+- Detailed diagnostics for troubleshooting
+
+For more information, see:
+- [Dashboard Loading Fix](./docs/DASHBOARD_LOADING_FIX.md) - Overview of the fix
+- [Detailed Fix Documentation](./docs/DASHBOARD_LOADING_FIX_DETAILS.md) - Technical implementation details
+
+To run the dashboard diagnostics:
+
+```bash
+node scripts/run-dashboard-diagnostics.js
+```
+
+This will open a test runner that will help diagnose any dashboard loading issues.
+
 ## Cleanup Notes
 
 This repository has been cleaned up to remove temporary fix scripts, old migrations, and unused files. All of these files have been moved to the `archive` directory, which is excluded from git.

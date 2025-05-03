@@ -1,0 +1,229 @@
+import React, { useState, useEffect } from 'react';
+import { Button, Typography, Box, Paper, Grid, CircularProgress } from '@mui/material';
+import { IdeaPlaygroundIdea } from '../../../lib/types/idea-playground.types';
+import SuggestionCard, { Suggestion } from './SuggestionCard';
+import SuggestionMerger from './SuggestionMerger';
+import { ideaPathway1AIService } from '../../../lib/services/idea-pathway1-ai.service';
+
+interface SuggestionsScreenProps {
+  idea: IdeaPlaygroundIdea;
+  userId: string;
+  onNext: (selectedSuggestion: Suggestion) => void;
+  onBack: () => void;
+}
+
+const SuggestionsScreen: React.FC<SuggestionsScreenProps> = ({ idea, userId, onNext, onBack }) => {
+  // State for suggestions
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Suggestion[]>([]);
+  const [mergedSuggestion, setMergedSuggestion] = useState<Suggestion | null>(null);
+  
+  // State for loading and errors
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isMerging, setIsMerging] = useState<boolean>(false);
+
+  // Generate suggestions when component mounts
+  useEffect(() => {
+    generateSuggestions();
+  }, [idea]);
+
+  // Function to fetch idea and generate suggestions
+  const fetchIdeaAndGenerateSuggestions = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Generate suggestions
+      await generateSuggestions();
+    } catch (err) {
+      console.error('Error generating suggestions:', err);
+      setError('Failed to generate suggestions. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to generate suggestion options
+  const generateSuggestions = async () => {
+    try {
+      // Call AI service to generate suggestions
+      const generatedSuggestions = await ideaPathway1AIService.generateCompanySuggestions(
+        idea,
+        userId,
+        5 // Number of suggestions to generate
+      );
+      
+      console.log('Successfully generated suggestions:', generatedSuggestions.length);
+      
+      // Set the suggestions in state
+      setSuggestions(generatedSuggestions);
+      setSelectedSuggestions([]);
+      setMergedSuggestion(null);
+    } catch (err) {
+      console.error('Error generating suggestions:', err);
+      setError('Failed to generate suggestions. Please try again.');
+      // Don't clear suggestions if there's an error, so user can still see previous results
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Toggle suggestion selection
+  const toggleSuggestionSelection = (suggestion: Suggestion) => {
+    // If already selected, remove from selection
+    if (selectedSuggestions.some(s => s.title === suggestion.title)) {
+      setSelectedSuggestions(prev => prev.filter(s => s.title !== suggestion.title));
+    } else {
+      // Otherwise, add to selection
+      setSelectedSuggestions(prev => [...prev, suggestion]);
+    }
+  };
+
+  // Start the merging process
+  const startMerging = () => {
+    setIsMerging(true);
+  };
+
+  // Cancel merging process
+  const cancelMerging = () => {
+    setIsMerging(false);
+  };
+
+  // Save merged suggestion and proceed
+  const saveMergedSuggestion = (suggestion: Suggestion) => {
+    setMergedSuggestion(suggestion);
+    setIsMerging(false);
+    
+    // If onNext is provided, proceed with the merged suggestion
+    if (onNext) {
+      onNext(suggestion);
+    }
+  };
+
+  // Handle continuing with a single suggestion
+  const continueWithSuggestion = (suggestion: Suggestion) => {
+    if (onNext) {
+      onNext(suggestion);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" p={4} height="100%">
+        <CircularProgress size={60} />
+        <Typography variant="h6" mt={2}>Generating suggestions...</Typography>
+        <Typography variant="body1" color="textSecondary">
+          We're using AI to create multiple business ideas based on your concept.
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error && suggestions.length === 0) {
+    return (
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" p={4} height="100%">
+        <Typography variant="h6" color="error" gutterBottom>
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={fetchIdeaAndGenerateSuggestions}
+        >
+          Try Again
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={onBack} 
+          sx={{ mt: 2 }}
+        >
+          Go Back
+        </Button>
+      </Box>
+    );
+  }
+
+  // Merging interface
+  if (isMerging) {
+    return (
+      <SuggestionMerger 
+        suggestions={selectedSuggestions} 
+        onSave={saveMergedSuggestion}
+        onCancel={cancelMerging}
+      />
+    );
+  }
+
+  // Main suggestion selection interface
+  return (
+    <Box p={3}>
+      <Typography variant="h5" gutterBottom>
+        Business Idea Variations
+      </Typography>
+      
+      <Typography variant="body1" paragraph>
+        We've generated multiple variations of your business idea. Select one to continue, or select multiple to merge them.
+      </Typography>
+      
+      {error && (
+        <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'error.light', color: 'error.contrastText' }}>
+          <Typography variant="body2">{error}</Typography>
+          <Button 
+            variant="contained" 
+            size="small" 
+            sx={{ mt: 1 }} 
+            onClick={generateSuggestions}
+          >
+            Regenerate Suggestions
+          </Button>
+        </Paper>
+      )}
+
+      <Grid container spacing={3}>
+        {suggestions.map((suggestion, index) => (
+          <Grid item xs={12} md={6} key={index}>
+            <SuggestionCard 
+              suggestion={suggestion} 
+              isSelected={selectedSuggestions.some(s => s.title === suggestion.title)}
+              onSelect={() => toggleSuggestionSelection(suggestion)}
+              onContinue={() => continueWithSuggestion(suggestion)}
+            />
+          </Grid>
+        ))}
+      </Grid>
+
+      <Box display="flex" justifyContent="space-between" mt={4}>
+        <Button 
+          variant="outlined" 
+          onClick={onBack}
+        >
+          Back
+        </Button>
+
+        <Box>
+          <Button 
+            variant="outlined" 
+            onClick={generateSuggestions} 
+            sx={{ mr: 2 }}
+          >
+            Regenerate Suggestions
+          </Button>
+          
+          <Button 
+            variant="contained" 
+            color="primary" 
+            disabled={selectedSuggestions.length < 2}
+            onClick={startMerging}
+          >
+            Merge Selected ({selectedSuggestions.length})
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default SuggestionsScreen;

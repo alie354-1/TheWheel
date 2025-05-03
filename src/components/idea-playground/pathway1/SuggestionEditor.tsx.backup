@@ -1,0 +1,240 @@
+import React, { useState } from 'react';
+import { Button, Box, Typography, TextField, Grid, Paper, Divider } from '@mui/material';
+import { Suggestion } from './SuggestionCard';
+
+interface SuggestionEditorProps {
+  suggestion: Suggestion;
+  onSave: (suggestion: Suggestion) => void;
+  onCancel: () => void;
+}
+
+/**
+ * SuggestionEditor component allows editing of a suggestion's fields
+ */
+const SuggestionEditor: React.FC<SuggestionEditorProps> = ({ suggestion, onSave, onCancel }) => {
+  // State for the edited suggestion
+  const [editedSuggestion, setEditedSuggestion] = useState<Suggestion>(suggestion);
+  
+  // Handle field updates
+  const handleFieldUpdate = (field: keyof Suggestion, value: string) => {
+    setEditedSuggestion(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(editedSuggestion);
+  };
+
+  // Handle array field updates (for fields like strengths, weaknesses, etc.)
+  const handleArrayFieldUpdate = (field: keyof Suggestion, value: string) => {
+    const items = value.split(/[,\n]/).map(item => item.trim()).filter(item => item);
+    
+    setEditedSuggestion(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: items
+      };
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="suggestion-editor">
+      <Paper elevation={3} className="suggestion-editor-paper">
+        <Box p={3}>
+          <Typography variant="h5" gutterBottom>
+            Edit Suggestion
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1">Title</Typography>
+              <TextField
+                fullWidth
+                value={editedSuggestion.title}
+                onChange={(e) => handleFieldUpdate('title', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="subtitle1">Description</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={editedSuggestion.description}
+                onChange={(e) => handleFieldUpdate('description', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Problem Statement</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={editedSuggestion.problem_statement}
+                onChange={(e) => handleFieldUpdate('problem_statement', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Solution Concept</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={editedSuggestion.solution_concept}
+                onChange={(e) => handleFieldUpdate('solution_concept', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Target Audience</Typography>
+              <TextField
+                fullWidth
+                value={editedSuggestion.target_audience}
+                onChange={(e) => handleFieldUpdate('target_audience', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Unique Value</Typography>
+              <TextField
+                fullWidth
+                value={editedSuggestion.unique_value}
+                onChange={(e) => handleFieldUpdate('unique_value', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider />
+              <Typography variant="h6" gutterBottom mt={2}>
+                Business Details
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Business Model</Typography>
+              <TextField
+                fullWidth
+                value={editedSuggestion.business_model}
+                onChange={(e) => handleFieldUpdate('business_model', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Revenue Model</Typography>
+              <TextField
+                fullWidth
+                value={editedSuggestion.revenue_model}
+                onChange={(e) => handleFieldUpdate('revenue_model', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Marketing Strategy</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                value={editedSuggestion.marketing_strategy}
+                onChange={(e) => handleFieldUpdate('marketing_strategy', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Go-to-Market Strategy</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                value={editedSuggestion.go_to_market}
+                onChange={(e) => handleFieldUpdate('go_to_market', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider />
+              <Typography variant="h6" gutterBottom mt={2}>
+                SWOT Analysis
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Strengths</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={Array.isArray(editedSuggestion.strengths) ? editedSuggestion.strengths.join('\n') : ''}
+                onChange={(e) => handleArrayFieldUpdate('strengths', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Weaknesses</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={Array.isArray(editedSuggestion.weaknesses) ? editedSuggestion.weaknesses.join('\n') : ''}
+                onChange={(e) => handleArrayFieldUpdate('weaknesses', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Opportunities</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={Array.isArray(editedSuggestion.opportunities) ? editedSuggestion.opportunities.join('\n') : ''}
+                onChange={(e) => handleArrayFieldUpdate('opportunities', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Threats</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={Array.isArray(editedSuggestion.threats) ? editedSuggestion.threats.join('\n') : ''}
+                onChange={(e) => handleArrayFieldUpdate('threats', e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box display="flex" justifyContent="space-between" mt={3}>
+                <Button 
+                  variant="outlined" 
+                  color="secondary" 
+                  onClick={onCancel}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  type="submit"
+                >
+                  Save Changes
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </form>
+  );
+};
+
+export default SuggestionEditor;

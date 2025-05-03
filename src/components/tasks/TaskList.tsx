@@ -40,8 +40,8 @@ const TaskList: React.FC<TaskListProps> = ({
   // Return early if no tasks
   if (!tasks || tasks.length === 0) {
     return (
-      <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
-        <p className="text-sm text-gray-500">No tasks available</p>
+      <div className="text-center py-8 bg-base-100 rounded-lg border-2 border-dashed border-base-300">
+        <p className="text-sm text-base-content/70">No tasks available</p>
       </div>
     );
   }

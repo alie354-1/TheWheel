@@ -141,8 +141,14 @@ export class StandupAIService {
   // Helper method to check feature flags and reset LLM service if needed
   private checkAndResetLLMService(): void {
     try {
-      // Don't reset the LLM service - this is causing issues
-      // featureFlagsService.resetLLMService();
+      // Re-enabled LLM service reset with error handling
+      try {
+        featureFlagsService.resetLLMService();
+        console.log('LLM service reset successful');
+      } catch (resetError) {
+        console.error('Error resetting LLM service:', resetError);
+        // Continue execution despite reset error
+      }
       
       // Log the current feature flags state
       const { featureFlags } = useAuthStore.getState();

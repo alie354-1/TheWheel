@@ -6,6 +6,7 @@ import { mockAuthService } from '../services/mock-auth.service';
 import { mockProfileService } from '../services/mock-profile.service';
 import { ExtendedUserProfile } from '../types/extended-profile.types';
 import { useAuthStore } from '../store';
+import { loggingService } from '../services/logging.service';
 
 // Set to false to use real authentication services
 const USE_MOCK_SERVICES = false;
@@ -77,6 +78,8 @@ export function useAuth() {
       const { user, error } = await auth.signIn(email, password);
       
       if (error) {
+        // Log the failed sign-in attempt
+        loggingService.logAuth('login', undefined, 'password', false, error.message);
         throw error;
       }
       
@@ -85,6 +88,12 @@ export function useAuth() {
       if (user) {
         const userProfile = await profileSvc.getProfile(user.id);
         setProfile(userProfile);
+        
+        // Log the successful sign-in
+        loggingService.logAuth('login', user.id, 'password', true);
+        
+        // Start a new session
+        loggingService.startSession(user.id, undefined, userProfile?.company_id);
       }
       
       return { user, error: null };
@@ -100,6 +109,13 @@ export function useAuth() {
   async function signOut() {
     try {
       setLoading(true);
+      
+      // Log the sign-out event and end the session before actual signout
+      if (user) {
+        loggingService.logAuth('logout', user.id);
+        await loggingService.endSession();
+      }
+      
       const { error } = await auth.signOut();
       
       if (error) {
@@ -119,6 +135,51 @@ export function useAuth() {
     }
   }
   
+  // Helper function to calculate profile completion percentage
+  const calculateProfileCompletion = (profile: ExtendedUserProfile | null): number => {
+    if (!profile) return 0;
+    
+    const requiredFields = [
+      'full_name',
+      'email',
+      'avatar_url'
+    ];
+    
+    const optionalFields = [
+      'company_id',
+      'company_name',
+      'company_role',
+      'company_logo_url',
+      'company_description',
+      'company_industry',
+      'company_size',
+      'company_stage'
+    ];
+    
+    // Count required fields
+    const completedRequired = requiredFields.filter(
+      field => profile[field as keyof ExtendedUserProfile]
+    ).length;
+    
+    // Count optional fields
+    const completedOptional = optionalFields.filter(
+      field => profile[field as keyof ExtendedUserProfile]
+    ).length;
+    
+    // Calculate weighted score (required fields count more)
+    const requiredWeight = 0.7;
+    const optionalWeight = 0.3;
+    
+    const requiredScore = completedRequired / requiredFields.length * requiredWeight;
+    const optionalScore = completedOptional / optionalFields.length * optionalWeight;
+    
+    // Total score (0-1)
+    const totalScore = requiredScore + optionalScore;
+    
+    // Return as percentage
+    return Math.round(totalScore * 100);
+  };
+  
   async function updateProfile(updates: Partial<ExtendedUserProfile>) {
     if (!user) {
       return { profile: null, error: new Error('No user logged in') };
@@ -126,16 +187,46 @@ export function useAuth() {
     
     try {
       setLoading(true);
+      
+      // Log the profile update attempt
+      loggingService.logEvent({
+        event_type: 'user_action',
+        event_source: 'profile',
+        action: 'profile_update_attempt',
+        data: {
+          update_fields: Object.keys(updates),
+          user_id: user.id
+        }
+      });
+      
       const updatedProfile = await profileSvc.updateProfile(user.id, updates);
       
       if (updatedProfile) {
         setProfile(updatedProfile);
+        
+        // Log successful profile update
+        loggingService.logEvent({
+          event_type: 'user_action',
+          event_source: 'profile',
+          action: 'profile_updated',
+          data: {
+            update_fields: Object.keys(updates),
+            profile_completion: calculateProfileCompletion(updatedProfile)
+          }
+        });
       }
       
       return { profile: updatedProfile, error: null };
     } catch (err: any) {
       console.error('Error updating profile:', err);
       setError(err);
+      
+      // Log the error
+      loggingService.logError(err, 'ProfileUpdate', {
+        update_fields: Object.keys(updates),
+        user_id: user.id
+      });
+      
       return { profile: null, error: err };
     } finally {
       setLoading(false);

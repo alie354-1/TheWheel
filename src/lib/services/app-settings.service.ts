@@ -16,6 +16,16 @@ export interface AppSettings {
   features: {
     [key: string]: boolean;
   };
+  huggingface?: {
+    api_key: string;
+    spaces: {
+      base: { url: string; model_id: string };
+      company: { url: string; model_id: string };
+      abstraction: { url: string; model_id: string };
+    };
+    default_tier: 'base' | 'company' | 'abstraction';
+    enabled: boolean;
+  };
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -31,10 +41,68 @@ const DEFAULT_SETTINGS: AppSettings = {
     showTips: true,
     cardSize: 'medium'
   },
-  features: {}
+  features: {},
+  huggingface: {
+    api_key: '',
+    spaces: {
+      base: { url: '', model_id: '' },
+      company: { url: '', model_id: '' },
+      abstraction: { url: '', model_id: '' }
+    },
+    default_tier: 'base',
+    enabled: false
+  }
 };
 
 class AppSettingsService {
+  // Global app settings methods (app-wide, not user-specific)
+  async getGlobalSettings(key: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', key)
+        .single();
+
+      if (error) {
+        console.error(`Error fetching global settings for key ${key}:`, error);
+        return null;
+      }
+      
+      return data.value;
+    } catch (error) {
+      console.error(`Error in getGlobalSettings for key ${key}:`, error);
+      return null;
+    }
+  }
+  
+  async updateGlobalSettings(key: string, value: any): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .upsert({
+          key,
+          value,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Error updating global settings for key ${key}:`, error);
+        return null;
+      }
+      
+      return data.value;
+    } catch (error) {
+      console.error(`Error in updateGlobalSettings for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  // User-specific settings methods
   async getUserSettings(userId: string): Promise<AppSettings> {
     try {
       const { data, error } = await supabase

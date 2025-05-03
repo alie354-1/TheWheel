@@ -114,24 +114,24 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-success" />;
       case 'in_progress':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
+        return <Clock className="h-5 w-5 text-warning" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-400" />;
+        return <AlertCircle className="h-5 w-5 text-base-content/40" />;
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800';
+        return 'bg-error/20 text-error';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning/20 text-warning';
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/20 text-success';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-base-200 text-base-content/70';
     }
   };
 
@@ -155,17 +155,17 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const getSourceTypeStyle = (sourceType: string) => {
     switch (sourceType) {
       case 'ai':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/20 text-primary';
       case 'web':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/20 text-success';
       case 'internal':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-secondary/20 text-secondary';
       case 'community':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-accent/20 text-accent';
       case 'expert':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning/20 text-warning';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-base-200 text-base-content/70';
     }
   };
 
@@ -177,7 +177,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
         {tags.map((tag, index) => (
           <span
             key={index}
-            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content/70"
           >
             {tag}
           </span>
@@ -188,7 +188,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   const renderResourceItem = (resource: any, index: number, section: string) => {
     return (
-      <div key={`${resource.title}-${index}`} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+      <div key={`${resource.title}-${index}`} className="flex items-center justify-between bg-base-100 p-2 rounded border border-base-300">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-0.5 rounded-full ${getSourceTypeStyle(resource.source_type)}`}>
@@ -198,7 +198,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               href={resource.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center text-sm text-indigo-600 hover:text-indigo-900"
+              className="flex items-center text-sm text-primary hover:text-primary-focus"
             >
               {getResourceIcon(resource.type)}
               <span className="ml-2">{resource.title}</span>
@@ -206,14 +206,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
             </a>
           </div>
           <div className="ml-6">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-base-content/60">
               {resource.description}
             </p>
             <div className="flex flex-wrap gap-2">
               {resource.tags?.map((tag: string, tagIndex: number) => (
                 <span
                   key={`${tag}-${tagIndex}`}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-200 text-base-content/80"
                 >
                   {tag}
                 </span>
@@ -225,15 +225,15 @@ const TaskItem: React.FC<TaskItemProps> = ({
           <button
             onClick={() => handleRegenerateResource(section, index)}
             disabled={isRegenerating === `${section}-${index}`}
-            className="text-gray-400 hover:text-gray-500 disabled:opacity-50"
+            className="text-base-content/40 hover:text-base-content/60 disabled:opacity-50"
           >
             <RotateCw 
               className={`h-4 w-4 ${isRegenerating === `${section}-${index}` ? 'animate-spin' : ''}`} 
             />
           </button>
           <button
-            onClick={() => handleRemoveSuggestion('resources', index)}
-            className="text-gray-400 hover:text-gray-500"
+            onClick={() => handleRemoveSuggestion(section, index)}
+            className="text-base-content/40 hover:text-base-content/60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -251,13 +251,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
     // Regular suggestion items
     const itemValue = typeof item === 'string' ? item : item.title;
     return (
-      <div key={`${section}-${index}`} className="flex items-center justify-between p-2 rounded bg-white border border-gray-200">
+      <div key={`${section}-${index}`} className="flex items-center justify-between p-2 rounded bg-base-100 border border-base-300">
         <div className="flex-1">
           <input
             type="text"
             value={itemValue}
             readOnly
-            className="block w-full text-sm text-gray-900 border-0 focus:ring-0 p-0"
+            className="block w-full text-sm text-base-content border-0 focus:ring-0 p-0 bg-transparent"
           />
         </div>
       </div>
@@ -266,35 +266,35 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   if (isEditing) {
     return (
-      <div className="bg-white shadow rounded-lg p-4">
+      <div className="bg-base-100 shadow-md rounded-lg p-4">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title</label>
+            <label className="block text-sm font-medium text-base-content">Title</label>
             <input
               type="text"
               value={editedTask.title}
               onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="input input-bordered w-full mt-1 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium text-base-content">Description</label>
             <textarea
               value={editedTask.description}
               onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
               rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="textarea textarea-bordered w-full mt-1 text-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Priority</label>
+              <label className="block text-sm font-medium text-base-content">Priority</label>
               <select
                 value={editedTask.priority}
                 onChange={(e) => setEditedTask({ ...editedTask, priority: e.target.value as Task['priority'] })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="select select-bordered w-full mt-1 text-sm"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -303,24 +303,24 @@ const TaskItem: React.FC<TaskItemProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Due Date</label>
+              <label className="block text-sm font-medium text-base-content">Due Date</label>
               <input
                 type="date"
                 value={editedTask.due_date}
                 onChange={(e) => setEditedTask({ ...editedTask, due_date: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input input-bordered w-full mt-1 text-sm"
               />
             </div>
           </div>
 
           {/* AI Suggestions Section */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-base-300 pt-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-900">AI Suggestions</h3>
+              <h3 className="text-sm font-medium text-base-content">AI Suggestions</h3>
               <button
                 onClick={handleGenerateAISuggestions}
                 disabled={isGeneratingAI}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                className="btn btn-sm btn-primary"
               >
                 {isGeneratingAI ? (
                   <>
@@ -339,10 +339,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {/* Display AI suggestions sections */}
             {editedTask.implementation_tips?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Implementation Tips</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Implementation Tips</h4>
                 <ul className="space-y-1">
                   {editedTask.implementation_tips.map((tip, index) => (
-                    <li key={index} className="text-sm text-gray-600 flex items-start">
+                    <li key={index} className="text-sm text-base-content/70 flex items-start">
                       <span className="mr-2">•</span>
                       {tip}
                     </li>
@@ -353,10 +353,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {editedTask.potential_challenges?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Potential Challenges</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Potential Challenges</h4>
                 <ul className="space-y-1">
                   {editedTask.potential_challenges.map((challenge, index) => (
-                    <li key={index} className="text-sm text-gray-600 flex items-start">
+                    <li key={index} className="text-sm text-base-content/70 flex items-start">
                       <span className="mr-2">•</span>
                       {challenge}
                     </li>
@@ -367,10 +367,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {editedTask.success_metrics?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Success Metrics</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Success Metrics</h4>
                 <ul className="space-y-1">
                   {editedTask.success_metrics.map((metric, index) => (
-                    <li key={index} className="text-sm text-gray-600 flex items-start">
+                    <li key={index} className="text-sm text-base-content/70 flex items-start">
                       <span className="mr-2">•</span>
                       {metric}
                     </li>
@@ -381,7 +381,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {editedTask.resources?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Resources</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Resources</h4>
                 <div className="space-y-2">
                   {editedTask.resources.map((resource, index) => renderResourceItem(resource, index, 'resources'))}
                 </div>
@@ -390,7 +390,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {editedTask.learning_resources?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Learning Resources</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Learning Resources</h4>
                 <div className="space-y-2">
                   {editedTask.learning_resources.map((resource, index) => renderResourceItem(resource, index, 'learning_resources'))}
                 </div>
@@ -399,7 +399,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {editedTask.tools?.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Recommended Tools</h4>
+                <h4 className="text-sm font-medium text-base-content mb-2">Recommended Tools</h4>
                 <div className="space-y-2">
                   {editedTask.tools.map((tool, index) => renderResourceItem(tool, index, 'tools'))}
                 </div>
@@ -413,14 +413,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 setEditedTask(task);
                 setIsEditing(false);
               }}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="btn btn-sm btn-outline"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              className="btn btn-sm btn-primary"
             >
               {suggestedTask ? (
                 <>
@@ -441,7 +441,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
+    <div className="bg-base-100 shadow-md rounded-lg overflow-hidden">
       <div className="p-4">
         <div>
           <div className="flex items-center justify-between">
@@ -450,14 +450,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
               className="flex items-center text-left flex-1"
             >
               {isExpanded ? (
-                <ChevronDown className="h-5 w-5 text-gray-400" />
+                <ChevronDown className="h-5 w-5 text-base-content/60" />
               ) : (
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-base-content/60" />
               )}
               <div className="ml-2">
-                <p className="text-sm font-medium text-gray-900">{task.title}</p>
+                <p className="text-sm font-medium text-base-content">{task.title}</p>
                 {!isExpanded && (
-                  <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="mt-1 flex items-center space-x-4 text-sm text-base-content/70">
                     <span>Type: {task.task_type}</span>
                     <span>•</span>
                     <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
@@ -473,7 +473,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               {suggestedTask && onAddTask && (
                 <button
                   onClick={() => onAddTask(task)}
-                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="btn btn-xs btn-primary"
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Add
@@ -481,14 +481,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
               )}
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1 text-gray-400 hover:text-gray-500"
+                className="p-1 text-base-content/40 hover:text-base-content/60"
               >
                 <Edit className="h-4 w-4" />
               </button>
               {!suggestedTask && onRemoveTask && (
                 <button
                   onClick={() => onRemoveTask(task)}
-                  className="p-1 text-gray-400 hover:text-gray-500"
+                  className="p-1 text-base-content/40 hover:text-base-content/60"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -500,8 +500,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {isExpanded && (
             <div className="mt-4 ml-7 space-y-4">
               <div>
-                <p className="text-sm text-gray-900">{task.description}</p>
-                <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                <p className="text-sm text-base-content">{task.description}</p>
+                <div className="mt-2 flex items-center space-x-4 text-sm text-base-content/70">
                   <span>Type: {task.task_type}</span>
                   <span>•</span>
                   <span>Category: {task.category}</span>
@@ -517,20 +517,20 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <div>
                   <button
                     onClick={() => onToggleSection('tips')}
-                    className="flex items-center text-sm font-medium text-gray-900"
+                    className="flex items-center text-sm font-medium text-base-content"
                   >
-                    <Lightbulb className="h-4 w-4 mr-2" />
+                    <Lightbulb className="h-4 w-4 mr-2 text-base-content/60" />
                     Implementation Tips
                     {expandedSections['tips'] ? (
-                      <ChevronDown className="h-4 w-4 ml-2" />
+                      <ChevronDown className="h-4 w-4 ml-2 text-base-content/60" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 ml-2" />
+                      <ChevronRight className="h-4 w-4 ml-2 text-base-content/60" />
                     )}
                   </button>
                   {expandedSections['tips'] && (
                     <ul className="mt-2 space-y-1 ml-6">
                       {task.implementation_tips.map((tip, index) => (
-                        <li key={index} className="text-sm text-gray-600">• {tip}</li>
+                        <li key={index} className="text-sm text-base-content/70">• {tip}</li>
                       ))}
                     </ul>
                   )}
@@ -542,14 +542,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <div>
                   <button
                     onClick={() => onToggleSection('resources')}
-                    className="flex items-center text-sm font-medium text-gray-900"
+                    className="flex items-center text-sm font-medium text-base-content"
                   >
-                    <Book className="h-4 w-4 mr-2" />
+                    <Book className="h-4 w-4 mr-2 text-base-content/60" />
                     Helpful Resources
                     {expandedSections['resources'] ? (
-                      <ChevronDown className="h-4 w-4 ml-2" />
+                      <ChevronDown className="h-4 w-4 ml-2 text-base-content/60" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 ml-2" />
+                      <ChevronRight className="h-4 w-4 ml-2 text-base-content/60" />
                     )}
                   </button>
                   {expandedSections['resources'] && (
@@ -565,14 +565,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <div>
                   <button
                     onClick={() => onToggleSection('learning')}
-                    className="flex items-center text-sm font-medium text-gray-900"
+                    className="flex items-center text-sm font-medium text-base-content"
                   >
-                    <Book className="h-4 w-4 mr-2" />
+                    <Book className="h-4 w-4 mr-2 text-base-content/60" />
                     Learning Resources
                     {expandedSections['learning'] ? (
-                      <ChevronDown className="h-4 w-4 ml-2" />
+                      <ChevronDown className="h-4 w-4 ml-2 text-base-content/60" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 ml-2" />
+                      <ChevronRight className="h-4 w-4 ml-2 text-base-content/60" />
                     )}
                   </button>
                   {expandedSections['learning'] && (
@@ -588,14 +588,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <div>
                   <button
                     onClick={() => onToggleSection('tools')}
-                    className="flex items-center text-sm font-medium text-gray-900"
+                    className="flex items-center text-sm font-medium text-base-content"
                   >
-                    <Tool className="h-4 w-4 mr-2" />
+                    <Tool className="h-4 w-4 mr-2 text-base-content/60" />
                     Recommended Tools
                     {expandedSections['tools'] ? (
-                      <ChevronDown className="h-4 w-4 ml-2" />
+                      <ChevronDown className="h-4 w-4 ml-2 text-base-content/60" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 ml-2" />
+                      <ChevronRight className="h-4 w-4 ml-2 text-base-content/60" />
                     )}
                   </button>
                   {expandedSections['tools'] && (
@@ -608,11 +608,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
               {/* Status Control */}
               {!suggestedTask && onUpdateTask && (
-                <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-base-300 pt-4">
                   <select
                     value={task.status}
                     onChange={(e) => onUpdateTask(task.id, { status: e.target.value as Task['status'] })}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="select select-bordered select-sm w-full"
                   >
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>

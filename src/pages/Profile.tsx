@@ -136,9 +136,9 @@ export default function Profile() {
     setIsLoading(true);
     
     try {
-      // Update basic profile
+      // Update basic profile in the users table
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({
           full_name: formData.full_name,
           is_public: formData.is_public,
@@ -152,10 +152,18 @@ export default function Profile() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        alert('Error saving profile: ' + (error.message || 'Unknown error'));
+        setIsLoading(false);
+        return;
+      }
 
       if (data) {
         setProfile(data);
+      } else {
+        console.error('No data returned from profile update:', data);
+        alert('No data returned from profile update.');
       }
       
       // Update enhanced profile if it exists

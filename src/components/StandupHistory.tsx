@@ -116,17 +116,17 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
 
   if (!entries.length) {
     return (
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-base-100 shadow-md rounded-lg p-4">
         <div className="text-center">
-          <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No standup history</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <Calendar className="mx-auto h-12 w-12 text-base-content/50" />
+          <h3 className="mt-2 text-sm font-medium text-base-content">No standup history</h3>
+          <p className="mt-1 text-sm text-base-content/70">
             Start your day by sharing your progress and goals.
           </p>
           <div className="mt-6">
             <Link
               to="/idea-hub/cofounder-bot"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              className="btn btn-primary btn-sm"
             >
               Start Daily Standup
             </Link>
@@ -137,19 +137,19 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-base-100 shadow-md rounded-lg">
+      <div className="px-4 py-3 border-b border-base-300">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center text-lg font-medium text-gray-900"
+            className="flex items-center text-lg font-medium text-base-content"
           >
-            <Calendar className="h-5 w-5 mr-2 text-gray-400" />
+            <Calendar className="h-5 w-5 mr-2 text-base-content/60" />
             Recent Standups
             {isExpanded ? (
-              <ChevronDown className="h-5 w-5 ml-2 text-gray-400" />
+              <ChevronDown className="h-5 w-5 ml-2 text-base-content/60" />
             ) : (
-              <ChevronRight className="h-5 w-5 ml-2 text-gray-400" />
+              <ChevronRight className="h-5 w-5 ml-2 text-base-content/60" />
             )}
           </button>
         </div>
@@ -158,25 +158,25 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
       {isExpanded && (
         <>
           {/* Search and Filters */}
-          <div className="px-6 py-4 border-b border-gray-200 space-y-4">
-            <div className="flex items-center space-x-4">
+          <div className="px-4 py-3 border-b border-base-300 space-y-3">
+            <div className="flex items-center space-x-3">
               <div className="flex-1">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
+                    <Search className="h-4 w-4 text-base-content/50" />
                   </div>
                   <input
                     type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search standups..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-base-300 rounded-md leading-5 bg-base-100 placeholder-base-content/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm"
                   />
                 </div>
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="btn btn-sm btn-outline"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
@@ -184,23 +184,23 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
             </div>
 
             {showFilters && (
-              <div className="flex items-center space-x-6">
+              <div className="flex flex-wrap items-center gap-4">
                 <label className="inline-flex items-center">
                   <input
                     type="checkbox"
                     checked={filters.hasBlockers}
                     onChange={(e) => setFilters(prev => ({ ...prev, hasBlockers: e.target.checked }))}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    className="checkbox checkbox-sm checkbox-primary"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Has Blockers</span>
+                  <span className="ml-2 text-sm text-base-content">Has Blockers</span>
                 </label>
 
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Date Range:</span>
+                  <span className="text-sm text-base-content">Date Range:</span>
                   <select
                     value={filters.dateRange}
                     onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as typeof filters.dateRange }))}
-                    className="rounded-md border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    className="select select-sm select-bordered text-sm"
                   >
                     <option value="all">All Time</option>
                     <option value="week">Past Week</option>
@@ -210,11 +210,11 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Sort By:</span>
+                  <span className="text-sm text-base-content">Sort By:</span>
                   <select
                     value={sortField}
                     onChange={(e) => toggleSort(e.target.value as typeof sortField)}
-                    className="rounded-md border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    className="select select-sm select-bordered text-sm"
                   >
                     <option value="date">Date</option>
                     <option value="accomplished">Accomplishments</option>
@@ -223,12 +223,12 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
                   </select>
                   <button
                     onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className="p-1 rounded-md hover:bg-gray-100"
+                    className="p-1 rounded-md hover:bg-base-200"
                   >
                     {sortDirection === 'asc' ? (
-                      <SortAsc className="h-4 w-4 text-gray-400" />
+                      <SortAsc className="h-4 w-4 text-base-content/60" />
                     ) : (
-                      <SortDesc className="h-4 w-4 text-gray-400" />
+                      <SortDesc className="h-4 w-4 text-base-content/60" />
                     )}
                   </button>
                 </div>
@@ -237,15 +237,15 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
           </div>
 
           {/* Standup Entries */}
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-base-300">
             {filteredEntries.map((entry) => (
-              <div key={entry.id} className="p-6">
+              <div key={entry.id} className="p-4">
                 <button
                   onClick={() => toggleEntry(entry.id)}
                   className="w-full flex items-center justify-between text-left"
                 >
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">
+                    <h4 className="text-sm font-medium text-base-content">
                       {new Date(entry.date).toLocaleDateString(undefined, {
                         weekday: 'long',
                         year: 'numeric',
@@ -254,80 +254,107 @@ const StandupHistory: React.FC<StandupHistoryProps> = ({ entries }) => {
                       })}
                     </h4>
                     {!expandedEntries[entry.id] && (
-                      <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                      <p className="mt-1 text-sm text-base-content/70 line-clamp-2">
                         {entry.working_on}
                       </p>
                     )}
                   </div>
                   {expandedEntries[entry.id] ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-base-content/60" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="h-5 w-5 text-base-content/60" />
                   )}
                 </button>
 
                 {expandedEntries[entry.id] && (
                   <div className="mt-4 space-y-4">
                     <div>
-                      <h5 className="text-sm font-medium text-gray-900 flex items-center">
-                        <CheckSquare className="h-4 w-4 mr-2 text-gray-400" />
+                      <h5 className="text-sm font-medium text-base-content flex items-center">
+                        <CheckSquare className="h-4 w-4 mr-2 text-base-content/60" />
                         Accomplished
                       </h5>
-                      <p className="mt-1 text-sm text-gray-500">{entry.accomplished}</p>
+                      <p className="mt-1 text-sm text-base-content/70">{entry.accomplished}</p>
                     </div>
 
                     <div>
-                      <h5 className="text-sm font-medium text-gray-900 flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                      <h5 className="text-sm font-medium text-base-content flex items-center">
+                        <Clock className="h-4 w-4 mr-2 text-base-content/60" />
                         Working On
                       </h5>
-                      <p className="mt-1 text-sm text-gray-500">{entry.working_on}</p>
+                      <p className="mt-1 text-sm text-base-content/70">{entry.working_on}</p>
                     </div>
 
                     {entry.blockers && (
                       <div>
-                        <h5 className="text-sm font-medium text-gray-900 flex items-center">
-                          <AlertCircle className="h-4 w-4 mr-2 text-gray-400" />
+                        <h5 className="text-sm font-medium text-base-content flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-2 text-base-content/60" />
                           Blockers
                         </h5>
-                        <p className="mt-1 text-sm text-gray-500">{entry.blockers}</p>
+                        <p className="mt-1 text-sm text-base-content/70">{entry.blockers}</p>
                       </div>
                     )}
 
                     <div>
-                      <h5 className="text-sm font-medium text-gray-900 flex items-center">
-                        <Target className="h-4 w-4 mr-2 text-gray-400" />
+                      <h5 className="text-sm font-medium text-base-content flex items-center">
+                        <Target className="h-4 w-4 mr-2 text-base-content/60" />
                         Goals
                       </h5>
-                      <p className="mt-1 text-sm text-gray-500">{entry.goals}</p>
+                      <p className="mt-1 text-sm text-base-content/70">{entry.goals}</p>
                     </div>
 
                     {entry.feedback && (
                       <div>
-                        <h5 className="text-sm font-medium text-gray-900">AI Analysis</h5>
-                        <div className="mt-1 text-sm text-gray-500 whitespace-pre-wrap rounded-lg bg-gray-50 p-4">
+                        <h5 className="text-sm font-medium text-base-content">AI Analysis</h5>
+                        <div className="mt-1 text-sm text-base-content/70 whitespace-pre-wrap rounded-lg bg-base-200 p-4">
                           {(() => {
                             try {
-                              const feedbackObj = JSON.parse(entry.feedback);
+                              console.log("[StandupHistory] Parsing feedback for entry", entry.id);
+                              
+                              // First check if feedback is valid JSON
+                              let feedbackObj;
+                              try {
+                                feedbackObj = JSON.parse(entry.feedback);
+                              } catch (parseError) {
+                                console.error("[StandupHistory] JSON parse error:", parseError);
+                                // Return raw feedback if parsing fails
+                                return entry.feedback || "No analysis available";
+                              }
+                              
+                              // Make sure we have insights object and it's properly formed
+                              if (!feedbackObj || !feedbackObj.insights) {
+                                console.warn("[StandupHistory] Missing insights in feedback", feedbackObj);
+                                return "Analysis data format error. Raw feedback: " + entry.feedback;
+                              }
+                              
                               const insights = feedbackObj.insights;
+                              
+                              // Ensure all expected arrays exist
+                              const strengths = Array.isArray(insights.strengths) ? insights.strengths : [];
+                              const areas = Array.isArray(insights.areas_for_improvement) ? insights.areas_for_improvement : [];
+                              const opportunities = Array.isArray(insights.opportunities) ? insights.opportunities : [];
+                              const risks = Array.isArray(insights.risks) ? insights.risks : [];
+                              const recommendations = Array.isArray(insights.strategic_recommendations) ? 
+                                insights.strategic_recommendations : [];
+                              
                               return `🎯 Key Insights
 
-${insights.strengths.length > 0 ? `Strengths:
-${insights.strengths.map(s => `• ${s}`).join('\n')}
+${strengths.length > 0 ? `Strengths:
+${strengths.map((s: string) => `• ${s}`).join('\n')}
 
-` : ''}${insights.areas_for_improvement.length > 0 ? `Areas for Improvement:
-${insights.areas_for_improvement.map(a => `• ${a}`).join('\n')}
+` : ''}${areas.length > 0 ? `Areas for Improvement:
+${areas.map((a: string) => `• ${a}`).join('\n')}
 
-` : ''}${insights.opportunities.length > 0 ? `Opportunities:
-${insights.opportunities.map(o => `• ${o}`).join('\n')}
+` : ''}${opportunities.length > 0 ? `Opportunities:
+${opportunities.map((o: string) => `• ${o}`).join('\n')}
 
-` : ''}${insights.risks.length > 0 ? `Risks:
-${insights.risks.map(r => `• ${r}`).join('\n')}
+` : ''}${risks.length > 0 ? `Risks:
+${risks.map((r: string) => `• ${r}`).join('\n')}
 
-` : ''}${insights.strategic_recommendations.length > 0 ? `Strategic Recommendations:
-${insights.strategic_recommendations.map(r => `• ${r}`).join('\n')}` : ''}`;
+` : ''}${recommendations.length > 0 ? `Strategic Recommendations:
+${recommendations.map((r: string) => `• ${r}`).join('\n')}` : ''}`;
                             } catch (e) {
-                              return '';
+                              console.error("[StandupHistory] Error rendering feedback:", e);
+                              return 'Error displaying analysis.';
                             }
                           })()}
                         </div>

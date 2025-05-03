@@ -1,337 +1,538 @@
-import React, { useState, useEffect } from 'react';
-import { BaseSuggestion } from '../../shared/idea/SuggestionCard';
+import React, { useState } from 'react';
+import { 
+  Button, Box, Typography, TextField, Grid, Paper, 
+  Divider, alpha, IconButton, InputAdornment
+} from '@mui/material';
 import { Suggestion } from './SuggestionCard';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
+import EditIcon from '@mui/icons-material/Edit';
+import BusinessIcon from '@mui/icons-material/Business';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import TitleIcon from '@mui/icons-material/Title';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
+import GroupIcon from '@mui/icons-material/Group';
+import StarsIcon from '@mui/icons-material/Stars';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import CampaignIcon from '@mui/icons-material/Campaign';
 
 interface SuggestionEditorProps {
   suggestion: Suggestion;
-  onSave: (updatedSuggestion: Suggestion) => void;
+  onSave: (suggestion: Suggestion) => void;
   onCancel: () => void;
 }
 
 /**
- * Component for editing a suggestion's fields
+ * SuggestionEditor component allows editing of a suggestion's fields
+ * with an enhanced modern UI
  */
-const SuggestionEditor: React.FC<SuggestionEditorProps> = ({
-  suggestion,
-  onSave,
-  onCancel
-}) => {
-  const [editedSuggestion, setEditedSuggestion] = useState<Suggestion>({...suggestion});
+const SuggestionEditor: React.FC<SuggestionEditorProps> = ({ suggestion, onSave, onCancel }) => {
+  // State for the edited suggestion
+  const [editedSuggestion, setEditedSuggestion] = useState<Suggestion>(suggestion);
   
-  // Ensure array fields are arrays
-  useEffect(() => {
-    const normalizedSuggestion = {...editedSuggestion};
-    
-    // Convert string fields to arrays if needed
-    const arrayFields = ['competition', 'revenue_streams', 'cost_structure', 'key_metrics'];
-    arrayFields.forEach(field => {
-      const value = normalizedSuggestion[field];
-      if (value !== undefined && !Array.isArray(value)) {
-        normalizedSuggestion[field] = [value as string];
-      } else if (value === undefined) {
-        normalizedSuggestion[field] = [];
-      }
-    });
-    
-    setEditedSuggestion(normalizedSuggestion);
-  }, []);
-  
-  // Handle text field changes
-  const handleChange = (field: keyof Suggestion, value: string) => {
-    setEditedSuggestion((prev: Suggestion) => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  
-  // Handle array field changes
-  const handleArrayChange = (field: keyof Suggestion, index: number, value: string) => {
-    if (!Array.isArray(editedSuggestion[field])) return;
-    
-    const newArray = [...(editedSuggestion[field] as string[])];
-    newArray[index] = value;
-    
-    setEditedSuggestion((prev: Suggestion) => ({
-      ...prev,
-      [field]: newArray
-    }));
-  };
-  
-  // Add a new item to an array field
-  const handleAddArrayItem = (field: keyof Suggestion) => {
-    if (!Array.isArray(editedSuggestion[field])) {
-      setEditedSuggestion((prev: Suggestion) => ({
+  // Handle field updates
+  const handleFieldUpdate = (field: keyof Suggestion, value: string) => {
+    setEditedSuggestion(prev => {
+      if (!prev) return prev;
+      return {
         ...prev,
-        [field]: ['']
-      }));
-      return;
-    }
-    
-    setEditedSuggestion((prev: Suggestion) => ({
-      ...prev,
-      [field]: [...(prev[field] as string[]), '']
-    }));
+        [field]: value
+      };
+    });
   };
-  
-  // Remove an item from an array field
-  const handleRemoveArrayItem = (field: keyof Suggestion, index: number) => {
-    if (!Array.isArray(editedSuggestion[field])) return;
-    
-    const newArray = [...(editedSuggestion[field] as string[])];
-    newArray.splice(index, 1);
-    
-    setEditedSuggestion((prev: Suggestion) => ({
-      ...prev,
-      [field]: newArray
-    }));
-  };
-  
+
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(editedSuggestion);
   };
-  
-  // Helper function to safely render array fields
-  const renderArrayField = (field: keyof BaseSuggestion, label: string, buttonLabel: string) => {
-    const fieldValue = editedSuggestion[field];
-    const arrayValue = Array.isArray(fieldValue) ? fieldValue : [];
+
+  // Handle array field updates (for fields like strengths, weaknesses, etc.)
+  const handleArrayFieldUpdate = (field: keyof Suggestion, value: string) => {
+    const items = value.split(/[,\n]/).map(item => item.trim()).filter(item => item);
     
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium text-gray-700">
-            {label}
-          </label>
-          <button
-            type="button"
-            onClick={() => handleAddArrayItem(field as keyof Suggestion)}
-            className="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded border border-indigo-200"
-          >
-            {buttonLabel}
-          </button>
-        </div>
-        
-        {arrayValue.map((item, index) => (
-          <div key={`${field}-${index}`} className="flex mb-2">
-            <input
-              type="text"
-              value={item}
-              onChange={(e) => handleArrayChange(field as keyof Suggestion, index, e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-md"
-              placeholder={`${label} item`}
-            />
-            <button
-              type="button"
-              onClick={() => handleRemoveArrayItem(field as keyof Suggestion, index)}
-              className="ml-2 px-2 py-1 bg-red-50 text-red-600 rounded border border-red-200"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-    );
+    setEditedSuggestion(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: items
+      };
+    });
   };
-  
+
+  // Generate a color for each section based on field type
+  const getFieldColor = (field: string) => {
+    switch(field) {
+      case 'problem_statement': return '#ffebee'; // light red
+      case 'solution_concept': return '#e8f5e9'; // light green
+      case 'target_audience': return '#e3f2fd'; // light blue
+      case 'unique_value': return '#fff8e1'; // light yellow/amber
+      case 'business_model': 
+      case 'revenue_model': return '#f3e5f5'; // light purple
+      case 'marketing_strategy':
+      case 'go_to_market': return '#e0f7fa'; // light cyan
+      default: return '#f5f5f5'; // light grey
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Suggestion</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-            Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={editedSuggestion.title}
-            onChange={(e) => handleChange('title', e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md"
-            required
-          />
-        </div>
-        
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            id="description"
-            value={editedSuggestion.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            rows={2}
-            className="w-full p-2 border border-gray-300 rounded-md"
-            required
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Problem Statement */}
-          <div>
-            <label htmlFor="problem_statement" className="block text-sm font-medium text-gray-700 mb-1">
-              Problem Statement
-            </label>
-            <textarea
-              id="problem_statement"
-              value={typeof editedSuggestion.problem_statement === 'string' ? editedSuggestion.problem_statement : ''}
-              onChange={(e) => handleChange('problem_statement', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
+    <Box sx={{ 
+      p: { xs: 2, md: 4 }, 
+      maxWidth: '1400px', 
+      mx: 'auto',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <Paper 
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 4 },
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+          mb: 3
+        }}
+      >
+        <form onSubmit={handleSubmit}>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <EditIcon 
+                color="primary"
+                sx={{ mr: 1.5, fontSize: 28 }}
+              />
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700,
+                  background: 'linear-gradient(90deg, #2196f3, #1565c0)',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                  display: 'inline-block'
+                }}
+              >
+                Edit Business Idea
+              </Typography>
+            </Box>
+            
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: 'text.secondary',
+                maxWidth: '800px',
+                ml: 0.5
+              }}
+            >
+              Refine your business idea by editing the details below. Changes will help AI generate more tailored suggestions.
+            </Typography>
+          </Box>
           
-          {/* Solution Concept */}
-          <div>
-            <label htmlFor="solution_concept" className="block text-sm font-medium text-gray-700 mb-1">
-              Solution Concept
-            </label>
-            <textarea
-              id="solution_concept"
-              value={typeof editedSuggestion.solution_concept === 'string' ? editedSuggestion.solution_concept : ''}
-              onChange={(e) => handleChange('solution_concept', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <TitleIcon sx={{ mr: 1, color: 'primary.main' }} />
+              Basic Information
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Title"
+                  value={editedSuggestion.title}
+                  onChange={(e) => handleFieldUpdate('title', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha('#f5f5f5', 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha('#f5f5f5', 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha('#e3f2fd', 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <TitleIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={3}
+                  value={editedSuggestion.description}
+                  onChange={(e) => handleFieldUpdate('description', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha('#f5f5f5', 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha('#f5f5f5', 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha('#e3f2fd', 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                        <DescriptionIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
           
-          {/* Target Audience */}
-          <div>
-            <label htmlFor="target_audience" className="block text-sm font-medium text-gray-700 mb-1">
-              Target Audience
-            </label>
-            <textarea
-              id="target_audience"
-              value={typeof editedSuggestion.target_audience === 'string' ? editedSuggestion.target_audience : ''}
-              onChange={(e) => handleChange('target_audience', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <EmojiObjectsIcon sx={{ mr: 1, color: 'primary.main' }} />
+              Core Concept
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Problem Statement"
+                  multiline
+                  rows={3}
+                  value={editedSuggestion.problem_statement}
+                  onChange={(e) => handleFieldUpdate('problem_statement', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('problem_statement'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('problem_statement'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('problem_statement'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                        <PriorityHighIcon color="error" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Solution Concept"
+                  multiline
+                  rows={3}
+                  value={editedSuggestion.solution_concept}
+                  onChange={(e) => handleFieldUpdate('solution_concept', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('solution_concept'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('solution_concept'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('solution_concept'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                        <EmojiObjectsIcon color="success" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Target Audience"
+                  value={editedSuggestion.target_audience}
+                  onChange={(e) => handleFieldUpdate('target_audience', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('target_audience'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('target_audience'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('target_audience'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <GroupIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Unique Value Proposition"
+                  value={editedSuggestion.unique_value}
+                  onChange={(e) => handleFieldUpdate('unique_value', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('unique_value'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('unique_value'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('unique_value'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <StarsIcon color="warning" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
           
-          {/* Unique Value */}
-          <div>
-            <label htmlFor="unique_value" className="block text-sm font-medium text-gray-700 mb-1">
-              Unique Value
-            </label>
-            <textarea
-              id="unique_value"
-              value={typeof editedSuggestion.unique_value === 'string' ? editedSuggestion.unique_value : ''}
-              onChange={(e) => handleChange('unique_value', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          
-          {/* Business Model */}
-          <div>
-            <label htmlFor="business_model" className="block text-sm font-medium text-gray-700 mb-1">
-              Business Model
-            </label>
-            <textarea
-              id="business_model"
-              value={typeof editedSuggestion.business_model === 'string' ? editedSuggestion.business_model : ''}
-              onChange={(e) => handleChange('business_model', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          
-          {/* Marketing Strategy */}
-          <div>
-            <label htmlFor="marketing_strategy" className="block text-sm font-medium text-gray-700 mb-1">
-              Marketing Strategy
-            </label>
-            <textarea
-              id="marketing_strategy"
-              value={typeof editedSuggestion.marketing_strategy === 'string' ? editedSuggestion.marketing_strategy : ''}
-              onChange={(e) => handleChange('marketing_strategy', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          
-          {/* Revenue Model */}
-          <div>
-            <label htmlFor="revenue_model" className="block text-sm font-medium text-gray-700 mb-1">
-              Revenue Model
-            </label>
-            <textarea
-              id="revenue_model"
-              value={typeof editedSuggestion.revenue_model === 'string' ? editedSuggestion.revenue_model : ''}
-              onChange={(e) => handleChange('revenue_model', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          
-          {/* Go to Market */}
-          <div>
-            <label htmlFor="go_to_market" className="block text-sm font-medium text-gray-700 mb-1">
-              Go-to-Market Strategy
-            </label>
-            <textarea
-              id="go_to_market"
-              value={typeof editedSuggestion.go_to_market === 'string' ? editedSuggestion.go_to_market : ''}
-              onChange={(e) => handleChange('go_to_market', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          
-          {/* Market Size */}
-          <div>
-            <label htmlFor="market_size" className="block text-sm font-medium text-gray-700 mb-1">
-              Market Size
-            </label>
-            <textarea
-              id="market_size"
-              value={typeof editedSuggestion.market_size === 'string' ? editedSuggestion.market_size : ''}
-              onChange={(e) => handleChange('market_size', e.target.value)}
-              rows={3}
-              className="w-full p-2 border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-        </div>
-        
-        {/* Array Fields */}
-        <div className="space-y-6">
-          {renderArrayField('competition', 'Competition', '+ Add Competitor')}
-          {renderArrayField('revenue_streams', 'Revenue Streams', '+ Add Revenue Stream')}
-          {renderArrayField('cost_structure', 'Cost Structure', '+ Add Cost Item')}
-          {renderArrayField('key_metrics', 'Key Metrics', '+ Add Metric')}
-        </div>
-        
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <BusinessIcon sx={{ mr: 1, color: 'primary.main' }} />
+              Business Strategy
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Business Model"
+                  value={editedSuggestion.business_model}
+                  onChange={(e) => handleFieldUpdate('business_model', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('business_model'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('business_model'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('business_model'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <BusinessIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Revenue Model"
+                  value={editedSuggestion.revenue_model}
+                  onChange={(e) => handleFieldUpdate('revenue_model', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('revenue_model'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('revenue_model'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('revenue_model'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <MonetizationOnIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Marketing Strategy"
+                  multiline
+                  rows={2}
+                  value={editedSuggestion.marketing_strategy}
+                  onChange={(e) => handleFieldUpdate('marketing_strategy', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('marketing_strategy'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('marketing_strategy'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('marketing_strategy'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                        <CampaignIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Go-to-Market Strategy"
+                  multiline
+                  rows={2}
+                  value={editedSuggestion.go_to_market}
+                  onChange={(e) => handleFieldUpdate('go_to_market', e.target.value)}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: alpha(getFieldColor('go_to_market'), 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha(getFieldColor('go_to_market'), 0.5),
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: alpha(getFieldColor('go_to_market'), 0.3),
+                      }
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                        <CampaignIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* SWOT Analysis section removed - will be implemented later */}
+
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              mt: 4,
+              pt: 3,
+              borderTop: '1px solid',
+              borderColor: 'divider'
+            }}
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Save Changes
-          </button>
-        </div>
-      </form>
-    </div>
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={onCancel}
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                px: 3,
+                py: 1.2,
+                borderRadius: 2,
+                borderWidth: '1.5px'
+              }}
+            >
+              Cancel
+            </Button>
+            
+            <Button 
+              variant="contained" 
+              color="primary" 
+              type="submit"
+              startIcon={<SaveIcon />}
+              sx={{
+                px: 4,
+                py: 1.2,
+                borderRadius: 2,
+                fontWeight: 600,
+                background: 'linear-gradient(90deg, #1976d2 0%, #2196f3 100%)',
+                boxShadow: '0 4px 8px rgba(33, 150, 243, 0.3)',
+                '&:hover': {
+                  boxShadow: '0 6px 12px rgba(33, 150, 243, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.2s'
+              }}
+            >
+              Save Changes
+            </Button>
+          </Box>
+        </form>
+      </Paper>
+    </Box>
   );
 };
 

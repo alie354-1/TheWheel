@@ -34,10 +34,11 @@ export default function Refinement() {
   const location = useLocation();
   const [initialStep, setInitialStep] = useState(0);
   
-  // Parse the step from the URL query parameters
+  // Parse the step and ideaId from the URL query parameters
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const stepParam = searchParams.get('step');
+    const ideaIdParam = searchParams.get('ideaId');
     
     if (stepParam) {
       const step = parseInt(stepParam, 10);
@@ -45,6 +46,12 @@ export default function Refinement() {
         console.log('Setting initial step from URL:', step);
         setInitialStep(step);
       }
+    }
+    
+    // If ideaId is provided, store it in localStorage for the IdeaContext to use
+    if (ideaIdParam) {
+      console.log('Setting ideaId from URL:', ideaIdParam);
+      localStorage.setItem('refinement_idea_id', ideaIdParam);
     }
   }, [location.search]);
   

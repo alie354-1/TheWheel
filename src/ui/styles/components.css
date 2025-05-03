@@ -1,0 +1,28 @@
+/**
+ * Component Styles
+ * 
+ * This file contains styles for UI components used in the application.
+ * Part of the UI rewrite to implement a more modern and consistent design.
+ */
+
+/* Card Component Styles */
+.card {
+  box-sizing: border-box;
+}
+
+.card.hoverable:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.3s ease;
+}
+
+.card.draggable:active {
+  cursor: grabbing !important;
+}
+
+.card.selected {
+  border-color: #1890ff !important;
+  border-width: 2px !important;
+}
+
+/* Add more component styles below */

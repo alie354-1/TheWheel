@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Disabled Services</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 4px solid #bee5eb;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border-left: 4px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #f5c6cb;
+    }
+    .log {
+      background-color: #f8f9fa;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      font-family: monospace;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .hidden {
+      display: none;
+    }
+    .test-group {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test Disabled Services</h1>
+    
+    <div class="info">
+      <strong>Info:</strong> This utility helps test the application with disabled services.
+      It verifies that the application works correctly with the disabled logging, feature flags, and privacy services.
+    </div>
+    
+    <div class="test-group">
+      <h2>1. Test Logging Service</h2>
+      <button id="testLoggingButton">Test Logging Service</button>
+      <div id="loggingStatus" class="status hidden"></div>
+    </div>
+    
+    <div class="test-group">
+      <h2>2. Test Feature Flags Service</h2>
+      <button id="testFeatureFlagsButton">Test Feature Flags Service</button>
+      <div id="featureFlagsStatus" class="status hidden"></div>
+    </div>
+    
+    <div class="test-group">
+      <h2>3. Test Privacy Service</h2>
+      <button id="testPrivacyButton">Test Privacy Service</button>
+      <div id="privacyStatus" class="status hidden"></div>
+    </div>
+    
+    <div class="test-group">
+      <h2>4. Test Authentication</h2>
+      <button id="testAuthButton">Test Authentication</button>
+      <div id="authStatus" class="status hidden"></div>
+    </div>
+    
+    <div class="test-group">
+      <h2>5. Force Logout</h2>
+      <p>If you're experiencing issues, try forcing a logout to clear authentication data:</p>
+      <a href="/force-logout.html"><button>Go to Force Logout Page</button></a>
+    </div>
+    
+    <div id="logContainer" class="log">
+      <div id="logOutput"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loggingService } from '../src/lib/services/logging.service.js';
+    import { enhancedLoggingService } from '../src/lib/services/logging.service.enhanced.js';
+    import { featureFlagsService } from '../src/lib/services/feature-flags.service.js';
+    import { privacyService } from '../src/lib/services/privacy.service.js';
+    import { authService } from '../src/lib/services/auth.service.js';
+    
+    const testLoggingButton = document.getElementById('testLoggingButton');
+    const loggingStatus = document.getElementById('loggingStatus');
+    
+    const testFeatureFlagsButton = document.getElementById('testFeatureFlagsButton');
+    const featureFlagsStatus = document.getElementById('featureFlagsStatus');
+    
+    const testPrivacyButton = document.getElementById('testPrivacyButton');
+    const privacyStatus = document.getElementById('privacyStatus');
+    
+    const testAuthButton = document.getElementById('testAuthButton');
+    const authStatus = document.getElementById('authStatus');
+    
+    const logOutput = document.getElementById('logOutput');
+    
+    // Override console.log to capture output
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+    
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      appendToLog('log', args);
+    };
+    
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      appendToLog('error', args);
+    };
+    
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      appendToLog('warn', args);
+    };
+    
+    function appendToLog(type, args) {
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+      logOutput.appendChild(line);
+      logOutput.parentElement.scrollTop = logOutput.parentElement.scrollHeight;
+    }
+    
+    // Test Logging Service
+    testLoggingButton.addEventListener('click', async () => {
+      testLoggingButton.disabled = true;
+      
+      try {
+        console.log('Testing basic logging service...');
+        console.log('- isLoggingEnabled:', loggingService.isLoggingEnabled());
+        
+        const sessionId = await loggingService.startSession('test-user-id');
+        console.log('- startSession result:', sessionId);
+        
+        const logId = await loggingService.logUserAction('test-action', 'test-component');
+        console.log('- logUserAction result:', logId);
+        
+        await loggingService.endSession();
+        console.log('- endSession completed');
+        
+        console.log('Testing enhanced logging service...');
+        console.log('- isLoggingEnabled:', enhancedLoggingService.isLoggingEnabled());
+        
+        const enhancedSessionId = await enhancedLoggingService.startSession('test-user-id');
+        console.log('- startSession result:', enhancedSessionId);
+        
+        const enhancedLogId = await enhancedLoggingService.logUserAction('test-action', 'test-component');
+        console.log('- logUserAction result:', enhancedLogId);
+        
+        await enhancedLoggingService.endSession();
+        console.log('- endSession completed');
+        
+        loggingStatus.classList.remove('hidden', 'error');
+        loggingStatus.classList.add('success');
+        loggingStatus.innerHTML = '<strong>Success!</strong> Logging service is properly disabled.';
+      } catch (error) {
+        console.error('Error testing logging service:', error);
+        
+        loggingStatus.classList.remove('hidden', 'success');
+        loggingStatus.classList.add('error');
+        loggingStatus.innerHTML = `<strong>Error!</strong> ${error.message}`;
+      }
+      
+      testLoggingButton.disabled = false;
+    });
+    
+    // Test Feature Flags Service
+    testFeatureFlagsButton.addEventListener('click', async () => {
+      testFeatureFlagsButton.disabled = true;
+      
+      try {
+        console.log('Testing feature flags service...');
+        
+        await featureFlagsService.loadFeatureFlags();
+        console.log('- loadFeatureFlags completed');
+        
+        await featureFlagsService.saveFeatureFlags({
+          testFlag: { enabled: true, visible: true }
+        });
+        console.log('- saveFeatureFlags completed');
+        
+        featureFlagsService.resetLLMService();
+        console.log('- resetLLMService completed');
+        
+        featureFlagsStatus.classList.remove('hidden', 'error');
+        featureFlagsStatus.classList.add('success');
+        featureFlagsStatus.innerHTML = '<strong>Success!</strong> Feature flags service is properly disabled.';
+      } catch (error) {
+        console.error('Error testing feature flags service:', error);
+        
+        featureFlagsStatus.classList.remove('hidden', 'success');
+        featureFlagsStatus.classList.add('error');
+        featureFlagsStatus.innerHTML = `<strong>Error!</strong> ${error.message}`;
+      }
+      
+      testFeatureFlagsButton.disabled = false;
+    });
+    
+    // Test Privacy Service
+    testPrivacyButton.addEventListener('click', async () => {
+      testPrivacyButton.disabled = true;
+      
+      try {
+        console.log('Testing privacy service...');
+        
+        const classification = await privacyService.classifyData({ test: 'data' });
+        console.log('- classifyData result:', classification);
+        
+        const anonymizedData = await privacyService.anonymizeData({ email: 'test@example.com' });
+        console.log('- anonymizeData result:', anonymizedData);
+        
+        const consent = await privacyService.getUserConsent('test-user-id');
+        console.log('- getUserConsent result:', consent);
+        
+        const hasConsent = await privacyService.checkConsent('test-user-id', 'analytics');
+        console.log('- checkConsent result:', hasConsent);
+        
+        privacyStatus.classList.remove('hidden', 'error');
+        privacyStatus.classList.add('success');
+        privacyStatus.innerHTML = '<strong>Success!</strong> Privacy service is properly disabled.';
+      } catch (error) {
+        console.error('Error testing privacy service:', error);
+        
+        privacyStatus.classList.remove('hidden', 'success');
+        privacyStatus.classList.add('error');
+        privacyStatus.innerHTML = `<strong>Error!</strong> ${error.message}`;
+      }
+      
+      testPrivacyButton.disabled = false;
+    });
+    
+    // Test Authentication
+    testAuthButton.addEventListener('click', async () => {
+      testAuthButton.disabled = true;
+      
+      try {
+        console.log('Testing authentication service...');
+        
+        const authStatus = authService.getAuthStatus();
+        console.log('- getAuthStatus result:', authStatus);
+        
+        const session = await authService.getSession();
+        console.log('- getSession result:', session);
+        
+        authStatus.classList.remove('hidden', 'error');
+        authStatus.classList.add('success');
+        authStatus.innerHTML = '<strong>Success!</strong> Authentication service is working properly.';
+      } catch (error) {
+        console.error('Error testing authentication service:', error);
+        
+        authStatus.classList.remove('hidden', 'success');
+        authStatus.classList.add('error');
+        authStatus.innerHTML = `<strong>Error!</strong> ${error.message}`;
+      }
+      
+      testAuthButton.disabled = false;
+    });
+  </script>
+</body>
+</html>

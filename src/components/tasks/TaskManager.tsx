@@ -169,25 +169,25 @@ const TaskManager: React.FC<TaskManagerProps> = ({
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p className="mt-2 text-sm text-gray-500">Loading tasks...</p>
+        <div className="loading loading-spinner loading-lg text-primary mx-auto"></div>
+        <p className="mt-2 text-sm text-base-content/70">Loading tasks...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white shadow rounded-lg">
+    <div className="bg-base-100 shadow-md rounded-lg">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-4 py-3 border-b border-base-300">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center text-lg font-medium text-gray-900"
+            className="flex items-center text-lg font-medium text-base-content"
           >
             {isExpanded ? (
-              <ChevronDown className="h-5 w-5 mr-2" />
+              <ChevronDown className="h-5 w-5 mr-2 text-base-content/60" />
             ) : (
-              <ChevronRight className="h-5 w-5 mr-2" />
+              <ChevronRight className="h-5 w-5 mr-2 text-base-content/60" />
             )}
             Tasks
           </button>
@@ -196,23 +196,23 @@ const TaskManager: React.FC<TaskManagerProps> = ({
           {!isExpanded && (
             <div className="ml-6 flex items-center space-x-6">
               <div className="flex items-center">
-                <Clock className="h-4 w-4 text-yellow-500 mr-1.5" />
-                <span className="text-sm text-gray-600">{stats.inProgress}</span>
+                <Clock className="h-4 w-4 text-warning mr-1.5" />
+                <span className="text-sm text-base-content/70">{stats.inProgress}</span>
               </div>
               <div className="flex items-center">
-                <AlertCircle className="h-4 w-4 text-red-500 mr-1.5" />
-                <span className="text-sm text-gray-600">{stats.overdue}</span>
+                <AlertCircle className="h-4 w-4 text-error mr-1.5" />
+                <span className="text-sm text-base-content/70">{stats.overdue}</span>
               </div>
               <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-1.5" />
-                <span className="text-sm text-gray-600">{stats.completed}</span>
+                <CheckCircle className="h-4 w-4 text-success mr-1.5" />
+                <span className="text-sm text-base-content/70">{stats.completed}</span>
               </div>
             </div>
           )}
 
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+            className="btn btn-primary btn-sm"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Task
@@ -224,21 +224,21 @@ const TaskManager: React.FC<TaskManagerProps> = ({
           <>
             {/* Stats */}
             <div className="mt-4 grid grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-sm font-medium text-blue-800">Total Tasks</div>
-                <div className="mt-1 text-2xl font-semibold text-blue-900">{stats.total}</div>
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <div className="text-sm font-medium text-primary">Total Tasks</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{stats.total}</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-sm font-medium text-green-800">Completed</div>
-                <div className="mt-1 text-2xl font-semibold text-green-900">{stats.completed}</div>
+              <div className="bg-success/10 p-4 rounded-lg">
+                <div className="text-sm font-medium text-success">Completed</div>
+                <div className="mt-1 text-2xl font-semibold text-success">{stats.completed}</div>
               </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <div className="text-sm font-medium text-yellow-800">In Progress</div>
-                <div className="mt-1 text-2xl font-semibold text-yellow-900">{stats.inProgress}</div>
+              <div className="bg-warning/10 p-4 rounded-lg">
+                <div className="text-sm font-medium text-warning">In Progress</div>
+                <div className="mt-1 text-2xl font-semibold text-warning">{stats.inProgress}</div>
               </div>
-              <div className="bg-red-50 p-4 rounded-lg">
-                <div className="text-sm font-medium text-red-800">Overdue</div>
-                <div className="mt-1 text-2xl font-semibold text-red-900">{stats.overdue}</div>
+              <div className="bg-error/10 p-4 rounded-lg">
+                <div className="text-sm font-medium text-error">Overdue</div>
+                <div className="mt-1 text-2xl font-semibold text-error">{stats.overdue}</div>
               </div>
             </div>
 
@@ -246,7 +246,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="btn btn-sm btn-outline"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
@@ -255,10 +255,10 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
             {/* Filters */}
             {showFilters && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="mt-4 p-4 bg-base-200 rounded-lg">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Status</h4>
+                    <h4 className="text-sm font-medium text-base-content mb-2">Status</h4>
                     <div className="flex flex-wrap gap-2">
                       {['pending', 'in_progress', 'completed'].map(status => (
                         <button
@@ -266,8 +266,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                           onClick={() => toggleFilter('status', status)}
                           className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
                             filters.status.includes(status)
-                              ? 'bg-indigo-100 text-indigo-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? status === 'completed'
+                                ? 'bg-success/20 text-success'
+                                : status === 'in_progress'
+                                ? 'bg-warning/20 text-warning'
+                                : 'bg-info/20 text-info'
+                              : 'bg-base-300 text-base-content'
                           }`}
                         >
                           {status === 'completed' && <CheckCircle className="h-4 w-4 mr-1" />}
@@ -280,7 +284,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Priority</h4>
+                    <h4 className="text-sm font-medium text-base-content mb-2">Priority</h4>
                     <div className="flex flex-wrap gap-2">
                       {['low', 'medium', 'high'].map(priority => (
                         <button
@@ -289,11 +293,11 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                           className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
                             filters.priority.includes(priority)
                               ? priority === 'high'
-                                ? 'bg-red-100 text-red-800'
+                                ? 'bg-error/20 text-error'
                                 : priority === 'medium'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                                ? 'bg-warning/20 text-warning'
+                                : 'bg-success/20 text-success'
+                              : 'bg-base-300 text-base-content'
                           }`}
                         >
                           {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -310,12 +314,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
       {/* Task List */}
       {isExpanded && (
-        <div className="p-6">
+        <div className="p-4">
           {/* Sort Controls */}
-          <div className="mb-4 flex items-center space-x-4">
+          <div className="mb-4 flex items-center space-x-3">
             <button
               onClick={() => toggleSort('due_date')}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="btn btn-sm btn-outline"
             >
               Due Date
               {sortField === 'due_date' && (
@@ -328,7 +332,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             </button>
             <button
               onClick={() => toggleSort('priority')}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="btn btn-sm btn-outline"
             >
               Priority
               {sortField === 'priority' && (
@@ -341,7 +345,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             </button>
             <button
               onClick={() => toggleSort('status')}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="btn btn-sm btn-outline"
             >
               Status
               {sortField === 'status' && (

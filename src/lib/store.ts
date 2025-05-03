@@ -1,14 +1,9 @@
 import { create } from 'zustand';
-import { User } from '@supabase/supabase-js';
-import { ExtendedUserProfile } from './types/extended-profile.types';
-import { mockProfileService } from './services/mock-profile.service';
+import { User } from '../lib/types/profile.types';
 import { profileService } from './services/profile.service';
 
-// Set to false to use real authentication services
-const USE_MOCK_SERVICES = false;
-
-// Use either real or mock services based on the flag
-const profileSvc = USE_MOCK_SERVICES ? mockProfileService : profileService;
+// Always use the real profile service (mock service is deprecated for new schema)
+const profileSvc = profileService;
 
 export interface FeatureFlags {
   [key: string]: {
@@ -36,19 +31,20 @@ const defaultFeatureFlags: FeatureFlags = {
   teamManagement: { enabled: true, visible: true },
   // Feature flags for mock services
   useMockAuth: { enabled: true, visible: true },
-  useMockAI: { enabled: false, visible: true },
+  useMockAI: { enabled: true, visible: true }, // Enable mock examples as fallback by default
   // Enhanced Idea Playground feature flags
   enhancedIdeaPlayground: { enabled: false, visible: true }, // Disabled to ensure PathwayRouter is used
-  useRealAI: { enabled: true, visible: true },
+  useRealAI: { enabled: true, visible: true }, // Real AI Only Mode is on by default
   multiTieredAI: { enabled: false, visible: true }
+  // Hugging Face integration flags removed - now using OpenAI exclusively
 };
 
 interface AuthState {
   user: User | null;
-  profile: ExtendedUserProfile | null;
+  profile: User | null;
   featureFlags: FeatureFlags;
   setUser: (user: User | null) => void;
-  setProfile: (profile: ExtendedUserProfile | null) => void;
+  setProfile: (profile: User | null) => void;
   setFeatureFlags: (flags: Partial<FeatureFlags>) => void;
   fetchProfile: (userId: string) => Promise<void>;
   updateSetupProgress: (progress: any) => Promise<void>;
@@ -78,7 +74,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   }),
   fetchProfile: async (userId: string) => {
     try {
-      // Use the appropriate profile service based on the USE_MOCK_SERVICES flag
       const profile = await profileSvc.getProfile(userId);
       if (profile) {
         set({ profile });
@@ -87,21 +82,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Error fetching profile:', error);
     }
   },
+
   updateSetupProgress: async (progress: any) => {
     try {
       const { user, profile } = get();
       if (!user || !profile) return;
-      
-      // Update the profile with the new setup progress
-      const updatedProfile = {
+
+      const updatedProfile: User = {
         ...profile,
         setup_progress: progress
       };
-      
-      // Update the store
+
       set({ profile: updatedProfile });
-      
-      // Update the database using the appropriate profile service
       await profileSvc.updateProfile(user.id, { setup_progress: progress });
       console.log('Setup progress updated:', progress);
     } catch (error) {

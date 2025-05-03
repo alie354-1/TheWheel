@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/hooks/useAuth';
 import { ideaPlaygroundService } from '../../lib/services/idea-playground.service';
-import { IdeaPlaygroundCanvas, IdeaPlaygroundIdea, IdeaGenerationParams, IdeaRefinementParams } from '../../lib/types/idea-playground.types';
+import { IdeaPlaygroundIdea } from '../../lib/types/idea-playground.types';
 import { ExtendedUserProfile } from '../../lib/types/extended-profile.types';
+
+// Use types from service file for compatibility
+import type { IdeaPlaygroundCanvas, IdeaGenerationParams } from '../../lib/services/idea-playground.service';
+
+// Components
 import CanvasSelector from './CanvasSelector';
 import IdeaGenerationForm from './IdeaGenerationForm';
 import IdeaRefinementForm from './IdeaRefinementForm';
 import IdeaList from './IdeaList';
-import CreateCanvasModal from '../idea-playground/CreateCanvasModal';
+import SavedIdeasList from './SavedIdeasList';
+import CreateCanvasModal from './CreateCanvasModal';
+
+// Define local types
+interface IdeaRefinementParams {
+  ideaId: string;
+  feedback: string;
+}
 
 const IdeaPlaygroundWorkspace: React.FC = () => {
   const auth = useAuth();
@@ -20,13 +32,6 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
   const [showCreateCanvas, setShowCreateCanvas] = useState(false);
   const [ideaMode, setIdeaMode] = useState<'generate' | 'market' | 'refine'>('generate');
   
-  console.log('IdeaPlaygroundWorkspace - auth:', auth);
-  console.log('IdeaPlaygroundWorkspace - user:', user);
-  console.log('IdeaPlaygroundWorkspace - profile:', profile);
-  console.log('IdeaPlaygroundWorkspace - canvases:', canvases);
-  console.log('IdeaPlaygroundWorkspace - currentCanvas:', currentCanvas);
-  console.log('IdeaPlaygroundWorkspace - ideas:', ideas);
-  
   // Load canvases on component mount
   useEffect(() => {
     if (user) {
@@ -37,15 +42,9 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
   // Load ideas when canvas changes
   useEffect(() => {
     if (currentCanvas) {
-      console.log('useEffect triggered for currentCanvas change:', currentCanvas);
       loadIdeas(currentCanvas.id);
     }
   }, [currentCanvas]);
-
-  // Debug useEffect for ideas state changes
-  useEffect(() => {
-    console.log('ideas state changed:', ideas);
-  }, [ideas]);
   
   const loadCanvases = async () => {
     if (!user) return;
@@ -63,12 +62,35 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
   };
   
   const loadIdeas = async (canvasId: string) => {
-    console.log('IdeaPlaygroundWorkspace.loadIdeas called with canvasId:', canvasId);
     setIsLoading(true);
-    const ideaList = await ideaPlaygroundService.getIdeasForCanvas(canvasId);
-    console.log('IdeaPlaygroundWorkspace.loadIdeas received ideas:', ideaList);
-    setIdeas(ideaList);
-    setIsLoading(false);
+    try {
+      const ideaList = await ideaPlaygroundService.getIdeasForCanvas(canvasId);
+      
+      // Convert to IdeaPlaygroundIdea format with is_saved mapping to isFavorite for demo
+      const convertedIdeas: IdeaPlaygroundIdea[] = ideaList.map(idea => ({
+        id: idea.id,
+        title: idea.title,
+        description: idea.description,
+        problem_statement: idea.problem_statement || '',
+        solution_concept: idea.solution_concept || '',
+        target_audience: Array.isArray(idea.target_audience) ? idea.target_audience : [idea.target_audience || ''],
+        unique_value: idea.unique_value || '',
+        business_model: idea.business_model || '',
+        user_id: idea.userId || '',
+        created_at: idea.createdAt || new Date().toISOString(),
+        updated_at: idea.updatedAt || new Date().toISOString(),
+        protection_level: 'public',
+        status: idea.status || 'draft',
+        is_saved: idea.isFavorite || false,
+        used_company_context: false
+      }));
+      
+      setIdeas(convertedIdeas);
+    } catch (error) {
+      console.error('Error loading ideas:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleCreateCanvas = async (name: string, description?: string) => {
@@ -78,8 +100,7 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
     const newCanvas = await ideaPlaygroundService.createCanvas(
       user.id,
       name,
-      description,
-      profile?.company_id
+      description || ''
     );
     
     if (newCanvas) {
@@ -94,8 +115,6 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
   const handleGenerateIdeas = async (params: IdeaGenerationParams) => {
     if (!user || !currentCanvas) return;
     
-    console.log('IdeaPlaygroundWorkspace.handleGenerateIdeas called with:', { params });
-    
     setIsLoading(true);
     try {
       const newIdeas = await ideaPlaygroundService.generateIdeas(
@@ -104,14 +123,9 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
         params
       );
       
-      console.log('IdeaPlaygroundWorkspace.handleGenerateIdeas received ideas:', newIdeas);
-      
       if (newIdeas.length > 0) {
         // Force a reload of ideas from the service instead of updating the state directly
         await loadIdeas(currentCanvas.id);
-        console.log('IdeaPlaygroundWorkspace.handleGenerateIdeas reloaded ideas');
-      } else {
-        console.log('IdeaPlaygroundWorkspace.handleGenerateIdeas received empty newIdeas array');
       }
     } catch (error) {
       console.error('Error generating ideas:', error);
@@ -121,28 +135,44 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
   };
   
   const handleRefineIdea = async (params: IdeaRefinementParams) => {
-    if (!user) return;
-    
-    console.log('IdeaPlaygroundWorkspace.handleRefineIdea called with:', { params });
+    if (!user || !currentCanvas) return;
     
     setIsLoading(true);
     try {
       const refinedIdea = await ideaPlaygroundService.refineIdea(
-        user.id,
-        params
+        params.ideaId,
+        params.feedback
       );
-      
-      console.log('IdeaPlaygroundWorkspace.handleRefineIdea received idea:', refinedIdea);
       
       if (refinedIdea && currentCanvas) {
         // Force a reload of ideas from the service
         await loadIdeas(currentCanvas.id);
-        console.log('IdeaPlaygroundWorkspace.handleRefineIdea reloaded ideas');
       }
     } catch (error) {
       console.error('Error refining idea:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleToggleSaveIdea = async (idea: IdeaPlaygroundIdea) => {
+    if (!user) return;
+    
+    try {
+      const success = await ideaPlaygroundService.toggleSaveIdea(user.id, idea);
+      
+      if (success && currentCanvas) {
+        // Create a new array with the updated idea to preserve immutability
+        const updatedIdeas = ideas.map(i => 
+          i.id === idea.id 
+            ? { ...i, is_saved: !i.is_saved }  // Toggle saved state
+            : i
+        );
+        
+        setIdeas(updatedIdeas);
+      }
+    } catch (error) {
+      console.error('Error toggling save status:', error);
     }
   };
   
@@ -164,14 +194,27 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
       <div className="mb-6">
         <CanvasSelector
           canvases={canvases}
-          currentCanvas={currentCanvas}
-          onSelectCanvas={(canvas: IdeaPlaygroundCanvas) => setCurrentCanvas(canvas)}
-          onCreateCanvas={() => setShowCreateCanvas(true)}
+          selectedCanvasId={currentCanvas?.id || null}
+          onCanvasChange={(canvasId) => {
+            const selectedCanvas = canvases.find(c => c.id === canvasId);
+            if (selectedCanvas) {
+              setCurrentCanvas(selectedCanvas);
+            }
+          }}
+          onCreateCanvas={(name, description) => handleCreateCanvas(name, description)}
+          isLoading={isLoading}
         />
       </div>
       
       {currentCanvas ? (
         <>
+          {/* Saved Ideas List - Shows at the top for quick access */}
+          <SavedIdeasList
+            ideas={ideas}
+            onIdeaClick={(idea) => console.log('Clicked saved idea:', idea)}
+            onToggleSave={handleToggleSaveIdea}
+          />
+          
           {/* Mode Selector */}
           <div className="mb-6">
             <div className="flex border-b border-gray-200">
@@ -243,6 +286,8 @@ const IdeaPlaygroundWorkspace: React.FC = () => {
             <IdeaList
               ideas={ideas}
               isLoading={isLoading}
+              onIdeaClick={(idea) => console.log('Clicked idea:', idea)}
+              onToggleSave={handleToggleSaveIdea}
             />
           </div>
         </>

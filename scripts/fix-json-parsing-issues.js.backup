@@ -1,0 +1,429 @@
+#!/usr/bin/env node
+/**
+ * This script fixes JSON parsing issues in the Idea Pathway1 AI service
+ * It's a JavaScript file that contains TypeScript code as strings
+ * 
+ * Usage: node --experimental-modules scripts/fix-json-parsing-issues.js
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Disable TypeScript checking for this file
+// @ts-nocheck
+
+console.log('🛠️ Fixing JSON parsing issues in Idea Pathway1 AI service...');
+
+const targetFile = path.join(process.cwd(), 'src/lib/services/idea-pathway1-ai.service.ts');
+
+// Check if file exists
+if (!fs.existsSync(targetFile)) {
+  console.error(`❌ Target file not found: ${targetFile}`);
+  process.exit(1);
+}
+
+// Read the current file
+let fileContent = fs.readFileSync(targetFile, 'utf8');
+
+// Create a robust JSON parser function implementation
+const robustJsonParserFunction = `
+/**
+ * Parses AI-generated suggestions with multiple fallback strategies
+ * to handle various JSON formatting issues
+ */
+private parseSuggestionsResponse(response: string, originalIdea: IdeaPlaygroundIdea): Suggestion[] {
+  try {
+    console.log('Parsing AI response...');
+    
+    // First try to extract what looks like JSON content
+    let jsonContent = response;
+    
+    // Look for content between JSON code blocks if present
+    const codeBlockMatch = response.match(/\`\`\`(json)?(.*?)\`\`\`/s);
+    if (codeBlockMatch && codeBlockMatch[2]) {
+      jsonContent = codeBlockMatch[2].trim();
+      console.log('Extracted JSON from code block');
+    }
+    
+    // Try multiple parsing strategies
+    const suggestionsArray = this.tryMultipleParsingStrategies(jsonContent);
+    
+    if (!suggestionsArray || suggestionsArray.length === 0) {
+      console.error('All parsing strategies failed, falling back to mock suggestions');
+      return this.generateMockSuggestions(originalIdea, 3);
+    }
+    
+    // Validate and clean up suggestions
+    const validSuggestions = suggestionsArray
+      .map(item => this.validateAndCleanSuggestion(item, originalIdea))
+      .filter(item => item !== null) as Suggestion[];
+    
+    if (validSuggestions.length === 0) {
+      console.error('No valid suggestions after validation, falling back to mock suggestions');
+      return this.generateMockSuggestions(originalIdea, 3);
+    }
+    
+    console.log(\`Successfully parsed \${validSuggestions.length} suggestions\`);
+    return validSuggestions;
+  } catch (error) {
+    console.error('Error parsing suggestions response:', error);
+    return this.generateMockSuggestions(originalIdea, 3);
+  }
+}
+
+/**
+ * Try multiple strategies to parse JSON from AI response
+ * Returns array of suggestions or null if all strategies fail
+ */
+private tryMultipleParsingStrategies(content: string): any[] | null {
+  // Strategy 1: Direct JSON parsing
+  try {
+    const result = JSON.parse(content);
+    if (Array.isArray(result)) {
+      console.log('Strategy 1 (Direct JSON parse) succeeded');
+      return result;
+    }
+    else if (typeof result === 'object' && result !== null) {
+      // If it's an object but not an array, it might be a wrapper
+      const possibleArray = Object.values(result).find(value => Array.isArray(value));
+      if (possibleArray && Array.isArray(possibleArray)) {
+        console.log('Strategy 1b (Extract array from object) succeeded');
+        return possibleArray;
+      }
+    }
+  } catch (e) {
+    console.log('Strategy 1 (Direct JSON parse) failed, trying next strategy');
+  }
+  
+  // Strategy 2: Fix common JSON issues before parsing
+  try {
+    const preprocessed = this.preprocessJson(content);
+    const result = JSON.parse(preprocessed);
+    if (Array.isArray(result)) {
+      console.log('Strategy 2 (Preprocess + parse) succeeded');
+      return result;
+    }
+    else if (typeof result === 'object' && result !== null) {
+      const possibleArray = Object.values(result).find(value => Array.isArray(value));
+      if (possibleArray && Array.isArray(possibleArray)) {
+        console.log('Strategy 2b (Preprocess + extract array) succeeded');
+        return possibleArray;
+      }
+    }
+  } catch (e) {
+    console.log('Strategy 2 (Preprocess + parse) failed, trying next strategy');
+  }
+  
+  // Strategy 3: Find and extract a JSON array using regex
+  try {
+    const arrayMatch = content.match(/\\[\\s*\\{[\\s\\S]*?\\}\\s*\\]/g);
+    if (arrayMatch && arrayMatch.length > 0) {
+      const jsonString = arrayMatch[0];
+      try {
+        const result = JSON.parse(jsonString);
+        if (Array.isArray(result)) {
+          console.log('Strategy 3 (Regex extract array) succeeded');
+          return result;
+        }
+      } catch (innerError) {
+        console.log('Strategy 3 (Regex extract array) failed to parse extracted content');
+      }
+    }
+  } catch (e) {
+    console.log('Strategy 3 (Regex extract array) failed, trying next strategy');
+  }
+  
+  // Strategy 4: Find individual JSON objects and compose an array
+  try {
+    const objectMatches = Array.from(content.matchAll(/\\{[\\s\\S]*?\\}(?=\\s*[\\{\\]]|\\s*$)/g))
+      .map(match => match[0]);
+    
+    if (objectMatches && objectMatches.length > 0) {
+      const validObjects = [];
+      
+      for (const objStr of objectMatches) {
+        try {
+          const preprocessed = this.preprocessJson(objStr);
+          const obj = JSON.parse(preprocessed);
+          if (typeof obj === 'object' && obj !== null) {
+            validObjects.push(obj);
+          }
+        } catch (parseErr) {
+          // Skip invalid objects
+        }
+      }
+      
+      if (validObjects.length > 0) {
+        console.log(\`Strategy 4 (Extract individual objects) succeeded with \${validObjects.length} objects\`);
+        return validObjects;
+      }
+    }
+  } catch (e) {
+    console.log('Strategy 4 (Extract individual objects) failed, trying next strategy');
+  }
+  
+  // Strategy 5: Last resort - try to extract key-value pairs
+  try {
+    const fallbackObjects = [];
+    const keys = ['title', 'description', 'problem_statement', 'solution_concept'];
+    
+    for (const key of keys) {
+      const regex = new RegExp(\`"\${key}"\\\\s*:\\\\s*"([^"]*)"\\`);
+      const titleMatch = content.match(regex);
+      if (titleMatch && titleMatch[1]) {
+        // If we find at least a title, create a minimal object
+        fallbackObjects.push({
+          title: content.match(/title"\\s*:\\s*"([^"]*)"/)?.[1] || 'Untitled Suggestion',
+          description: content.match(/description"\\s*:\\s*"([^"]*)"/)?.[1] || 'No description available',
+        });
+        break;
+      }
+    }
+    
+    if (fallbackObjects.length > 0) {
+      console.log('Strategy 5 (Fallback extraction) succeeded');
+      return fallbackObjects;
+    }
+  } catch (e) {
+    console.log('Strategy 5 (Fallback extraction) failed');
+  }
+  
+  // All strategies failed
+  return null;
+}
+
+/**
+ * Preprocess JSON string to fix common formatting issues
+ */
+private preprocessJson(input: string): string {
+  let result = input;
+  
+  // Remove trailing commas in objects and arrays
+  result = result.replace(/,\\s*(\\}|\\])/g, '$1');
+  
+  // Add missing commas between objects in arrays
+  result = result.replace(/\\}\\s*\\{/g, '},\\n{');
+  
+  // Fix unquoted property names (only if they're valid JS identifiers)
+  result = result.replace(/(\\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*:/g, '$1"$2":');
+  
+  // Fix single quotes to double quotes (if not within double quotes)
+  let inDoubleQuotes = false;
+  let processedResult = '';
+  
+  for (let i = 0; i < result.length; i++) {
+    const char = result[i];
+    
+    if (char === '"' && (i === 0 || result[i-1] !== '\\\\')) {
+      inDoubleQuotes = !inDoubleQuotes;
+      processedResult += char;
+    } else if (char === "'" && !inDoubleQuotes) {
+      processedResult += '"';
+    } else {
+      processedResult += char;
+    }
+  }
+  
+  result = processedResult;
+  
+  return result;
+}
+
+/**
+ * Validate and clean a suggestion object
+ * Returns null if suggestion is invalid
+ */
+private validateAndCleanSuggestion(suggestion: any, originalIdea: IdeaPlaygroundIdea): Suggestion | null {
+  if (!suggestion || typeof suggestion !== 'object') {
+    return null;
+  }
+  
+  // Check for minimum required fields
+  if (!suggestion.title) {
+    return null;
+  }
+  
+  // Create a complete suggestion with fallbacks for missing fields
+  return {
+    title: suggestion.title || 'Untitled Suggestion',
+    description: suggestion.description || originalIdea.description || 'No description available',
+    problem_statement: suggestion.problem_statement || 'No problem statement available',
+    solution_concept: suggestion.solution_concept || 'No solution concept available',
+    target_audience: suggestion.target_audience || 'No target audience specified',
+    unique_value: suggestion.unique_value || 'No unique value proposition specified',
+    business_model: suggestion.business_model || 'No business model specified',
+    marketing_strategy: suggestion.marketing_strategy || 'No marketing strategy specified',
+    revenue_model: suggestion.revenue_model || 'No revenue model specified',
+    go_to_market: suggestion.go_to_market || 'No go-to-market strategy specified',
+    market_size: suggestion.market_size || 'Market size not specified',
+    strengths: suggestion.strengths || ['No strengths specified'],
+    weaknesses: suggestion.weaknesses || ['No weaknesses specified'],
+    opportunities: suggestion.opportunities || ['No opportunities specified'],
+    threats: suggestion.threats || ['No threats specified'],
+    original_idea_id: originalIdea.id
+  };
+}
+`;
+
+// Check if the file already has a parseSuggestionsResponse method
+if (fileContent.includes('parseSuggestionsResponse')) {
+  // Replace the existing method implementation
+  const methodRegex = /(private\s+parseSuggestionsResponse[\s\S]*?)(private|public|\/\*\*|$)/;
+  const match = fileContent.match(methodRegex);
+  
+  if (match) {
+    // Replace the entire method implementation
+    fileContent = fileContent.replace(match[0], robustJsonParserFunction + '\n\n' + match[2]);
+    console.log('✅ Replaced existing parseSuggestionsResponse method');
+  } else {
+    console.error('❌ Could not locate parseSuggestionsResponse method to replace');
+    // Add it at the end of the class
+    const classEndIndex = fileContent.lastIndexOf('}');
+    if (classEndIndex !== -1) {
+      fileContent = fileContent.slice(0, classEndIndex) + 
+                   robustJsonParserFunction + '\n\n' +
+                   fileContent.slice(classEndIndex);
+      console.log('✅ Added parseSuggestionsResponse method at the end of the class');
+    } else {
+      console.error('❌ Could not locate class end');
+    }
+  }
+} else {
+  // Add the method to the end of the class
+  const classEndIndex = fileContent.lastIndexOf('}');
+  if (classEndIndex !== -1) {
+    fileContent = fileContent.slice(0, classEndIndex) + 
+                 robustJsonParserFunction + '\n\n' +
+                 fileContent.slice(classEndIndex);
+    console.log('✅ Added parseSuggestionsResponse method');
+  } else {
+    console.error('❌ Could not locate class end');
+  }
+}
+
+// Also modify the generateCompanySuggestions method for better error handling
+const generateCompanySuggestionsImpl = `
+/**
+ * Generate variations of a company idea using AI
+ */
+async generateCompanySuggestions(
+  idea: IdeaPlaygroundIdea,
+  userId: string,
+  count: number = 5
+): Promise<Suggestion[]> {
+  try {
+    console.log('Generating company suggestions for idea:', idea.title);
+    
+    // Create a detailed prompt for the AI
+    const prompt = this.createSuggestionPrompt(idea, count);
+    
+    // Call the general LLM service with the prompt
+    const response = await generalLLMService.query(prompt, {
+      userId: userId || 'anonymous',
+      useCompanyModel: !!idea.used_company_context,
+      useExistingModels: true,
+      context: 'idea_generation'
+    });
+    
+    if (!response || !response.content) {
+      console.error('Empty response from AI service');
+      throw new Error('Empty response from AI service');
+    }
+    
+    console.log('Received AI response, length:', response.content.length);
+    
+    // Parse the AI response into suggestion objects
+    const suggestions = this.parseSuggestionsResponse(response.content, idea);
+    
+    // Log successful generation
+    console.log(\`Successfully generated \${suggestions.length} suggestions\`);
+    
+    return suggestions;
+  } catch (error) {
+    console.error('Error generating company suggestions:', error instanceof Error ? error.message : error);
+    
+    // Return mock suggestions as fallback
+    const mockSuggestions = this.generateMockSuggestions(idea, count);
+    console.warn(\`Using \${mockSuggestions.length} mock suggestions due to error\`);
+    
+    return mockSuggestions;
+  }
+}
+`;
+
+// Replace the generateCompanySuggestions method if it exists
+if (fileContent.includes('generateCompanySuggestions')) {
+  const methodRegex = /(async\s+generateCompanySuggestions[\s\S]*?)(private|public|\/\*\*|$)/;
+  const match = fileContent.match(methodRegex);
+  
+  if (match) {
+    fileContent = fileContent.replace(match[0], generateCompanySuggestionsImpl + '\n\n' + match[2]);
+    console.log('✅ Replaced existing generateCompanySuggestions method');
+  } else {
+    console.error('❌ Could not locate generateCompanySuggestions method');
+  }
+}
+
+// Make sure the imports are correct
+if (!fileContent.includes('import { generalLLMService }')) {
+  // Find the last import line
+  const lastImportIndex = fileContent.lastIndexOf('import ');
+  const lastImportEnd = fileContent.indexOf('\n', lastImportIndex);
+  
+  if (lastImportIndex !== -1 && lastImportEnd !== -1) {
+    const newImport = "import { generalLLMService } from '../services/general-llm.service';\n";
+    fileContent = fileContent.slice(0, lastImportEnd + 1) + newImport + fileContent.slice(lastImportEnd + 1);
+    console.log('✅ Added import for generalLLMService');
+  }
+}
+
+// Write the updated file
+fs.writeFileSync(targetFile, fileContent, 'utf8');
+console.log(`✅ Successfully updated ${targetFile}`);
+
+// Now also fix the SuggestionsScreen.tsx for better error handling
+const suggestionsScreenPath = path.join(process.cwd(), 'src/components/idea-playground/pathway1/SuggestionsScreen.tsx');
+
+if (fs.existsSync(suggestionsScreenPath)) {
+  let screenContent = fs.readFileSync(suggestionsScreenPath, 'utf8');
+  
+  // Replace error handling in fetchIdeaAndGenerateSuggestions
+  const errorHandlingRegex = /(catch\s*\(err\)\s*\{[\s\S]*?setError\()['"]([^'"]*)['"]/;
+  const errorHandlingMatch = screenContent.match(errorHandlingRegex);
+  
+  if (errorHandlingMatch) {
+    screenContent = screenContent.replace(errorHandlingMatch[0], 
+      `catch (err) {
+      console.error('Error fetching idea or generating suggestions:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(\`Failed to load idea or generate suggestions: \${errorMessage}. Please refresh to try again.\``);
+    console.log('✅ Updated error handling in SuggestionsScreen.tsx');
+  }
+  
+  // Replace error handling in generateSuggestions
+  const genSuggestionsErrorRegex = /(catch\s*\(err\)\s*\{[\s\S]*?setError\()['"]([^'"]*)['"]/g;
+  let matches = [...screenContent.matchAll(genSuggestionsErrorRegex)];
+  
+  if (matches.length > 1) {
+    screenContent = screenContent.replace(matches[1][0], 
+      `catch (err) {
+      console.error('Error generating suggestions:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(\`Failed to generate suggestions: \${errorMessage}. Please try again.\``);
+    console.log('✅ Updated error handling in generateSuggestions');
+  }
+  
+  // Write the updated file
+  fs.writeFileSync(suggestionsScreenPath, screenContent, 'utf8');
+  console.log(`✅ Successfully updated ${suggestionsScreenPath}`);
+} else {
+  console.log(`⚠️ SuggestionsScreen.tsx not found at ${suggestionsScreenPath}`);
+}
+
+console.log('\n🎉 Fixes completed! The Idea Pathway 1 AI service should now handle JSON parsing more robustly.');
+console.log('   Please test the idea generation feature to verify the fix.');

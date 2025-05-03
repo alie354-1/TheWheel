@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../lib/store';
+import { useAuthStore } from '../lib/store'; // Import fetchProfile
 import { supabase } from '../lib/supabase';
 import InitialOnboardingWizard from '../components/onboarding/InitialOnboardingWizard';
 import Login from '../pages/Login';
@@ -22,13 +22,21 @@ const InitialOnboardingPage: React.FC = () => {
   const handleOnboardingComplete = async () => {
     if (!user) return;
     
+    // Get fetchProfile from the store
+    const { fetchProfile } = useAuthStore.getState();
+
     try {
-      // Update the profile to mark initial onboarding as complete
-      const { error } = await supabase
-        .from('profiles')
+      console.log("Attempting to mark initial onboarding complete for user:", user.id);
+      // Update the profile to mark initial onboarding as started (not fully complete)
+      const { error: updateError } = await supabase
+        .from('users') // Assuming 'users' table has setup_progress. Check if it should be 'profiles'.
         .update({
           setup_progress: {
             ...profile?.setup_progress,
+            // Do NOT add 'complete' to completed_steps for Save & Exit
+            completed_steps: [
+              ...((profile?.setup_progress?.completed_steps || []).filter((s: string) => s !== 'complete'))
+            ],
             form_data: {
               ...(profile?.setup_progress?.form_data || {}),
               initialOnboardingComplete: true
@@ -36,16 +44,24 @@ const InitialOnboardingPage: React.FC = () => {
           }
         })
         .eq('id', user.id);
-        
-      if (error) {
-        console.error('Error updating profile:', error);
+
+      if (updateError) {
+        console.error('Error updating profile in database:', updateError);
+        // Optionally: Show an error message to the user
+        // For now, we'll still try to navigate, but log the error
+      } else {
+        console.log("Database update successful. Refreshing profile state...");
+        // Explicitly refresh the profile state from the database
+        await fetchProfile(user.id); 
+        console.log("Profile state refreshed.");
       }
-      
-      // Redirect to the regular onboarding flow
-      navigate('/onboarding');
+
+      // Redirect to dashboard after attempting update and refresh
+      console.log("Navigating to dashboard...");
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Error in onboarding completion:', error);
-      // Fall back to dashboard if there's an error
+      console.error('Critical error during onboarding completion:', error);
+      // Fall back to dashboard even if there's a critical error
       navigate('/dashboard');
     }
   };

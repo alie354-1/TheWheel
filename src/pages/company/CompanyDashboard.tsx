@@ -1,394 +1,264 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  Building2,
-  Users,
-  Settings,
-  FolderOpen,
-  CheckSquare,
-  Cloud,
-  BarChart,
-  Plus,
-  ChevronRight,
-  Clock,
-  AlertCircle,
-  Rocket,
-  ArrowRight
-} from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../lib/store';
-import TaskManager from '../../components/tasks/TaskManager';
-import DocumentStore from '../../components/company/DocumentStore';
-import CompanyStages from '../../components/company/CompanyStages';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom"; // Import Link and useNavigate
+import { companyJourneyService } from "../../lib/services/companyJourney.service";
+import { companyAccessService } from "../../lib/services/company-access.service";
+import { useAuthStore } from "../../lib/store";
+import { LayoutDashboard, Route, ListChecks, Landmark, Lightbulb, Wrench, Users, Settings, FileText } from 'lucide-react'; // Added FileText
+import JourneyProgressWidget from '../../components/company/dashboard/JourneyProgressWidget';
+import MyTasksWidget from '../../components/company/dashboard/MyTasksWidget';
+import FinancialSnapshotWidget from '../../components/company/dashboard/FinancialSnapshotWidget';
+import JourneyMapView from '../../components/company/dashboard/JourneyMapView'; // Import the new view
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'in_progress' | 'completed';
-  category: string;
-  task_type: string;
-  estimated_hours: number;
-  due_date: string;
-}
+// Placeholder components for tab content
+const OverviewTab = ({ companyId }: { companyId: string }) => (
+  // Improved responsive grid with better spacing
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 py-4">
+    {/* Main Content Area (2/3 width on large screens) */}
+    <div className="lg:col-span-2 space-y-4">
+      {/* Journey Progress with max-height constraint */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4 max-h-[300px] overflow-auto">
+          <JourneyProgressWidget companyId={companyId} />
+        </div>
+      </div>
+      
+      {/* Tasks widget with max-height constraint */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4 max-h-[250px] overflow-auto">
+          <MyTasksWidget companyId={companyId} />
+        </div>
+      </div>
+      
+      {/* Recent Activity with compact styling */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4">
+          <h3 className="card-title text-base font-medium mb-2">Recent Activity</h3>
+          <p className="text-sm text-base-content/70">No recent activity to display</p>
+        </div>
+      </div>
+    </div>
 
-interface CompanyMember {
-  id: string;
-  role: string;
-  title: string;
-  department: string;
-  user_id: string;
-  user_email: string;
-}
+    {/* Sidebar Area (1/3 width on large screens) */}
+    <div className="space-y-4">
+      {/* Financial snapshot with max-height */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4 max-h-[250px] overflow-auto">
+          <FinancialSnapshotWidget companyId={companyId} />
+        </div>
+      </div>
+      
+      {/* Quick Actions with compact styling */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4">
+          <h3 className="card-title text-base font-medium mb-2">Quick Actions</h3>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn btn-sm btn-outline">Add Task</button>
+            <button className="btn btn-sm btn-outline">Invite Team</button>
+            <button className="btn btn-sm btn-outline">Update Budget</button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Team Pulse with compact styling */}
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-body p-4">
+          <h3 className="card-title text-base font-medium mb-2">Team Pulse</h3>
+          <p className="text-sm text-base-content/70">No team members to display</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+const JourneyTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4">
+    <h3 className="text-xl font-semibold mb-4">Journey Map</h3>
+    <JourneyMapView companyId={companyId} /> {/* Use the new component */}
+   </div>
+);
+const TasksTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Tasks</h3> {/* Increased heading size */}
+    <p>Task management interface (list, filters, board?) will go here.</p>
+     {/* TODO: Implement Tasks component */}
+   </div>
+);
+const FinanceTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Finance</h3> {/* Increased heading size */}
+    <p>Financial charts, budget tracking, reports will go here.</p>
+     {/* TODO: Link to or embed Financial Hub components */}
+   </div>
+);
+const IdeasTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Ideas</h3> {/* Increased heading size */}
+    <p>Company idea pipeline overview will go here.</p>
+     {/* TODO: Implement Ideas overview component */}
+   </div>
+);
+const ToolsTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Tools</h3> {/* Increased heading size */}
+    <p>Company tools management and marketplace interaction will go here.</p>
+     {/* TODO: Implement Tools component */}
+   </div>
+);
+const TeamTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Team</h3> {/* Increased heading size */}
+    <p>Team member list, roles, invitations will go here.</p>
+     {/* TODO: Implement Team component */}
+   </div>
+);
+const SettingsTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Company Settings</h3> {/* Increased heading size */}
+    <p>Editing company profile details will go here.</p>
+     {/* TODO: Implement Company Settings component/form */}
+   </div>
+);
+const DocumentsTab = ({ companyId }: { companyId: string }) => (
+   <div className="p-6 bg-base-100 rounded-lg shadow mt-4"> {/* Added styling */}
+    <h3 className="text-xl font-semibold mb-4">Documents</h3> {/* Increased heading size */}
+    <p>Company document management (upload, view, organize) will go here.</p>
+     {/* TODO: Implement Documents component */}
+   </div>
+);
 
-interface Company {
-  id: string;
-  name: string;
-  industry: string;
-  website: string;
-  size: string;
-  stage: string;
-  workspace_setup: {
-    google: boolean;
-    microsoft: boolean;
-  };
-}
+const TABS = [
+  { id: 'overview', name: 'Overview', icon: LayoutDashboard, component: OverviewTab },
+  { id: 'journey', name: 'Journey', icon: Route, component: JourneyTab },
+  { id: 'tasks', name: 'Tasks', icon: ListChecks, component: TasksTab },
+  { id: 'finance', name: 'Finance', icon: Landmark, component: FinanceTab },
+  { id: 'ideas', name: 'Ideas', icon: Lightbulb, component: IdeasTab },
+  { id: 'tools', name: 'Tools', icon: Wrench, component: ToolsTab },
+  { id: 'documents', name: 'Documents', icon: FileText, component: DocumentsTab }, // Added Documents tab
+  { id: 'team', name: 'Team', icon: Users, component: TeamTab },
+  { id: 'settings', name: 'Settings', icon: Settings, component: SettingsTab },
+];
 
-export default function CompanyDashboard() {
-  const { profile } = useAuthStore();
-  const [company, setCompany] = useState<Company | null>(null);
-  const [documents, setDocuments] = useState([]);
-  const [environments, setEnvironments] = useState([]);
-  const [members, setMembers] = useState<CompanyMember[]>([]);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+function CompanyDashboard() {
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [isLoadingCompany, setIsLoadingCompany] = useState(true);
+  const [activeTab, setActiveTab] = useState(TABS[0].id); // Default to 'overview'
+
+  // --- Removed Journey-specific state from main component ---
+  // const [journey, setJourney] = useState<any[]>([]);
+  // const [hasCustomJourney, setHasCustomJourney] = useState(false);
+  // const [loadingJourney, setLoadingJourney] = useState(true);
+  // const [customizing, setCustomizing] = useState(false);
+  // const [newStepName, setNewStepName] = useState("");
+  // const [addingStep, setAddingStep] = useState(false);
+  // const [toolSubmissionStepId, setToolSubmissionStepId] = useState<string | null>(null);
+  // const [toolName, setToolName] = useState("");
+  // const [toolUrl, setToolUrl] = useState("");
+  // const [toolDescription, setToolDescription] = useState("");
+  // const [toolCategory, setToolCategory] = useState("");
+  // const [submittingTool, setSubmittingTool] = useState(false);
+  // --- End Removed State ---
+
+
+  // Fetch company ID for the current user
   useEffect(() => {
-    if (profile) {
-      loadCompanyData();
-    }
-  }, [profile]);
-
-  const loadCompanyData = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-
-      // Fetch company data
-      const { data: companies, error: companyError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('owner_id', profile?.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (companyError) throw companyError;
-
-      const company = companies?.[0];
-      if (company) {
-        setCompany(company);
-
-        // Fetch related data
-        const [
-          { data: documentsData },
-          { data: environmentsData },
-          { data: membersData }
-        ] = await Promise.all([
-          supabase
-            .from('company_documents')
-            .select('*')
-            .eq('company_id', company.id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('development_environments')
-            .select('*')
-            .eq('company_id', company.id),
-          supabase
-            .from('company_members')
-            .select('id, role, title, department, user_id, user_email')
-            .eq('company_id', company.id)
-        ]);
-
-        setDocuments(documentsData || []);
-        setEnvironments(environmentsData || []);
-        setMembers(membersData || []);
+    const fetchUserCompany = async () => {
+      if (!user) {
+        setIsLoadingCompany(false);
+        return;
       }
-    } catch (error: any) {
-      console.error('Error fetching company data:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setIsLoadingCompany(true);
+      try {
+        const accessInfo = await companyAccessService.checkUserCompanyAccess(user.id);
+        if (accessInfo.hasCompany && accessInfo.companyData.length > 0) {
+          setCompanyId(accessInfo.companyData[0]?.id || null);
+        } else {
+          setCompanyId(null);
+        }
+        if (accessInfo.error) {
+           console.error("Error checking company access:", accessInfo.error);
+        }
+      } catch (error) {
+        console.error("Error fetching user company access info:", error);
+        setCompanyId(null);
+      } finally {
+        setIsLoadingCompany(false);
+      }
+    };
+    fetchUserCompany();
+  }, [user]);
 
-  if (isLoading) {
+  // --- Removed Journey-specific functions ---
+  // async function fetchJourney(currentCompanyId: string) { ... }
+  // async function handleCustomizeJourney() { ... }
+  // async function handleAddCustomStep(e: React.FormEvent) { ... }
+  // async function handleDismissStep(stepId: string) { ... }
+  // async function handleMoveStep(idx: number, direction: "up" | "down") { ... }
+  // async function handleSubmitTool(e: React.FormEvent) { ... }
+  // --- End Removed Functions ---
+
+
+  // Loading state for company check
+  if (isLoadingCompany) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="p-8 max-w-5xl mx-auto text-center">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p>Loading company information...</p>
       </div>
     );
   }
 
-  if (error) {
+  // If no company, prompt to set one up
+  if (!companyId) {
     return (
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 rounded-lg p-4">
-            <div className="flex">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="mt-2 text-sm text-red-700">{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="p-8 max-w-5xl mx-auto text-center">
+        <h1 className="text-2xl font-bold mb-4">Company Dashboard</h1>
+        <p className="mb-4">You haven't set up or joined a company yet.</p>
+        <Link to="/company/setup" className="btn btn-primary">
+          Set Up Your Company
+        </Link>
       </div>
     );
   }
 
+  // Find the component for the active tab
+  const ActiveTabComponent = TABS.find(tab => tab.id === activeTab)?.component;
+
+  // Render dashboard with tabs if company exists
   return (
-    <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <Building2 className="h-6 w-6" />
-              {company?.name || 'Company Dashboard'}
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">{company?.industry}</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link
-              to="/company/members"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Team ({members.length})
-            </Link>
-            <Link
-              to="/company/settings"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Link>
-          </div>
-        </div>
+    // Use bg-base-200 for the page background
+    <div className="p-4 md:p-8 max-w-7xl mx-auto bg-base-200 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6 text-base-content">Company Dashboard</h1> {/* Use theme text color */}
 
-        {/* Quick Stats */}
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Users className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Team Members</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{members.length}</div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link to="/company/members" className="font-medium text-indigo-700 hover:text-indigo-900">
-                  View all
-                </Link>
-              </div>
-            </div>
-          </div>
+      {/* Tab Navigation - Using tabs-bordered for cleaner look */}
+      <div role="tablist" className="tabs tabs-bordered border-b border-base-300 mb-6">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            role="tab"
+            className={`tab tab-bordered gap-2 px-4 py-2 transition-all duration-200 ease-in-out
+              ${activeTab === tab.id ? 
+                'tab-active text-primary border-primary font-medium' : 
+                'text-base-content hover:text-primary hover:border-base-300'}`}
+            onClick={() => setActiveTab(tab.id)}
+            aria-selected={activeTab === tab.id}
+          >
+            <tab.icon className="h-4 w-4 mr-1" /> {tab.name}
+          </button>
+        ))}
+      </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <FolderOpen className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Documents</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{documents.length}</div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <button 
-                  onClick={() => setActiveTab('documents')} 
-                  className="font-medium text-indigo-700 hover:text-indigo-900"
-                >
-                  View all
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Cloud className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Dev Environments</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {environments.filter(e => e.status === 'active').length}
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link to="/company/environments" className="font-medium text-indigo-700 hover:text-indigo-900">
-                  View all
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <BarChart className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Analytics</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-sm text-gray-500">Coming soon</div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <span className="text-gray-500">Available soon</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stage Tracker */}
-        <div className="mt-8">
-          <CompanyStages company={company} />
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="mt-8 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`${
-                activeTab === 'overview'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={`${
-                activeTab === 'documents'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`${
-                activeTab === 'tasks'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Tasks
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-6">
-          {activeTab === 'overview' && (
-            <div className="space-y-8">
-              {/* Task Manager */}
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Tasks</h2>
-                <TaskManager category="company" showCompleted={false} />
-              </div>
-
-              {/* Team Members */}
-              <div className="bg-white shadow rounded-lg">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Team Members</h2>
-                    <button className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Invite Member
-                    </button>
-                  </div>
-                  <div className="flow-root">
-                    <ul className="-my-5 divide-y divide-gray-200">
-                      {members.map((member) => (
-                        <li key={member.id} className="py-4">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0">
-                              <img
-                                className="h-8 w-8 rounded-full"
-                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.user_email || 'User')}`}
-                                alt=""
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {member.user_email}
-                              </p>
-                              <p className="text-sm text-gray-500 truncate">
-                                {member.title} • {member.role}
-                              </p>
-                            </div>
-                            <div>
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'documents' && (
-            <DocumentStore />
-          )}
-
-          {activeTab === 'tasks' && (
-            <TaskManager category="company" showCompleted={true} />
-          )}
-        </div>
+      {/* Tab Content Area */}
+      <div>
+        {ActiveTabComponent ? (
+          <ActiveTabComponent companyId={companyId} />
+        ) : (
+          <div className="p-6 bg-base-100 rounded-lg shadow mt-4">Error: Tab content not found.</div>
+        )}
       </div>
     </div>
   );
 }
+
+export default CompanyDashboard;

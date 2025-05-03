@@ -1,10 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="corporate">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <title>Wheel99 - Startup Platform</title>
+    <!-- Emergency recovery script -->
+    <script>
+      // Add a global error handler to catch initialization errors
+      window.addEventListener('error', function(event) {
+        console.error('Global error caught:', event.message);
+        // Show recovery UI if the app fails to load after 10 seconds
+        setTimeout(function() {
+          if (!window.appLoaded) {
+            var recoveryDiv = document.createElement('div');
+            recoveryDiv.id = 'recovery-ui';
+            recoveryDiv.style.position = 'fixed';
+            recoveryDiv.style.bottom = '20px';
+            recoveryDiv.style.right = '20px';
+            recoveryDiv.style.backgroundColor = '#f8d7da';
+            recoveryDiv.style.color = '#721c24';
+            recoveryDiv.style.padding = '10px 15px';
+            recoveryDiv.style.borderRadius = '4px';
+            recoveryDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+            recoveryDiv.style.zIndex = '9999';
+            recoveryDiv.innerHTML = '<h3 style="margin: 0 0 10px 0">Dashboard Recovery</h3>' +
+              '<p style="margin: 0 0 10px 0">If the dashboard is not loading properly, click the button below to fix common issues:</p>' +
+              '<button id="fix-dashboard-btn" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer">Fix Dashboard</button>';
+            document.body.appendChild(recoveryDiv);
+            
+            document.getElementById('fix-dashboard-btn').addEventListener('click', function() {
+              var script = document.createElement('script');
+              script.src = '/scripts/fix-dashboard-loading.js';
+              document.head.appendChild(script);
+              this.disabled = true;
+              this.textContent = 'Fixing...';
+              setTimeout(() => {
+                this.textContent = 'Reloading...';
+                window.location.reload();
+              }, 2000);
+            });
+          }
+        }, 10000);
+      });
+      
+      // Set a flag when the app has loaded successfully
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          window.appLoaded = true;
+        }, 1000);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

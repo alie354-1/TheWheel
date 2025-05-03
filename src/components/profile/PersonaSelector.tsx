@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Persona } from '../../lib/types/multi-persona-profile.types';
-import { multiPersonaProfileService } from '../../lib/services/multi-persona-profile.service';
-import { useAuth } from '../../lib/hooks/useAuth';
+import { usePersona } from '../../lib/hooks/usePersona';
 import { ChevronDown, Plus, Settings } from 'lucide-react';
 
 /**
@@ -12,68 +10,18 @@ import { ChevronDown, Plus, Settings } from 'lucide-react';
  * or creating new personas.
  */
 export const PersonaSelector: React.FC = () => {
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [activePersona, setActivePersona] = useState<Persona | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { personas, activePersona, isLoading, error, switchPersona } = usePersona();
   const navigate = useNavigate();
-
-  // Load personas and active persona on component mount
-  useEffect(() => {
-    const loadPersonas = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setIsLoading(true);
-        const allPersonas = await multiPersonaProfileService.getPersonas(user.id);
-        setPersonas(allPersonas);
-        
-        const active = await multiPersonaProfileService.getActivePersona(user.id);
-        setActivePersona(active);
-      } catch (error) {
-        console.error('Error loading personas:', error);
-        setError('Failed to load personas');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPersonas();
-  }, [user?.id]);
 
   // Handle persona switching
   const handleSwitchPersona = async (personaId: string) => {
-    if (!user?.id) return;
+    const success = await switchPersona(personaId);
     
-    try {
-      setIsLoading(true);
-      const success = await multiPersonaProfileService.setActivePersona(user.id, personaId);
-      
-      if (success) {
-        // Find the persona that was switched to
-        const persona = personas.find(p => p.id === personaId);
-        setActivePersona(persona || null);
-        setIsOpen(false);
-        
-        // Show a temporary success message
-        const originalError = error;
-        setError(`Switched to ${persona?.name || 'new persona'}`);
-        setTimeout(() => {
-          setError(originalError);
-        }, 2000);
-        
-        // Refresh current page to update content for new persona
-        window.location.reload();
-      } else {
-        throw new Error('Failed to switch persona');
-      }
-    } catch (error) {
-      console.error('Error switching persona:', error);
-      setError('Error switching persona');
-    } finally {
-      setIsLoading(false);
+    if (success) {
+      setIsOpen(false);
+      // Refresh current page to update content for new persona
+      window.location.reload();
     }
   };
 
@@ -107,8 +55,8 @@ export const PersonaSelector: React.FC = () => {
     }
   };
 
-  // If no user or still loading, show loading state
-  if (!user?.id || isLoading) {
+  // If still loading, show loading state
+  if (isLoading) {
     return (
       <button
         disabled

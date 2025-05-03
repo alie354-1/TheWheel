@@ -24,12 +24,44 @@ export function useTasks({ category, showCompleted = false, standupId }: UseTask
   const loadTasks = async () => {
     try {
       setIsLoading(true);
-      const tasks = await taskService.getTasks({ category, standupId });
-      setTasks(showCompleted ? tasks : tasks.filter(t => t.status !== 'completed'));
+      
+      // Add console logging for debugging
+      console.log("[useTasks] Loading tasks, category:", category);
+      
+      // Add timeout protection
+      const timeoutPromise = new Promise<any[]>((_, reject) => 
+        setTimeout(() => {
+          console.log("[useTasks] Task loading timed out");
+          reject(new Error('Task loading timeout after 5 seconds'));
+        }, 5000)
+      );
+      
+      // Main tasks loading promise
+      const tasksPromise = taskService.getTasks({ category, standupId })
+        .catch(error => {
+          console.error("[useTasks] Error loading tasks:", error);
+          return []; // Return empty array instead of throwing
+        });
+
+      // Race between actual API call and timeout
+      const tasks = await Promise.race([tasksPromise, timeoutPromise])
+        .catch(error => {
+          console.error("[useTasks] Task loading failed:", error);
+          return []; // Empty fallback on any error
+        });
+      
+      console.log("[useTasks] Loaded tasks:", tasks?.length || 0);
+      
+      // Set tasks even if empty array (never null/undefined)
+      setTasks(showCompleted ? (tasks || []) : (tasks || []).filter(t => t.status !== 'completed'));
       setError(null);
     } catch (err: any) {
-      setError(err.message);
+      console.error("[useTasks] Unexpected error:", err);
+      setError(err.message || "Failed to load tasks");
+      // Initialize with empty array even on error
+      setTasks([]);
     } finally {
+      console.log("[useTasks] Finished loading tasks");
       setIsLoading(false);
     }
   };

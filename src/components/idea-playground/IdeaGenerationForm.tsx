@@ -3,11 +3,17 @@ import { IdeaGenerationParams } from '../../lib/types/idea-playground.types';
 
 interface IdeaGenerationFormProps {
   onSubmit: (params: IdeaGenerationParams) => void;
-  hasCompany: boolean;
+  hasCompany?: boolean;
   useMarketContext?: boolean;
+  isLoading?: boolean;
 }
 
-const IdeaGenerationForm: React.FC<IdeaGenerationFormProps> = ({ onSubmit, hasCompany, useMarketContext = false }) => {
+const IdeaGenerationForm: React.FC<IdeaGenerationFormProps> = ({ 
+  onSubmit, 
+  hasCompany = false, 
+  useMarketContext = false,
+  isLoading = false
+}) => {
   const [topic, setTopic] = useState('');
   const [industry, setIndustry] = useState('');
   const [problemArea, setProblemArea] = useState('');

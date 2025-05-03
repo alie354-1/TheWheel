@@ -6,14 +6,21 @@ import SmartSuggestionButton from '../shared/SmartSuggestionButton';
 import { profileService } from '../../../lib/services/profile.service';
 import { ExtendedUserProfile } from '../../../lib/types/extended-profile.types';
 
+// Define idea types
+export type IdeaType = 'new_company' | 'new_product' | 'new_feature' | 'improvement';
+
 interface IdeaCaptureScreenProps {
-  onCreateIdea: (idea: { 
-    title: string; 
-    description: string; 
-    solution_concept?: string;
-    used_company_context?: boolean;
-    company_id?: string;
-  }) => Promise<any>;
+  onCreateIdea: (
+    idea: { 
+      title: string; 
+      description: string; 
+      solution_concept?: string;
+      used_company_context?: boolean;
+      company_id?: string;
+      idea_type?: IdeaType;
+    }, 
+    event?: React.FormEvent
+  ) => Promise<any>;
 }
 
 /**
@@ -24,11 +31,13 @@ const IdeaCaptureScreen: React.FC<IdeaCaptureScreenProps> = ({ onCreateIdea }) =
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [solutionConcept, setSolutionConcept] = useState('');
+  const [ideaType, setIdeaType] = useState<IdeaType>('new_company');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{ 
     title?: string; 
     description?: string;
     solution_concept?: string;
+    idea_type?: string;
   }>({});
   const [userProfile, setUserProfile] = useState<ExtendedUserProfile | null>(null);
   const [useCompanyContext, setUseCompanyContext] = useState(false);
@@ -73,13 +82,19 @@ const IdeaCaptureScreen: React.FC<IdeaCaptureScreenProps> = ({ onCreateIdea }) =
     try {
       // Create the idea
       console.log('Creating idea with title:', title, 'and description:', description, 'and solution concept:', solutionConcept);
-      const newIdea = await onCreateIdea({ 
+      
+      // Create the idea input object
+      const ideaInput = { 
         title, 
         description,
         solution_concept: solutionConcept,
         used_company_context: useCompanyContext,
-        company_id: useCompanyContext ? userProfile?.company_id : undefined
-      });
+        company_id: useCompanyContext ? userProfile?.company_id : undefined,
+        idea_type: ideaType
+      };
+      
+      // Pass both the idea data AND the event to the parent component
+      const newIdea = await onCreateIdea(ideaInput, e);
       
       if (!newIdea || !newIdea.id) {
         throw new Error('Failed to create idea: No valid idea returned');
@@ -87,7 +102,15 @@ const IdeaCaptureScreen: React.FC<IdeaCaptureScreenProps> = ({ onCreateIdea }) =
       
       console.log('Successfully created idea:', newIdea.id);
       
-      // Navigate to the suggestions screen with the new idea ID
+      // If we're inside a parent component flow (like QuickGeneration),
+      // the navigation should be handled by the parent component
+      // Only navigate directly if the parent hasn't prevented the default behavior
+      if (e.defaultPrevented) {
+        console.log('Navigation prevented by parent component');
+        return newIdea;
+      }
+      
+      // Otherwise, navigate to the standard pathway flow
       const nextUrl = `/idea-hub/playground/pathway/1/suggestions/${newIdea.id}`;
       console.log('Navigating to:', nextUrl);
       
@@ -133,6 +156,120 @@ const IdeaCaptureScreen: React.FC<IdeaCaptureScreenProps> = ({ onCreateIdea }) =
       </div>
       
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+        {/* Idea Type Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            What type of idea is this? <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div 
+              className={`p-3 border rounded-md cursor-pointer transition-all ${
+                ideaType === 'new_company' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:border-indigo-300'
+              }`}
+              onClick={() => setIdeaType('new_company')}
+            >
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type_new_company"
+                  name="idea_type"
+                  checked={ideaType === 'new_company'}
+                  onChange={() => setIdeaType('new_company')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="type_new_company" className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
+                  New Company
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 ml-6">
+                A completely new business venture or startup
+              </p>
+            </div>
+            
+            <div 
+              className={`p-3 border rounded-md cursor-pointer transition-all ${
+                ideaType === 'new_product' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:border-indigo-300'
+              }`}
+              onClick={() => setIdeaType('new_product')}
+            >
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type_new_product"
+                  name="idea_type"
+                  checked={ideaType === 'new_product'}
+                  onChange={() => setIdeaType('new_product')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="type_new_product" className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
+                  New Product
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 ml-6">
+                A new product for an existing company
+              </p>
+            </div>
+            
+            <div 
+              className={`p-3 border rounded-md cursor-pointer transition-all ${
+                ideaType === 'new_feature' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:border-indigo-300'
+              }`}
+              onClick={() => setIdeaType('new_feature')}
+            >
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type_new_feature"
+                  name="idea_type"
+                  checked={ideaType === 'new_feature'}
+                  onChange={() => setIdeaType('new_feature')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="type_new_feature" className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
+                  New Feature
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 ml-6">
+                A new feature for an existing product
+              </p>
+            </div>
+            
+            <div 
+              className={`p-3 border rounded-md cursor-pointer transition-all ${
+                ideaType === 'improvement' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:border-indigo-300'
+              }`}
+              onClick={() => setIdeaType('improvement')}
+            >
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type_improvement"
+                  name="idea_type"
+                  checked={ideaType === 'improvement'}
+                  onChange={() => setIdeaType('improvement')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="type_improvement" className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
+                  Improvement
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 ml-6">
+                An enhancement to an existing product or service
+              </p>
+            </div>
+          </div>
+          {validationErrors.idea_type && (
+            <p className="mt-1 text-sm text-red-600">{validationErrors.idea_type}</p>
+          )}
+        </div>
         <div className="mb-6">
           <div className="flex items-center justify-between mb-1">
             <label htmlFor="title" className="block text-sm font-medium text-gray-700">

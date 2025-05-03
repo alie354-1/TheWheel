@@ -4,10 +4,19 @@ import FeatureFlagsSettings from '../components/admin/FeatureFlagsSettings';
 import OpenAISettings from '../components/admin/OpenAISettings';
 import AppCredentialsSettings from '../components/admin/AppCredentialsSettings';
 import ModelManagementPanel from '../components/admin/ModelManagementPanel';
+import TerminologyManagement from '../components/admin/TerminologyManagement';
 import { useAuthStore } from '../lib/store';
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin, isSuperAdmin } = useAuthStore();
+  const { user, profile } = useAuthStore();
+  
+  // Check if user has admin privileges
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'Platform Admin' || 
+                 profile?.role === 'admin' || profile?.role === 'superadmin' || profile?.role === 'Platform Admin';
+  
+  // Check if user has super admin privileges
+  const isSuperAdmin = user?.role === 'superadmin' || user?.role === 'Platform Admin' || 
+                      profile?.role === 'superadmin' || profile?.role === 'Platform Admin';
   
   if (!isAdmin) {
     return (
@@ -28,6 +37,9 @@ const AdminPanel: React.FC = () => {
         
         {/* Feature Flags */}
         <FeatureFlagsSettings />
+
+        {/* Terminology Management */}
+        <TerminologyManagement />
         
         {/* Hierarchical LLM System */}
         <ModelManagementPanel />

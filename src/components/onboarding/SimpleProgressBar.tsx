@@ -10,8 +10,8 @@ interface SimpleProgressBarProps {
 export const SimpleProgressBar: React.FC<SimpleProgressBarProps> = ({
   progress,
   height = 4,
-  color = 'bg-blue-500',
-  backgroundColor = 'bg-gray-200'
+  color = 'bg-primary',
+  backgroundColor = 'bg-base-300'
 }) => {
   // Ensure progress is between 0 and 100
   const safeProgress = Math.max(0, Math.min(100, progress));

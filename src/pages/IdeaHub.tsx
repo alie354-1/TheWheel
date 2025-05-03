@@ -16,29 +16,20 @@ export default function IdeaHub() {
   const tools = [
     {
       icon: Library,
-      title: 'Enhanced Idea Playground',
-      description: 'Use our new enhanced idea playground to generate and refine ideas.',
+      title: 'Idea Generation',
+      description: 'Create new business ideas with AI assistance and explore variations.',
       action: {
-        text: 'Open Playground',
+        text: 'Generate Ideas',
         href: '/idea-hub/playground'
       }
     },
     {
-      icon: Library,
-      title: 'Unified Idea Workflow',
-      description: 'Generate, explore, refine, compare, and merge ideas in one seamless workflow.',
+      icon: Lightbulb,
+      title: 'Quick Generation',
+      description: 'Quickly generate business ideas with minimal input.',
       action: {
-        text: 'Start Workflow',
-        href: '/idea-hub/unified'
-      }
-    },
-    {
-      icon: Library,
-      title: 'Idea Explorer',
-      description: 'Generate, compare, and merge multiple business ideas.',
-      action: {
-        text: 'Explore Ideas',
-        href: '/idea-hub/explore'
+        text: 'Quick Generate',
+        href: '/idea-hub/quick-generation'
       }
     },
     {
@@ -93,6 +84,15 @@ export default function IdeaHub() {
       action: {
         text: 'Open Canvas',
         href: '/idea-hub/canvas'
+      }
+    },
+    {
+      icon: Library,
+      title: 'Saved Ideas',
+      description: 'View and manage your saved business ideas.',
+      action: {
+        text: 'View Ideas',
+        href: '/idea-hub/saved'
       }
     }
   ];

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js'; // Keep User type for reference if needed elsewhere
 import { enhancedProfileService } from '../../lib/services/enhanced-profile.service';
 import { UserRoleType, CompanyStageType } from '../../lib/types/enhanced-profile.types';
 
 interface InitialOnboardingWizardProps {
-  user: User;
+  user: { id: string }; // Only require the user ID
   onComplete: () => void;
 }
 

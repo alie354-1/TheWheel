@@ -120,21 +120,32 @@ export default function CofounderBot() {
   const generateSummary = async () => {
     setIsSummarizing(true);
     try {
-      // Get user's company ID
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user?.id)
-        .single();
-      
-      const companyId = userProfile?.company_id;
-      
-      // Create context for AI service
-      const context = {
-        userId: user?.id || '',
-        companyId,
-        useExistingModels: true
-      };
+  // Create context for AI service without requiring company_id
+  const context: {
+    userId: string;
+    useExistingModels: boolean;
+    companyId?: string;
+  } = {
+    userId: user?.id || '',
+    useExistingModels: true
+  };
+  
+  // Try to get company ID if it exists, but don't require it
+  try {
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user?.id)
+      .single();
+    
+    // Only add companyId to context if it exists
+    if (userProfile?.company_id) {
+      context.companyId = userProfile.company_id;
+    }
+  } catch (error) {
+    // Ignore errors fetching company_id, it's optional
+    console.log('No company ID found for user, continuing without it');
+  }
       
       // Generate summary using the standup AI service
       const summary = await standupAIService.generateStandupSummary(currentEntry, context);
@@ -256,21 +267,32 @@ ${summary.strategic_recommendations.length > 0 ? `\n🎯 ${summary.strategic_rec
   setIsThinking(true);
 
   try {
-    // Get user's company ID
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user?.id)
-      .single();
-    
-    const companyId = userProfile?.company_id;
-    
-    // Create context for AI service
-    const context = {
+    // Create context for AI service without requiring company_id
+    const context: {
+      userId: string;
+      useExistingModels: boolean;
+      companyId?: string;
+    } = {
       userId: user?.id || '',
-      companyId,
       useExistingModels: true
     };
+    
+    // Try to get company ID if it exists, but don't require it
+    try {
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user?.id)
+        .single();
+      
+      // Only add companyId to context if it exists
+      if (userProfile?.company_id) {
+        context.companyId = userProfile.company_id;
+      }
+    } catch (error) {
+      // Ignore errors fetching company_id, it's optional
+      console.log('No company ID found for user, continuing without it');
+    }
     
     setCurrentEntry(updatedEntry);
       

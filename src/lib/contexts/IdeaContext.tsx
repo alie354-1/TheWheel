@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BusinessSuggestions, IdeaVariation } from '../services/idea-generation.service';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ideaPlaygroundAdapter } from '../services/idea-playground/service-adapter';
+import { useAuthStore } from '../store';
 
 // Local storage key for idea data
 const IDEA_DATA_STORAGE_KEY = 'wheel99_idea_refinement_data';
@@ -103,10 +105,28 @@ const defaultIdeaData: IdeaData = {
 export const IdeaProvider: React.FC<IdeaProviderProps> = ({ children, initialStep = 0 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   
-  // Try to load saved data from localStorage
+  // Try to load saved data from localStorage or from database if ideaId is provided
   const loadSavedData = (): IdeaData => {
     try {
+      // Check if we have an ideaId from the quick generation flow
+      const refinementIdeaId = localStorage.getItem('refinement_idea_id');
+      
+      if (refinementIdeaId) {
+        console.log('Found ideaId in localStorage:', refinementIdeaId);
+        // We'll load the idea data from the database in a useEffect
+        // For now, return the default data
+        // Remove the ideaId from localStorage to prevent reloading on refresh
+        localStorage.removeItem('refinement_idea_id');
+        
+        // Store the ideaId in the context for loading in useEffect
+        localStorage.setItem('loading_idea_id', refinementIdeaId);
+        
+        return defaultIdeaData;
+      }
+      
+      // Otherwise, try to load from localStorage
       const savedData = localStorage.getItem(IDEA_DATA_STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
@@ -162,6 +182,56 @@ export const IdeaProvider: React.FC<IdeaProviderProps> = ({ children, initialSte
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Load idea from database if ideaId is provided
+  useEffect(() => {
+    const loadingIdeaId = localStorage.getItem('loading_idea_id');
+    
+    if (loadingIdeaId && user) {
+      console.log('Loading idea from database:', loadingIdeaId);
+      setIsLoading(true);
+      setError('');
+      
+      ideaPlaygroundAdapter.getIdea(loadingIdeaId)
+        .then(loadedIdea => {
+          if (loadedIdea) {
+            console.log('Successfully loaded idea from database:', loadedIdea);
+            
+            // Convert the loaded idea to the format expected by IdeaData
+            const convertedIdea: IdeaData = {
+              id: loadedIdea.id,
+              title: loadedIdea.title || '',
+              description: loadedIdea.description || '',
+              problem_statement: loadedIdea.problem_statement || '',
+              solution_concept: loadedIdea.solution_concept || '',
+              target_audience: Array.isArray(loadedIdea.target_audience) ? 
+                loadedIdea.target_audience.join(', ') : 
+                (loadedIdea.target_audience || ''),
+              unique_value: loadedIdea.unique_value || '',
+              business_model: loadedIdea.business_model || '',
+              marketing_strategy: '', // Initialize with empty string
+              revenue_model: '', // Initialize with empty string
+              go_to_market: '', // Initialize with empty string
+              // Add any other fields from the loaded idea
+            };
+            
+            setIdeaData(convertedIdea);
+            setSuccess('Idea loaded successfully');
+          } else {
+            console.error('Failed to load idea from database: Idea not found');
+            setError('Failed to load idea: Idea not found');
+          }
+        })
+        .catch(err => {
+          console.error('Error loading idea from database:', err);
+          setError(`Failed to load idea: ${err.message}`);
+        })
+        .finally(() => {
+          setIsLoading(false);
+          localStorage.removeItem('loading_idea_id');
+        });
+    }
+  }, [user]);
 
   // Save data to localStorage whenever it changes
   useEffect(() => {

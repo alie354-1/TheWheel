@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Cog, Users, Link, Flag } from 'lucide-react';
 import OpenAISettings from '../components/admin/OpenAISettings';
 import AppCredentialsSettings from '../components/admin/AppCredentialsSettings';
 import FeatureFlagsSettings from '../components/admin/FeatureFlagsSettings';
 import UserManagement from '../components/admin/UserManagement';
+import { featureFlagsService } from '../lib/services/feature-flags.service';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('integrations');
+  
+  useEffect(() => {
+    // Load feature flags when component mounts
+    const loadFlags = async () => {
+      try {
+        await featureFlagsService.loadFeatureFlags();
+      } catch (error) {
+        console.error('Error loading feature flags:', error);
+      }
+    };
+    
+    loadFlags();
+  }, []);
 
   return (
     <div className="py-6">

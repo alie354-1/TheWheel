@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Force Logout Utility</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 4px solid #ffeeba;
+    }
+    button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #c0392b;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border-left: 4px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #f5c6cb;
+    }
+    .log {
+      background-color: #f8f9fa;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Force Logout Utility</h1>
+    
+    <div class="warning">
+      <strong>Warning:</strong> This utility will force logout all users by clearing authentication data.
+      Use this only when you're experiencing authentication issues or as directed by support.
+    </div>
+    
+    <p>
+      This utility helps resolve authentication issues by:
+    </p>
+    <ul>
+      <li>Clearing all authentication data from localStorage and sessionStorage</li>
+      <li>Resetting the Supabase client instance</li>
+      <li>Calling the auth service's forceLogoutAllUsers method</li>
+      <li>Clearing auth-related cookies</li>
+    </ul>
+    
+    <button id="logoutButton">Force Logout All Users</button>
+    
+    <div id="statusMessage" class="status hidden"></div>
+    
+    <div id="logContainer" class="log hidden">
+      <div id="logOutput"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the force logout function
+    import { forceLogoutAllUsers } from '../scripts/force-logout-all-users.js';
+    
+    const logoutButton = document.getElementById('logoutButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const logContainer = document.getElementById('logContainer');
+    const logOutput = document.getElementById('logOutput');
+    
+    // Override console.log to capture output
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+    
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      appendToLog('log', args);
+    };
+    
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      appendToLog('error', args);
+    };
+    
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      appendToLog('warn', args);
+    };
+    
+    function appendToLog(type, args) {
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+      logOutput.appendChild(line);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    // Handle the logout button click
+    logoutButton.addEventListener('click', async () => {
+      // Show log container
+      logContainer.classList.remove('hidden');
+      
+      // Disable button during logout
+      logoutButton.disabled = true;
+      logoutButton.textContent = 'Logging Out...';
+      
+      try {
+        // Perform the logout
+        const success = await forceLogoutAllUsers();
+        
+        // Update status message
+        statusMessage.classList.remove('hidden', 'error', 'success');
+        
+        if (success) {
+          statusMessage.classList.add('success');
+          statusMessage.innerHTML = `
+            <strong>Success!</strong> All users have been logged out.
+            <p>You will be redirected to the login page in 5 seconds...</p>
+          `;
+          
+          // Redirect to login page after 5 seconds
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 5000);
+        } else {
+          statusMessage.classList.add('error');
+          statusMessage.innerHTML = `
+            <strong>Error!</strong> There was a problem logging out users.
+            <p>Please check the log output below for details.</p>
+          `;
+          
+          // Re-enable button
+          logoutButton.disabled = false;
+          logoutButton.textContent = 'Try Again';
+        }
+      } catch (error) {
+        // Handle unexpected errors
+        console.error('Unexpected error during logout:', error);
+        
+        statusMessage.classList.remove('hidden', 'success');
+        statusMessage.classList.add('error');
+        statusMessage.innerHTML = `
+          <strong>Error!</strong> An unexpected error occurred.
+          <p>Please check the log output below for details.</p>
+        `;
+        
+        // Re-enable button
+        logoutButton.disabled = false;
+        logoutButton.textContent = 'Try Again';
+      }
+    });
+  </script>
+</body>
+</html>

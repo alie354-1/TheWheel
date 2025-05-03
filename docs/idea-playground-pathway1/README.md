@@ -4,6 +4,8 @@
 
 The Idea Playground Pathway 1 feature enhances the ideation process by enabling users to explore variations of their business ideas and generate hybrid concepts through AI-assisted idea refinement. This pathway offers a structured workflow to develop and refine ideas, making the creative process more productive and efficient.
 
+> **Note:** A robust JSON parsing fix has been implemented (see [JSON_PARSING_FIX.md](./JSON_PARSING_FIX.md) for details) to resolve previous issues with AI-generated responses. This ensures reliable operation of all AI features.
+
 ## Key Features
 
 - **AI-Powered Idea Variation Generation**: Generate 3-5 distinct variations of an original business idea with complete details including SWOT analysis, target audiences, business models, and more

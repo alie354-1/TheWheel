@@ -1,5 +1,9 @@
 import openai from '../openai-client';
 import { supabase } from '../supabase';
+import { loggingService } from './logging.service';
+import { mockGeneralLLMService } from './mock-general-llm.service';
+import { useAuthStore } from '../store';
+import { MultiTieredAIService } from '../../components/idea-playground/enhanced/services/multi-tiered-ai.service';
 
 export interface QueryContext {
   userId: string;
@@ -9,6 +13,7 @@ export interface QueryContext {
   useExistingModels?: boolean;
   context?: string;
   conversationHistory?: Array<{role: 'system' | 'user' | 'assistant', content: string}>; // Add support for conversation history with correct types
+  temperature?: number; // Add support for controlling temperature in requests
 }
 
 export interface GeneralLLMService {
@@ -21,6 +26,24 @@ export class OpenAIGeneralLLMService implements GeneralLLMService {
   async query(input: string, context: QueryContext): Promise<any> {
     const startTime = Date.now();
     let completion;
+    
+    // Log the AI interaction start
+    const interactionId = await loggingService.logAIInteraction(
+      'query_start',
+      {
+        model: "gpt-4",
+        input_text: input,
+        context_type: context.context || 'general',
+        user_id: context.userId,
+        company_id: context.companyId,
+        features: {
+          useCompanyModel: context.useCompanyModel || false,
+          useAbstraction: context.useAbstraction || false,
+          useExistingModels: context.useExistingModels || false
+        },
+        conversation_length: context.conversationHistory?.length || 1
+      }
+    );
     
     try {
       // Create messages array with system prompt with proper typing
@@ -50,14 +73,35 @@ export class OpenAIGeneralLLMService implements GeneralLLMService {
         messages: messages
       });
       
-      // Try to log the query, but don't block if it fails
+      const responseContent = completion.choices[0].message.content || '';
+      const duration = Date.now() - startTime;
+      
+      // Log successful interaction in our comprehensive logging system
+      await loggingService.logAIInteraction(
+        'query_complete',
+        {
+          interaction_id: interactionId,
+          model: "gpt-4",
+          input_text: input,
+          output_text: responseContent,
+          tokens_used: {
+            prompt_tokens: completion.usage?.prompt_tokens || 0,
+            completion_tokens: completion.usage?.completion_tokens || 0,
+            total_tokens: completion.usage?.total_tokens || 0
+          },
+          duration_ms: duration,
+          status: 'success'
+        }
+      );
+      
+      // Also log to the original database for backward compatibility
       try {
         await supabase.from('llm_query_logs').insert({
           user_id: context.userId,
           company_id: context.companyId,
           query_text: input,
-          response_length: completion.choices[0].message.content?.length || 0,
-          duration_ms: Date.now() - startTime,
+          response_length: responseContent.length,
+          duration_ms: duration,
           models_used: {
             useCompanyModel: context.useCompanyModel || false,
             useAbstraction: context.useAbstraction || false,
@@ -67,14 +111,33 @@ export class OpenAIGeneralLLMService implements GeneralLLMService {
         });
       } catch (logError) {
         // Just log the error but don't let it affect the response
-        console.error('Error logging LLM query:', logError);
+        console.error('Error logging LLM query to legacy storage:', logError);
       }
       
       return completion.choices[0].message;
     } catch (error: any) {
       console.error('Error in general LLM query:', error);
       
-      // Try to log the error, but don't block if logging fails
+      // Log the error in our comprehensive logging system
+      await loggingService.logAIInteraction(
+        'query_error',
+        {
+          interaction_id: interactionId,
+          model: "gpt-4",
+          input_text: input,
+          error_message: error.message,
+          error_details: {
+            name: error.name,
+            code: error.code,
+            status: error.status,
+            type: error.type
+          },
+          duration_ms: Date.now() - startTime,
+          status: 'error'
+        }
+      );
+      
+      // Also log to the original database for backward compatibility
       try {
         await supabase.from('llm_query_logs').insert({
           user_id: context.userId,
@@ -85,20 +148,13 @@ export class OpenAIGeneralLLMService implements GeneralLLMService {
           models_used: { error: error.message }
         });
       } catch (logError) {
-        console.error('Error logging LLM query error:', logError);
+        console.error('Error logging LLM query error to legacy storage:', logError);
       }
       
       throw error;
     }
   }
 }
-
-// Import mock service and store
-import { mockGeneralLLMService } from './mock-general-llm.service';
-import { useAuthStore } from '../store';
-
-// Import multi-tiered AI service class
-import { MultiTieredAIService } from '../../components/idea-playground/enhanced/services/multi-tiered-ai.service';
 
 // Create an instance of the MultiTieredAIService
 const multiTieredAIServiceInstance = new MultiTieredAIService();
@@ -111,9 +167,10 @@ const getLLMService = (): GeneralLLMService => {
     useRealAI: featureFlags.useRealAI?.enabled,
     useMockAI: featureFlags.useMockAI?.enabled,
     useMultiTieredAI: featureFlags.useMultiTieredAI?.enabled
+    // Removed Hugging Face related flags
   });
   
-  // Check if real AI should be used (this takes precedence)
+  // Check if real AI should be used (this takes precedence over mock)
   if (featureFlags.useRealAI?.enabled) {
     // Use multi-tiered AI if that feature flag is also enabled
     if (featureFlags.useMultiTieredAI?.enabled) {

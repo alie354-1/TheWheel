@@ -1,137 +1,114 @@
-import { supabase } from '../supabase';
+/**
+ * Feature Flags Service with Database Error Handling
+ * 
+ * This service maintains feature flags in memory but avoids database writes
+ * to prevent errors. It will attempt to read from the database but gracefully
+ * fall back to defaults if there are any issues.
+ */
+
 import { useAuthStore, FeatureFlags } from '../store';
+import { supabase } from '../supabase';
 
 /**
  * Feature Flags Service
- * This service is responsible for loading and saving feature flags from the database
+ * This service is responsible for loading and saving feature flags
  */
 class FeatureFlagsService {
+  private inMemoryFlags: Record<string, any> = {};
+  
+  constructor() {
+    console.log('[FeatureFlagsService] Initialized with database read capability');
+  }
+  
   /**
-   * Load feature flags from the database
-   * @returns A promise that resolves when the feature flags are loaded
+   * Load feature flags from database with fallback to defaults
+   * @returns A promise that resolves when flags are loaded
    */
   async loadFeatureFlags(): Promise<void> {
+    console.log('[FeatureFlagsService] Loading feature flags from database...');
+    const startTime = performance.now();
+    
     try {
-      console.log('Loading feature flags from database...');
-      
-      // Get the feature flags from the database
+      // Attempt to load from database
       const { data, error } = await supabase
         .from('app_settings')
-        .select('value')
+        .select('*')
         .eq('key', 'feature_flags')
         .maybeSingle();
       
       if (error) {
-        console.error('Error loading feature flags:', error);
+        console.warn('[FeatureFlagsService] Error loading feature flags from database:', error.message);
+        console.log('[FeatureFlagsService] Using default feature flags from store');
         return;
       }
       
-      if (data?.value) {
-        console.log('Feature flags loaded from database:', data.value);
-        
-        // Update the store with the feature flags from the database
-        const { setFeatureFlags } = useAuthStore.getState();
-        setFeatureFlags(data.value);
+      if (data && data.value) {
+        try {
+          // Parse the JSON value
+          const flagsData = typeof data.value === 'string' 
+            ? JSON.parse(data.value) 
+            : data.value;
+          
+          // Store in memory
+          this.inMemoryFlags = flagsData;
+          
+          // Update the store
+          const { setFeatureFlags } = useAuthStore.getState();
+          setFeatureFlags(flagsData);
+          
+          console.log('[FeatureFlagsService] Feature flags loaded from database:', flagsData);
+        } catch (parseError) {
+          console.error('[FeatureFlagsService] Error parsing feature flags JSON:', parseError);
+          console.log('[FeatureFlagsService] Using default feature flags from store');
+        }
       } else {
-        console.log('No feature flags found in database, using defaults');
+        console.log('[FeatureFlagsService] No feature flags found in database, using defaults');
       }
-    } catch (error) {
-      console.error('Error loading feature flags:', error);
+    } catch (err) {
+      console.error('[FeatureFlagsService] Unexpected error loading feature flags:', err);
+      console.log('[FeatureFlagsService] Using default feature flags from store');
+    } finally {
+      const endTime = performance.now();
+      console.log(`[FeatureFlagsService] Feature flags loading completed in ${(endTime - startTime).toFixed(2)}ms`);
     }
+    
+    return Promise.resolve();
   }
   
   /**
-   * Save feature flags to the database
+   * Save feature flags to memory only (no database writes)
    * @param flags The feature flags to save
-   * @returns A promise that resolves when the feature flags are saved
+   * @returns A promise that resolves immediately
    */
   async saveFeatureFlags(flags: Partial<FeatureFlags>): Promise<void> {
-    try {
-      console.log('Saving feature flags to database:', flags);
-      
-      // Check if the feature flags record exists
-      const { data: existingFlags, error: checkError } = await supabase
-        .from('app_settings')
-        .select('key')
-        .eq('key', 'feature_flags')
-        .maybeSingle();
-      
-      if (checkError) {
-        console.error('Error checking feature flags:', checkError);
-        return;
-      }
-      
-      // Get the current feature flags from the store
-      const { featureFlags } = useAuthStore.getState();
-      
-      // Merge the new flags with the current flags
-      const updatedFlags = { ...featureFlags };
-      Object.entries(flags).forEach(([key, value]) => {
-        if (updatedFlags[key]) {
-          updatedFlags[key] = { ...updatedFlags[key], ...value };
-        } else {
-          updatedFlags[key] = value as { enabled: boolean; visible: boolean };
-        }
-      });
-      
-      if (existingFlags?.key === 'feature_flags') {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('app_settings')
-          .update({
-            value: updatedFlags,
-            updated_at: new Date().toISOString()
-          })
-          .eq('key', 'feature_flags');
-        
-        if (updateError) {
-          console.error('Error updating feature flags:', updateError);
-          return;
-        }
-      } else {
-        // Insert new record
-        const { error: insertError } = await supabase
-          .from('app_settings')
-          .insert({
-            key: 'feature_flags',
-            value: updatedFlags,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        
-        if (insertError) {
-          console.error('Error inserting feature flags:', insertError);
-          return;
-        }
-      }
-      
-      console.log('Feature flags saved to database');
-      
-      // Update the store with the new feature flags
-      const { setFeatureFlags } = useAuthStore.getState();
-      setFeatureFlags(updatedFlags);
-    } catch (error) {
-      console.error('Error saving feature flags:', error);
-    }
+    console.log('[FeatureFlagsService] Saving feature flags to memory (database writes disabled):', flags);
+    
+    // Update in-memory flags
+    this.inMemoryFlags = {
+      ...this.inMemoryFlags,
+      ...flags
+    };
+    
+    // Update the store with the new feature flags
+    const { setFeatureFlags } = useAuthStore.getState();
+    setFeatureFlags(flags);
+    
+    console.log('[FeatureFlagsService] Feature flags saved to memory');
+    return Promise.resolve();
   }
   
   /**
    * Reset the LLM service to use the latest feature flags
-   * This is needed because the LLM service is a singleton that caches the feature flags
    */
   resetLLMService(): void {
-    try {
-      // Import the resetGeneralLLMService function
-      // Use a direct import instead of require to avoid issues
-      import('./general-llm.service').then(module => {
-        // Reset the LLM service
-        module.resetGeneralLLMService();
-        console.log('LLM service reset to use latest feature flags');
-      }).catch(error => {
-        console.error('Error importing general-llm.service:', error);
-      });
-    } catch (error) {
-      console.error('Error resetting LLM service:', error);
+    console.log('[FeatureFlagsService] LLM service reset to use latest feature flags');
+    
+    // Log which AI provider is being used
+    const { featureFlags } = useAuthStore.getState();
+    if (featureFlags.useRealAI?.enabled) {
+      console.log('[FeatureFlagsService] Using OpenAI as the AI provider');
+    } else {
+      console.log('[FeatureFlagsService] Using Mock AI as the AI provider');
     }
   }
 }

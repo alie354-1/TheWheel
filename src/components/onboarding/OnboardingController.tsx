@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../lib/store';
 import { 
@@ -9,8 +9,6 @@ import {
   UserSkillLevel
 } from '../../lib/services/onboarding.service';
 import { profileService } from '../../lib/services/profile.service';
-import { multiPersonaProfileService } from '../../lib/services/multi-persona-profile.service';
-import { OnboardingState } from '../../lib/types/multi-persona-profile.types';
 
 // Import step components
 import OnboardingWelcome from './steps/OnboardingWelcome';
@@ -35,53 +33,87 @@ const trackStepView = (step: string) => {
   // In a real implementation, this would send data to your analytics service
 };
 
-interface OnboardingControllerProps {
-  initialPersonaId?: string;
-}
+interface OnboardingControllerProps {}
 
-const OnboardingController: React.FC<OnboardingControllerProps> = ({ initialPersonaId }) => {
-  const { user } = useAuthStore();
+const OnboardingController: React.FC<OnboardingControllerProps> = () => {
+  const { user, profile } = useAuthStore();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<string>('welcome');
   const [loading, setLoading] = useState<boolean>(false);
   const [recommendedFeatures, setRecommendedFeatures] = useState<string[]>([]);
   const [userSelections, setUserSelections] = useState<Record<string, any>>({});
-  const [activePersona, setActivePersona] = useState<any>(null);
-  const [personaId, setPersonaId] = useState<string | undefined>(initialPersonaId);
-  const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
+  const [onboardingState, setOnboardingState] = useState<any>(null);
   const [personalizationReady, setPersonalizationReady] = useState<boolean>(false);
   const [personalWelcome, setPersonalWelcome] = useState<string>("");
   
-  // Fetch any existing onboarding data
-  useEffect(() => {
-    if (!user || !personaId) return;
+  // Reference to check if fetch has already been initiated
+  const fetchInitiatedRef = useRef<boolean>(false);
+  // Reference to track API request status
+  const isFetchingRef = useRef<boolean>(false);
+  
+  // Memoized fetch function to prevent recreation on each render
+  const fetchOnboardingState = useCallback(async () => {
+    // Prevent duplicate fetches & infinite loops with refs
+    if (!user || isFetchingRef.current || fetchInitiatedRef.current) return;
     
-    const fetchOnboardingState = async () => {
-      setLoading(true);
-      try {
-        // Load persona information
-        const persona = await multiPersonaProfileService.getPersonaById(personaId);
-        setActivePersona(persona);
+    // Mark as fetching and initiated
+    isFetchingRef.current = true;
+    fetchInitiatedRef.current = true;
+    
+    console.log('Fetching onboarding state');
+    setLoading(true);
+    
+    try {
+      // Check if user has onboarding state in profile
+      if (profile?.setup_progress) {
+        console.log('Loading onboarding state from profile');
+        setOnboardingState(profile.setup_progress);
         
-        // Load onboarding state
-        const state = await multiPersonaProfileService.getOnboardingState(user.id, personaId);
-        setOnboardingState(state);
-        
-        if (state) {
-          // Resume from last step
-          setCurrentStep(state.current_step || 'welcome');
-          // Load saved selections
-          setUserSelections(state.form_data || {});
+        // Resume from last step
+        if (profile.setup_progress.current_step) {
+          console.log('Setting current step to:', profile.setup_progress.current_step);
+          setCurrentStep(profile.setup_progress.current_step);
         }
-      } catch (error) {
-        console.error('Error loading onboarding data:', error);
-      } finally {
-        setLoading(false);
+        
+        // Load saved selections
+        if (profile.setup_progress.form_data) {
+          console.log('Loading saved form data');
+          setUserSelections(profile.setup_progress.form_data);
+        }
+      } else {
+        console.log('No onboarding state found, starting fresh');
       }
-    };
+    } catch (error) {
+      console.error('Error loading onboarding data:', error);
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
+    }
+  }, [user, profile]);
+  
+  // Controlled fetch effect
+  useEffect(() => {
+    // Skip if there's no user
+    if (!user) {
+      console.log('Skipping fetch - missing user');
+      return;
+    }
     
+    // Don't refetch if we've already started fetching
+    if (isFetchingRef.current) {
+      console.log('Fetch already in progress, skipping');
+      return;
+    }
+    
+    console.log('Initializing fetch sequence');
     fetchOnboardingState();
-  }, [user, personaId]);
+    
+    // Cleanup
+    return () => {
+      // Reset fetching but keep initiated flag
+      isFetchingRef.current = false;
+    };
+  }, [user, fetchOnboardingState]);
   
   // Track step views for analytics
   useEffect(() => {
@@ -90,73 +122,31 @@ const OnboardingController: React.FC<OnboardingControllerProps> = ({ initialPers
     }
   }, [currentStep]);
   
+  // Use a ref to track whether we're currently transitioning
+  const isTransitioningRef = useRef<boolean>(false);
+  
   // Handle transitions between steps
-  const goToNextStep = async (stepData: Record<string, any> = {}) => {
-    if (!user) return;
+  const goToNextStep = useCallback(async (stepData: Record<string, any> = {}) => {
+    if (!user || isTransitioningRef.current) return;
     
+    // Prevent multiple clicks/transitions
+    isTransitioningRef.current = true;
+    console.log('Starting transition to next step with data:', stepData);
     setLoading(true);
     
-    // Update user selections
-    const updatedSelections = {
-      ...userSelections,
-      ...stepData
-    };
-    setUserSelections(updatedSelections);
-    
-    // Handle persona creation at the role selection step if we don't have a personaId
-    if (currentStep === 'role_selection' && !personaId && updatedSelections.userRole) {
-      try {
-        // Create a new persona based on the selected role
-        const role = updatedSelections.userRole;
-        // Make sure persona type is one of the allowed types
-        const personaType = 
-          role === UserRole.FOUNDER ? 'founder' :
-          role === UserRole.COMPANY_MEMBER ? 'company_member' : 
-          'service_provider';
-        
-        const newPersona = await multiPersonaProfileService.createPersona(user.id, {
-          name: `My ${personaType} profile`,
-          type: personaType,
-          is_active: true, // Set this persona as active
-          is_public: false, // Default to private until user decides to make it public
-          visibility_settings: {
-            discoverable_as: [personaType as any],
-            visible_to: ['connections'],
-            hidden_fields: []
-          }
-        });
-        
-        if (newPersona && newPersona.id) {
-          // Set the new personaId for future steps
-          setPersonaId(newPersona.id);
-          setActivePersona(newPersona);
-          
-          console.log(`Created new persona: ${newPersona.id} of type ${personaType}`);
-        } else {
-          console.error('Failed to create persona: No ID returned');
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Error creating persona:', error);
-        setLoading(false);
-        return;
-      }
-    }
-    
-    // Now proceed with saving the onboarding state
     try {
-      // Only save to persona if we have a personaId
-      if (personaId) {
-        await multiPersonaProfileService.updateOnboardingState(user.id, personaId, {
-          current_step: currentStep,
-          form_data: updatedSelections
-        });
-      }
+      // Update user selections
+      const updatedSelections = {
+        ...userSelections,
+        ...stepData
+      };
+      setUserSelections(updatedSelections);
+      console.log('Updated user selections');
       
       // Determine next step based on current step and user type
       let nextStep = '';
       
+      console.log('Determining next step from:', currentStep);
       if (currentStep === 'welcome') {
         nextStep = 'role_selection';
       } else if (currentStep === 'role_selection') {
@@ -183,50 +173,81 @@ const OnboardingController: React.FC<OnboardingControllerProps> = ({ initialPers
       } else if (currentStep === 'theme_preferences') {
         nextStep = 'notification_preferences';
       } else if (currentStep === 'notification_preferences') {
-        // Get recommended features before showing recommendations
-        const features = await onboardingService.getRecommendedFeatures(user.id);
-        setRecommendedFeatures(features);
-        
-        // Get personalized welcome message
-        const welcome = await onboardingService.getPersonalizedWelcome(user.id);
-        setPersonalWelcome(welcome);
-        
-        setPersonalizationReady(true);
+        try {
+          console.log('Fetching recommendations and welcome message');
+          // Get recommended features before showing recommendations
+          const features = await onboardingService.getRecommendedFeatures(user.id);
+          setRecommendedFeatures(features);
+          
+          // Get personalized welcome message
+          const welcome = await onboardingService.getPersonalizedWelcome(user.id);
+          setPersonalWelcome(welcome);
+          
+          setPersonalizationReady(true);
+          console.log('Personalization data ready');
+        } catch (error) {
+          console.error('Error fetching personalization data:', error);
+          // Continue anyway with generic content
+          setPersonalizationReady(true);
+        }
         nextStep = 'recommendations';
       } else if (currentStep === 'recommendations') {
         nextStep = 'completion';
       } else if (currentStep === 'completion') {
         // Complete onboarding, mark as complete and redirect
-        if (personaId) {
-          await multiPersonaProfileService.updateOnboardingState(user.id, personaId, {
-            is_complete: true,
-            completed_steps: [...(onboardingState?.completed_steps || []), 'complete']
-          });
-        }
         handleComplete();
         return;
       }
       
-      setCurrentStep(nextStep);
-    } catch (error) {
-      console.error('Error saving onboarding data:', error);
+      console.log('Next step determined to be:', nextStep);
+      
+      // Save the onboarding state to the user's profile
+      try {
+        // Save the current step to completed_steps before moving to the next one
+        const newCompletedSteps = [...(onboardingState?.completed_steps || [])];
+        if (currentStep !== 'welcome' && !newCompletedSteps.includes(currentStep)) {
+          newCompletedSteps.push(currentStep);
+        }
+        
+        // Update the profile's setup_progress
+        const { updateSetupProgress } = useAuthStore.getState();
+        await updateSetupProgress({
+          ...(profile?.setup_progress || {}),
+          current_step: nextStep,
+          completed_steps: newCompletedSteps,
+          form_data: updatedSelections
+        });
+        
+        console.log('Setting current step to:', nextStep);
+        console.log('Updated completed steps:', newCompletedSteps);
+        setCurrentStep(nextStep);
+        
+      } catch (error) {
+        console.error('Error saving onboarding data:', error);
+      }
     } finally {
-      setLoading(false);
+      // Allow transitions again after a short delay to prevent accidental double-clicks
+      setTimeout(() => {
+        isTransitioningRef.current = false;
+        setLoading(false);
+      }, 300);
     }
-  };
+  }, [user, currentStep, userSelections, profile, onboardingService]);
   
   const handleSkip = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      // Mark onboarding as complete even when skipped, but only if we have a personaId
-      if (personaId) {
-        await multiPersonaProfileService.updateOnboardingState(user.id, personaId, {
-          is_complete: true,
-          form_data: { ...userSelections, skipped: true }
-        });
-      }
+      // Mark onboarding as complete even when skipped
+      const { updateSetupProgress } = useAuthStore.getState();
+      await updateSetupProgress({
+        ...(profile?.setup_progress || {}),
+        completed_steps: [...(profile?.setup_progress?.completed_steps || []), 'complete'],
+        form_data: { ...userSelections, skipped: true },
+        initialOnboardingComplete: true,
+        lastLogin: new Date().toISOString()
+      });
       navigate('/dashboard');
     } catch (error) {
       console.error('Error skipping onboarding:', error);
@@ -235,14 +256,55 @@ const OnboardingController: React.FC<OnboardingControllerProps> = ({ initialPers
     }
   };
   
-  const handleComplete = () => {
-    navigate('/dashboard');
+  const handleComplete = async () => {
+    if (!user) {
+      navigate('/dashboard');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Update the main profile's setup_progress to mark overall onboarding as complete
+      const { updateSetupProgress } = useAuthStore.getState();
+      await updateSetupProgress({
+        ...(profile?.setup_progress || {}),
+        completed_steps: [...(profile?.setup_progress?.completed_steps || []), 'complete'],
+        initialOnboardingComplete: true,
+        lastLogin: new Date().toISOString()
+      });
+      
+      console.log('Onboarding successfully completed');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    } finally {
+      setLoading(false);
+      navigate('/dashboard');
+    }
   };
   
-  if (!user || loading) {
+  // Add a debounced loading state to prevent flickering
+  const [stableLoading, setStableLoading] = useState(false);
+  
+  useEffect(() => {
+    if (loading) {
+      // Set stable loading immediately when loading starts
+      setStableLoading(true);
+    } else {
+      // Delay turning off loading indicator to prevent flickering
+      const timer = setTimeout(() => {
+        setStableLoading(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+  
+  // Show loading state only if stableLoading is true and we have a user
+  if (!user || stableLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        {!stableLoading && !user && <div className="mt-4">Loading user data...</div>}
+        {stableLoading && <div className="mt-4">Loading your onboarding experience...</div>}
       </div>
     );
   }

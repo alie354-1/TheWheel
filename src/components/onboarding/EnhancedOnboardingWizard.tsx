@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../lib/store';
 import { enhancedOnboardingService, EnhancedOnboardingData } from '../../lib/services/enhanced-onboarding.service';
 import { enhancedProfileService } from '../../lib/services/enhanced-profile.service'; 
-import { UserRoleType, CompanyStageType } from '../../lib/types/enhanced-profile.types';
+import { CompanyStageType } from '../../lib/types/enhanced-profile.types';
 
 // Import step components
 import { EnhancedRoleSelectionStep } from './steps/EnhancedRoleSelectionStep';
@@ -16,8 +16,6 @@ import IndustrySelectionStep from './steps/IndustrySelectionStep';
 import SkillLevelStep from './steps/SkillLevelStep';
 import GoalsSelectionStep from './steps/GoalsSelectionStep';
 import ThemePreferencesStep from './steps/ThemePreferencesStep';
-import NotificationPreferencesStep from './steps/NotificationPreferencesStep';
-import FeatureRecommendations from './steps/FeatureRecommendations';
 import OnboardingCompletion from './steps/OnboardingCompletion';
 import OnboardingWelcome from './steps/OnboardingWelcome';
 
@@ -231,18 +229,14 @@ export const EnhancedOnboardingWizard: React.FC<EnhancedOnboardingWizardProps> =
       case 'industry_selection':
         return (
           <IndustrySelectionStep
-            onNext={(data) => goToNextStep({ industryCategory: data.industryCategory })}
-            onBack={goToPreviousStep}
-            initialValue={formData.industryCategory}
+            onSelect={(industryCategory) => goToNextStep({ industryCategory })}
           />
         );
       
       case 'skill_level':
         return (
           <SkillLevelStep
-            onNext={(data) => goToNextStep({ skillLevel: data.skillLevel as any })}
-            onBack={goToPreviousStep}
-            initialValue={formData.skillLevel as any}
+            onSelect={(skillLevel) => goToNextStep({ skillLevel })}
           />
         );
       
@@ -256,12 +250,10 @@ export const EnhancedOnboardingWizard: React.FC<EnhancedOnboardingWizardProps> =
       case 'preferences':
         return (
           <ThemePreferencesStep
-            onNext={(data) => goToNextStep({
-              preferredTheme: data.theme,
+            onSelect={(theme) => goToNextStep({
+              preferredTheme: theme,
               notificationPreferences: formData.notificationPreferences
             })}
-            onBack={goToPreviousStep}
-            initialValue={formData.preferredTheme}
           />
         );
       
@@ -274,6 +266,12 @@ export const EnhancedOnboardingWizard: React.FC<EnhancedOnboardingWizardProps> =
               } else {
                 navigate('/dashboard');
               }
+            }}
+            personalWelcome="Congratulations on completing your profile setup!"
+            userSelections={{
+              industry: formData.industryCategory || "your industry",
+              role: formData.primaryRole || "your role",
+              goals: formData.goals || []
             }}
           />
         );

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
 import OnboardingWizard from '../components/onboarding/OnboardingWizard';
-import { multiPersonaProfileService } from '../lib/services/multi-persona-profile.service';
 
 const OnboardingWizardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,43 +16,26 @@ const OnboardingWizardPage: React.FC = () => {
     
     setLoading(true);
     try {
-      // Create personas based on selected roles
-      for (const role of data.role) {
-        // Create a persona for each selected role
-        const persona = await multiPersonaProfileService.createPersona(user.id, {
-          name: `${role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')} Profile`,
-          type: role,
-          is_active: false
-        });
-        
-        if (persona && role === 'founder' && data.companyStage) {
-          // Update founder persona with company stage
-          await multiPersonaProfileService.updatePersona(persona.id, {
-            project_context: {
-              current_startup_stage: data.companyStage === 'idea_stage' 
-                ? 'ideation' 
-                : data.companyStage === 'solid_idea' 
-                  ? 'validation' 
-                  : 'growth'
-            }
-          });
-          
-          // Highlight appropriate features based on company stage
-          if (data.companyStage === 'idea_stage') {
-            // Highlight idea playground
-            navigate('/idea-hub/playground');
-          } else if (data.companyStage === 'solid_idea') {
-            // Highlight company formation
-            navigate('/company/setup');
-          } else if (data.companyStage === 'existing_company') {
-            // Highlight company dashboard
-            navigate('/company/dashboard');
-          }
-        }
-      }
+      // Get the primary role (first in the array)
+      const primaryRole = data.role[0];
       
-      // Redirect to dashboard if no specific navigation occurred
-      if (loading) {
+      // Navigate based on role and company stage
+      if (primaryRole === 'founder' && data.companyStage) {
+        // Highlight appropriate features based on company stage
+        if (data.companyStage === 'idea_stage') {
+          // Highlight idea playground
+          navigate('/idea-hub/playground');
+        } else if (data.companyStage === 'solid_idea') {
+          // Highlight company formation
+          navigate('/company/setup');
+        } else if (data.companyStage === 'existing_company') {
+          // Highlight company dashboard
+          navigate('/company/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        // Default navigation for other roles
         navigate('/dashboard');
       }
     } catch (error) {

@@ -289,7 +289,7 @@ export default function ProfileSetup() {
     
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({
           full_name: formData.full_name,
           setup_progress: {
@@ -299,6 +299,9 @@ export default function ProfileSetup() {
               .map(s => s.id),
             form_data: formData
           },
+          is_public: formData.is_public,
+          allows_messages: formData.allows_messages,
+          professional_background: formData.professional_background,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);

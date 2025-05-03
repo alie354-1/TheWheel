@@ -618,66 +618,168 @@ export class MultiPersonaProfileService {
    */
   private async createDefaultProfile(userId: string): Promise<UserProfile | null> {
     try {
-      // Try to get user data from auth
-      const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
+      // Direct implementation instead of relying on service_role_api.init_user_profile
+      console.log('Creating default profile for user:', userId);
       
-      if (authError) {
-        console.error('Error fetching auth user data:', authError);
-        return null;
-      }
-
-      const user = authData.user;
-      
-      // Create core profile
-      const coreProfile: CoreIdentity = {
-        id: userId,
-        email: user.email || '',
-        full_name: null,
-        avatar_url: null,
-        verified: user.email_confirmed_at !== null,
-        account_created_at: user.created_at || new Date().toISOString(),
-        account_status: 'active'
-      };
-      
-      // Create system metadata with 2FA info
-      const systemMetadata: SystemMetadata = {
-        profile_version: 1,
-        last_updated: new Date().toISOString(),
-        two_factor_enabled: user.factors ? user.factors.length > 0 : false
-      };
-
-      const { error: coreError } = await supabase
+      // Step 1: Check if user already has a core profile
+      const { data: existingProfile, error: existingProfileError } = await supabase
         .from('user_core_profiles')
-        .insert([coreProfile]);
-
-      if (coreError) {
-        console.error('Error creating core profile:', coreError);
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (existingProfileError && existingProfileError.code !== 'PGRST116') {
+        // PGRST116 is "not found" which is fine here
+        console.error('Error checking existing profile:', existingProfileError);
         return null;
       }
-
-      // Create default persona
-      const persona = await this.createDefaultPersona(userId);
-      if (!persona) {
-        console.error('Error creating default persona');
+      
+      let coreProfile;
+      
+      if (!existingProfile) {
+        // No profile exists, create one - fetch user info first
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !userData || !userData.user) {
+          console.error('Error getting user data:', userError);
+          return null;
+        }
+        
+        const user = userData.user;
+        
+        // Create core profile
+        const { data: newProfile, error: insertError } = await supabase
+          .from('user_core_profiles')
+          .insert([{
+            id: userId,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            display_name: user.user_metadata?.preferred_name || user.email?.split('@')[0] || 'User',
+            avatar_url: user.user_metadata?.avatar_url || null,
+            verified: user.email_confirmed_at ? true : false,
+            created_at: new Date().toISOString(),
+            last_active_at: new Date().toISOString(),
+            system_metadata: this.getDefaultSystemMetadata()
+          }])
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Error creating core profile:', insertError);
+          return null;
+        }
+        
+        coreProfile = newProfile;
+        
+        // Create default settings
+        await supabase
+          .from('user_settings')
+          .insert([{
+            user_id: userId,
+            theme: 'system',
+            notifications: {
+              email: true,
+              push: true,
+              inApp: true,
+              digest: false
+            },
+            features: {}
+          }]);
+      } else {
+        coreProfile = existingProfile;
+      }
+      
+      // Step 2: Create a default persona if none exists
+      const { data: existingPersonas, error: personasError } = await supabase
+        .from('user_personas')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (personasError) {
+        console.error('Error checking existing personas:', personasError);
         return null;
       }
-
-      // Set as active persona
-      await this.setActivePersona(userId, persona.id);
-
-      // Use the system metadata we created with 2FA info
-
-      // Return the complete profile
-      return {
-        core: coreProfile,
-        active_persona_id: persona.id,
-        system: systemMetadata,
+      
+      let activePersona;
+      
+      if (!existingPersonas || existingPersonas.length === 0) {
+        // Create a default persona
+        const { data: newPersona, error: personaError } = await supabase
+          .from('user_personas')
+          .insert([{
+            user_id: userId,
+            name: `Primary Profile (${new Date().getTime()})`, // Add timestamp for uniqueness
+            type: 'custom',
+            is_active: true,
+            is_public: false,
+            professional: {
+              title: 'User',
+              role_category: 'CUSTOM'
+            },
+            visibility_settings: {
+              discoverable_as: ['custom'],
+              visible_to: ['connections'],
+              hidden_fields: []
+            },
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+          
+        if (personaError) {
+          console.error('Error creating default persona:', personaError);
+          return null;
+        }
+        
+        activePersona = newPersona;
+        
+        // Update the core profile to set this as the active persona
+        await supabase
+          .from('user_core_profiles')
+          .update({ active_persona_id: activePersona.id })
+          .eq('id', userId);
+        
+        // Create onboarding state for this persona
+        await supabase
+          .from('onboarding_state')
+          .insert([{
+            user_id: userId,
+            persona_id: activePersona.id,
+            current_step: 'welcome',
+            completed_steps: [],
+            form_data: {},
+            is_complete: false,
+            last_updated: new Date().toISOString(),
+            metrics: {
+              step_completion_times: {},
+              total_time_spent: 0
+            }
+          }]);
+      } else {
+        activePersona = existingPersonas.find(p => p.is_active) || existingPersonas[0];
+        
+        // If no active persona is set in core profile, update it
+        if (!coreProfile.active_persona_id) {
+          await supabase
+            .from('user_core_profiles')
+            .update({ active_persona_id: activePersona.id })
+            .eq('id', userId);
+        }
+      }
+      
+      // Return complete profile in expected format
+      const userProfile: UserProfile = {
+        core: coreProfile as CoreIdentity,
+        active_persona_id: activePersona.id,
+        system: coreProfile.system_metadata as SystemMetadata || this.getDefaultSystemMetadata(),
         global_settings: {
-          default_persona_id: persona.id,
+          default_persona_id: activePersona.id,
           auto_switch_personas: false,
           cross_persona_notifications: true
         }
       };
+      
+      return userProfile;
     } catch (error) {
       console.error('Error in createDefaultProfile:', error);
       return null;
@@ -697,7 +799,7 @@ export class MultiPersonaProfileService {
         .insert([{
           ...defaultData,
           user_id: userId,
-          name: 'Primary Profile',
+          name: `Primary Profile (${new Date().getTime()})`, // Add timestamp for uniqueness
           is_active: true,
           created_at: new Date().toISOString()
         }])
