@@ -104,6 +104,9 @@ export class ServiceRegistry {
 // Export singleton instance
 export const serviceRegistry = ServiceRegistry.getInstance();
 
+// Export function to get the service registry instance
+export const getServiceRegistry = () => serviceRegistry;
+
 // Type-safe access functions for common services
 export const getFeatureFlagsService = () => serviceRegistry.get<typeof featureFlagsService>('featureFlags');
 export const getLoggingService = () => serviceRegistry.get<typeof loggingService>('logging');

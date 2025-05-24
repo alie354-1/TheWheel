@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import UserManagement from '../components/admin/UserManagement';
-import FeatureFlagsSettings from '../components/admin/FeatureFlagsSettings';
+import EnhancedFeatureFlagsSettings from '../components/admin/EnhancedFeatureFlagsSettings';
 import OpenAISettings from '../components/admin/OpenAISettings';
 import AppCredentialsSettings from '../components/admin/AppCredentialsSettings';
 import ModelManagementPanel from '../components/admin/ModelManagementPanel';
@@ -83,7 +83,7 @@ const AdminPanel: React.FC = () => {
           </div>
         )}
         {activeTab === "stepToDomainAI" && <StepToDomainAIMapping />}
-        {activeTab === "flags" && <FeatureFlagsSettings />}
+        {activeTab === "flags" && <EnhancedFeatureFlagsSettings />}
         {activeTab === "terminology" && <TerminologyManagement />}
         {activeTab === "models" && <ModelManagementPanel />}
         {activeTab === "openai" && <OpenAISettings />}

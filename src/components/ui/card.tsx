@@ -79,3 +79,29 @@ export const CardFooter: React.FC<CardFooterProps> = ({ children, className = ''
     </div>
   );
 };
+
+type CardTitleProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '' }) => {
+  return (
+    <h3 className={`text-lg font-semibold text-base-content ${className}`}>
+      {children}
+    </h3>
+  );
+};
+
+type CardDescriptionProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = '' }) => {
+  return (
+    <p className={`text-sm text-base-content/70 ${className}`}>
+      {children}
+    </p>
+  );
+};
