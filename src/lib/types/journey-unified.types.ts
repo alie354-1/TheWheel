@@ -215,3 +215,131 @@ export interface PhaseWithProgress extends JourneyPhase {
  */
 export type JourneyChallenge = JourneyStep;
 export type CompanyChallengeProgress = CompanyJourneyStep;
+
+/**
+ * Sprint 4 Drag and Drop & Custom Arrangement Types
+ */
+
+/**
+ * Custom Step Arrangement
+ * Represents a saved custom ordering of steps
+ */
+export interface CustomStepArrangement {
+  id: string;
+  company_id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Custom Step Order
+ * Represents the order of a step within a custom arrangement
+ */
+export interface CustomStepOrder {
+  id: string;
+  arrangement_id: string;
+  step_id: string;
+  order_index: number;
+  custom_phase_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Custom Phase
+ * Represents a user-defined grouping of steps
+ */
+export interface CustomPhase {
+  id: string;
+  company_id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Step Batch Operation
+ * Records a batch operation performed on multiple steps
+ */
+export interface StepBatchOperation {
+  id: string;
+  company_id: string;
+  user_id: string;
+  operation_type: string;
+  affected_steps: string[];
+  source_arrangement_id?: string;
+  target_arrangement_id?: string;
+  operation_data?: Record<string, any>;
+  created_at: string;
+}
+
+/**
+ * Shared Journey Report
+ * Represents a shareable journey progress report
+ */
+export interface SharedJourneyReport {
+  id: string;
+  company_id: string;
+  creator_id: string;
+  title: string;
+  description?: string;
+  included_phases?: string[];
+  included_steps?: string[];
+  access_type: 'public' | 'company' | 'private' | 'specific_users';
+  allowed_users?: string[];
+  display_options?: Record<string, any>;
+  expiration_date?: string;
+  public_token?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Step Recommendation
+ * Represents a step recommendation from one user to another
+ */
+export interface StepRecommendation {
+  id: string;
+  company_id: string;
+  sender_id: string;
+  recipient_id: string;
+  step_id: string;
+  context_note?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  response_note?: string;
+  viewed_at?: string;
+  responded_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Notification
+ * Represents a user notification
+ */
+export interface Notification {
+  id: string;
+  user_id: string;
+  company_id: string;
+  event_type: string;
+  title: string;
+  body: string;
+  resource_type?: string;
+  resource_id?: string;
+  action_url?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  is_read: boolean;
+  read_at?: string;
+  delivered_channels: string[];
+  created_at: string;
+}

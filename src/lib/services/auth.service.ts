@@ -1,6 +1,7 @@
 import { supabase, resetSupabaseClient } from '../supabase';
 import { User } from '../types/profile.types';
 import { useAuthStore } from '../store';
+import { logAuditAction } from './auditLog.service'; // Import audit log service
 
 // Maximum number of retries for auth operations
 const MAX_RETRIES = 3;
@@ -97,6 +98,10 @@ class AuthService {
 
       this.authStatus = 'authenticated';
       console.log('User authenticated and profile loaded');
+
+      // Log successful login to audit trail
+      logAuditAction('user_login', { userId: userRecord.id, status: 'success' });
+
       return { user: userRecord as User, error: null };
     } catch (error: any) {
       console.error('Unexpected error during sign in:', error);

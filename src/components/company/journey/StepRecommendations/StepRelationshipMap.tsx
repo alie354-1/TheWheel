@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { RecommendationService } from '@/lib/services/recommendation.service';
+import { RelationshipsRecommendationService } from '@/lib/services/recommendation/relationships.service'; // Corrected import
 import type { StepRelationship } from '@/lib/types/journey-steps.types';
 import { motion } from 'framer-motion';
 
-interface StepRelationshipMapProps {
+export interface StepRelationshipMapProps { // Added export
   stepId: string;
   onStepSelect?: (stepId: string) => void;
   className?: string;
@@ -39,7 +39,7 @@ export const StepRelationshipMap: React.FC<StepRelationshipMapProps> = ({
 
       try {
         setLoading(true);
-        const relationshipData = await RecommendationService.getStepRelationships(stepId);
+        const relationshipData = await RelationshipsRecommendationService.getStepRelationships(stepId); // Corrected service call
         setRelationships(relationshipData);
         setError(null);
       } catch (err) {

@@ -1,17 +1,21 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { toast } from "sonner";
 import JourneyBoard from "./JourneyBoard/JourneyBoard";
 import AIRecommendationPanel from "./JourneyBoard/AIRecommendationPanel";
 import FilterBar from "./JourneyBoard/FilterBar";
 import * as journeyBoardService from "../../lib/services/journeyBoard.service";
 import ListView from "./JourneyBoard/ListView";
-import { RecommendationsPanel } from "../../components/company/journey/StepRecommendations";
+import { ActionPanel } from '../../components/company/journey/ActionPanel'; // Import ActionPanel
+// Removed the old RecommendationsPanel import
+// import { RecommendationsPanel } from "../../components/company/journey/StepRecommendations"; 
 import { JourneyAnalyticsDashboard } from "../../components/company/journey/Analytics";
 
 // Replace with real companyId from context/auth
 const companyId = "demo-company-id";
 
 const JourneyMapPage: React.FC = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
   const [phases, setPhases] = useState<string[]>([]);
   const [stepsByPhase, setStepsByPhase] = useState<Record<string, any[]>>({});
   const [aiRecommendations, setAIRecommendations] = useState<string[]>([]);
@@ -123,6 +127,15 @@ const JourneyMapPage: React.FC = () => {
     setAILoading(false);
   };
 
+  // Handler for step selection from ActionPanel
+  const handleStepSelect = (stepId: string) => {
+    // Navigate to the step detail page
+    if (stepId) {
+      navigate(`/company/${companyId}/journey/step/${stepId}`);
+      toast.info(`Navigating to step: ${stepId}`); // Optional feedback
+    }
+  };
+
   // Filtered steps
   const filteredPhases = selectedPhase === "All" ? phases : [selectedPhase];
   const filteredStepsByPhase: typeof stepsByPhase = {};
@@ -152,8 +165,8 @@ const JourneyMapPage: React.FC = () => {
         view={view}
         onViewChange={setView}
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="md:col-span-2">
+      {/* AI Panel Section */}
+      <div className="mb-6"> 
           <AIRecommendationPanel
             recommendations={aiRecommendations}
             aiInfo={aiInfo}
@@ -161,59 +174,70 @@ const JourneyMapPage: React.FC = () => {
             aiAnswer={aiAnswer}
             loading={aiLoading}
           />
+      </div>
+      
+      {/* Main Content Area + Action Panel Sidebar */}
+      <div className="flex gap-4 mt-6">
+        {/* Main content area for Board, List, or Timeline */}
+        <div className="flex-grow">
+          {view === "board" && (
+            <JourneyBoard
+              phases={filteredPhases}
+              stepsByPhase={filteredStepsByPhase}
+              onStatusChange={handleStatusChange}
+              // Pass other necessary props if JourneyBoard needs them
+              onEditStep={handleEditStep}
+              onDeleteStep={handleDeleteStep}
+              onToggleParallel={handleToggleParallel}
+              onArchiveStep={handleArchiveStep}
+              onNotesChange={handleNotesChange}
+            />
+          )}
+          {view === "list" && (
+            <ListView
+              steps={filteredPhases.flatMap(phase =>
+                (filteredStepsByPhase[phase] || []).map((step) => ({ // Removed unused idx, arr
+                  id: step.id,
+                  name: step.name,
+                  status: step.status,
+                  isArchived: step.isArchived,
+                  onStatusChange: async (status: string) => {
+                    await journeyBoardService.updateCompanyStep(companyId, step.id, { status });
+                    await loadData(); // Refresh data after update
+                  },
+                  onReorder: async (stepId: string, direction: "up" | "down") => {
+                    const steps = filteredPhases.flatMap(p => filteredStepsByPhase[p] || []);
+                    const currentIdx = steps.findIndex(s => s.id === stepId);
+                    let targetIdx = direction === "up" ? currentIdx - 1 : currentIdx + 1;
+                    if (targetIdx < 0 || targetIdx >= steps.length) return;
+                    const currentStep = steps[currentIdx];
+                    const targetStep = steps[targetIdx];
+                    // Assuming order_index exists or needs to be handled
+                    // This part might need adjustment based on actual data structure/API
+                    await journeyBoardService.updateCompanyStep(companyId, currentStep.id, { order_index: targetIdx }); 
+                    await journeyBoardService.updateCompanyStep(companyId, targetStep.id, { order_index: currentIdx });
+                    await loadData(); // Refresh data after reorder
+                  }
+                }))
+              )}
+            />
+          )}
+          {view === "timeline" && (
+            <JourneyAnalyticsDashboard 
+              timeRange="month" 
+              className="mb-6"
+            />
+          )}
         </div>
-        <div className="md:col-span-1">
-          <RecommendationsPanel 
-            onStepSelect={(stepId) => {
-              if (stepId) {
-                window.location.href = `/company/${companyId}/journey/step/${stepId}`;
-              }
-            }}
+
+        {/* Action Panel Sidebar */}
+        <div className="w-80 flex-shrink-0"> {/* Fixed width sidebar */}
+          <ActionPanel 
+            companyId={companyId} 
+            onStepSelect={handleStepSelect} // Pass the selection handler
           />
         </div>
       </div>
-      {view === "board" && (
-        <JourneyBoard
-          phases={filteredPhases}
-          stepsByPhase={filteredStepsByPhase}
-          onStatusChange={handleStatusChange}
-        />
-      )}
-      {view === "list" && (
-        <ListView
-          steps={filteredPhases.flatMap(phase =>
-            (filteredStepsByPhase[phase] || []).map((step, idx, arr) => ({
-              id: step.id,
-              name: step.name,
-              status: step.status,
-              isArchived: step.isArchived,
-              onStatusChange: async (status: string) => {
-                await journeyBoardService.updateCompanyStep(companyId, step.id, { status });
-                // Optionally refresh data
-              },
-              onReorder: async (stepId: string, direction: "up" | "down") => {
-                // Find the current index and swap with the previous/next step
-                const steps = filteredPhases.flatMap(phase => filteredStepsByPhase[phase] || []);
-                const currentIdx = steps.findIndex(s => s.id === stepId);
-                let targetIdx = direction === "up" ? currentIdx - 1 : currentIdx + 1;
-                if (targetIdx < 0 || targetIdx >= steps.length) return;
-                // Swap order_index values in backend
-                const currentStep = steps[currentIdx];
-                const targetStep = steps[targetIdx];
-                await journeyBoardService.updateCompanyStep(companyId, currentStep.id, { order_index: targetIdx });
-                await journeyBoardService.updateCompanyStep(companyId, targetStep.id, { order_index: currentIdx });
-                // Optionally refresh data
-              }
-            }))
-          )}
-        />
-      )}
-      {view === "timeline" && (
-        <JourneyAnalyticsDashboard 
-          timeRange="month" 
-          className="mb-6"
-        />
-      )}
     </div>
   );
 };

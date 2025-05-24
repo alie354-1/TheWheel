@@ -4,6 +4,12 @@ import { aiService } from '../../lib/services/ai.service';
 import type { Task, Resource, LearningResource, Tool } from '../../lib/types/task.types';
 import { supabase } from '../../lib/supabase';
 
+// Define a type for keys that hold suggestion arrays in Task
+type TaskSuggestionKey = 'implementation_tips' | 'potential_challenges' | 'success_metrics' | 'resources' | 'learning_resources' | 'tools';
+
+// Define a union type for the items within the suggestion arrays
+type TaskSuggestionItem = string | Resource | LearningResource | Tool;
+
 interface TaskFormProps {
   task?: Task;
   onSubmit: (task: Partial<Task>) => void;
@@ -40,12 +46,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
     tools: task?.tools || []
   }));
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [regeneratingCategory, setRegeneratingCategory] = useState<string | null>(null);
-  const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
+  // Use TaskSuggestionKey for state related to dynamic categories
+  const [regeneratingCategory, setRegeneratingCategory] = useState<TaskSuggestionKey | null>(null); 
+  const [isRegenerating, setIsRegenerating] = useState<TaskSuggestionKey | null>(null);
   const [sampleResources, setSampleResources] = useState<any[]>([]);
 
   useEffect(() => {
-    loadSampleResources();
+    // loadSampleResources(); // Commented out as 'resources' table doesn't exist and data isn't used
   }, []);
 
   const loadSampleResources = async () => {
@@ -95,9 +102,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
     }
   };
 
-  const handleRegenerateCategory = async (category: string) => {
+  // Use TaskSuggestionKey for the category parameter
+  const handleRegenerateCategory = async (category: TaskSuggestionKey) => { 
     if (!formData.title || !formData.description) return;
     setRegeneratingCategory(category);
+    setIsRegenerating(category); // Also set isRegenerating state
 
     try {
       const response = await aiService.generateTasks({
@@ -108,60 +117,90 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
       });
 
       if (response.tasks && response.tasks.length > 0) {
-        const suggestions = response.tasks[0];
+        // Ensure suggestions object exists and access the specific category
+        const suggestions = response.tasks[0]; 
+        // Use keyof Task to safely access properties
+        const categorySuggestions = suggestions[category as keyof typeof suggestions] as TaskSuggestionItem[] | undefined; 
+        
         setFormData(prev => ({
           ...prev,
-          [category]: suggestions[category] || []
+          [category]: categorySuggestions || [] // Use the fetched suggestions or default to empty array
         }));
       }
     } catch (error) {
       console.error('Error regenerating category:', error);
     } finally {
       setRegeneratingCategory(null);
+      setIsRegenerating(null); // Reset isRegenerating state
     }
   };
 
-  const handleUpdateSuggestion = (category: string, index: number, updates: any) => {
+  // Use TaskSuggestionKey for the category parameter
+  const handleUpdateSuggestion = (category: TaskSuggestionKey, index: number, updates: any) => { 
     setFormData(prev => {
-      const items = [...(prev[category] as any[])];
+      // Use nullish coalescing for potentially undefined arrays
+      const items = [...(prev[category] ?? [])]; 
+      // Ensure index is valid
+      if (index < 0 || index >= items.length) return prev; 
+      
       items[index] = typeof updates === 'string' 
-        ? updates
-        : { ...items[index], ...updates };
+        ? updates // Assuming string updates are for string[] types like tips, challenges, metrics
+        : { ...(items[index] as object), ...updates }; // Spread only if item is an object
       return { ...prev, [category]: items };
     });
   };
 
-  const handleRemoveSuggestion = (category: string, index: number) => {
+  // Use TaskSuggestionKey for the category parameter
+  const handleRemoveSuggestion = (category: TaskSuggestionKey, index: number) => { 
     setFormData(prev => ({
       ...prev,
-      [category]: (prev[category] as any[])?.filter((_, i) => i !== index) || []
+      // Use optional chaining and nullish coalescing
+      [category]: prev[category]?.filter((_, i) => i !== index) ?? [] 
     }));
   };
 
-  const handleAddTag = (section: string, index: number, tag: string) => {
+  // Use TaskSuggestionKey for the section parameter
+  const handleAddTag = (section: TaskSuggestionKey, index: number, tag: string) => { 
     if (!tag.trim()) return;
     
     setFormData(prev => {
-      const items = [...(prev[section] as any[])];
+      // Use nullish coalescing for potentially undefined arrays
+      const items = [...(prev[section] ?? [])]; 
       const item = items[index];
       
-      if (!item.tags) {
-        item.tags = [];
-      }
+      // Ensure item exists and is an object before accessing tags
+      if (!item || typeof item !== 'object') return prev; 
       
-      if (!item.tags.includes(tag.trim())) {
-        item.tags = [...item.tags, tag.trim()];
+      // Type guard to ensure item has a tags property
+      if ('tags' in item) {
+        if (!item.tags) {
+          item.tags = [];
+        }
+        if (!item.tags.includes(tag.trim())) {
+          item.tags = [...item.tags, tag.trim()];
+        }
+        items[index] = item;
+      } else {
+         // Handle cases where item might be a string (though unlikely for tag sections)
+         // Or initialize item as an object with tags if appropriate for the section
+         // For now, we'll just return prev if tags aren't expected
+         console.warn(`Item at index ${index} in section ${section} does not have a 'tags' property.`);
+         return prev;
       }
-      
-      items[index] = item;
+
       return { ...prev, [section]: items };
     });
   };
 
-  const handleRemoveTag = (section: string, itemIndex: number, tagIndex: number) => {
+  // Use TaskSuggestionKey for the section parameter
+  const handleRemoveTag = (section: TaskSuggestionKey, itemIndex: number, tagIndex: number) => { 
     setFormData(prev => {
-      const items = [...(prev[section] as any[])];
+      // Use nullish coalescing for potentially undefined arrays
+      const items = [...(prev[section] ?? [])]; 
       const item = items[itemIndex];
+
+      // Ensure item exists, is an object, and has tags before filtering
+      if (!item || typeof item !== 'object' || !('tags' in item) || !item.tags) return prev; 
       
       item.tags = item.tags.filter((_: string, i: number) => i !== tagIndex);
       items[itemIndex] = item;
@@ -187,7 +226,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
     }
   };
 
-  const getSourceTypeStyle = (sourceType: string) => {
+  const getSourceTypeStyle = (sourceType: string | undefined) => { // Allow undefined
     switch (sourceType) {
       case 'ai':
         return 'bg-blue-100 text-blue-800';
@@ -204,13 +243,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
     }
   };
 
-  const renderResourceItem = (resource: any, index: number) => {
+  // Use Resource type for resource parameter
+  const renderResourceItem = (resource: Resource, index: number) => { 
     return (
       <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-0.5 rounded-full ${getSourceTypeStyle(resource.source_type)}`}>
-              {resource.source_type}
+              {resource.source_type ?? 'N/A'} {/* Handle potential undefined */}
             </span>
             <div className="flex items-center">
               {getResourceIcon(resource.type)}
@@ -241,8 +281,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
           />
           
           <div className="flex flex-wrap gap-2">
-            {resource.tags?.map((tag: string, tagIndex: number) => (
+            {/* Use nullish coalescing for tags */}
+            {(resource.tags ?? []).map((tag: string, tagIndex: number) => ( 
               <span
+                key={tagIndex} // Add key prop
                 className="text-sm text-indigo-600 hover:text-indigo-900"
               >
                 {tag}
@@ -289,18 +331,61 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
     );
   };
 
-  const renderSuggestionItem = (section: string, item: any, index: number) => {
+  // Use TaskSuggestionKey for the section parameter
+  const renderSuggestionItem = (section: TaskSuggestionKey, item: TaskSuggestionItem, index: number) => { 
     if (section === 'resources') {
-      return renderResourceItem(item, index);
+      // Ensure item is treated as Resource type for safety
+      return renderResourceItem(item as Resource, index); 
     }
+    if (section === 'learning_resources') {
+       // Handle LearningResource similarly if needed, for now just display title
+       const learningItem = item as LearningResource;
+       return (
+         <div className="flex items-center justify-between p-2 rounded bg-white border border-gray-200">
+           <div className="flex-1">
+             <input
+               type="text"
+               value={learningItem.title ?? ''}
+               onChange={(e) => handleUpdateSuggestion(section, index, { ...learningItem, title: e.target.value })} 
+               className="block w-full text-sm text-gray-900 border-0 focus:ring-0 p-0"
+             />
+           </div>
+           <div className="flex items-center space-x-2">
+             <button onClick={() => handleRemoveSuggestion(section, index)} className="text-gray-400 hover:text-gray-500"> <X className="h-4 w-4" /> </button>
+           </div>
+         </div>
+       );
+    }
+     if (section === 'tools') {
+       // Handle Tool similarly if needed, for now just display name
+       const toolItem = item as Tool;
+       return (
+         <div className="flex items-center justify-between p-2 rounded bg-white border border-gray-200">
+           <div className="flex-1">
+             <input
+               type="text"
+               value={toolItem.name ?? ''}
+               onChange={(e) => handleUpdateSuggestion(section, index, { ...toolItem, name: e.target.value })} 
+               className="block w-full text-sm text-gray-900 border-0 focus:ring-0 p-0"
+             />
+           </div>
+           <div className="flex items-center space-x-2">
+             <button onClick={() => handleRemoveSuggestion(section, index)} className="text-gray-400 hover:text-gray-500"> <X className="h-4 w-4" /> </button>
+           </div>
+         </div>
+       );
+    }
+
+    // Fallback for string arrays (implementation_tips, potential_challenges, success_metrics)
+    const value = typeof item === 'string' ? item : String(item ?? ''); 
 
     return (
       <div className="flex items-center justify-between p-2 rounded bg-white border border-gray-200">
         <div className="flex-1">
           <input
             type="text"
-            value={typeof item === 'string' ? item : item.title}
-            onChange={(e) => handleUpdateSuggestion(section, index, e.target.value)}
+            value={value}
+            onChange={(e) => handleUpdateSuggestion(section, index, e.target.value)} 
             className="block w-full text-sm text-gray-900 border-0 focus:ring-0 p-0"
           />
         </div>
@@ -318,15 +403,16 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Use nullish coalescing for potentially undefined arrays before checking length
     const taskData = {
       ...formData,
       status: task?.status || 'pending',
-      implementation_tips: formData.implementation_tips?.length ? formData.implementation_tips : undefined,
-      potential_challenges: formData.potential_challenges?.length ? formData.potential_challenges : undefined,
-      success_metrics: formData.success_metrics?.length ? formData.success_metrics : undefined,
-      resources: formData.resources?.length ? formData.resources : undefined,
-      learning_resources: formData.learning_resources?.length ? formData.learning_resources : undefined,
-      tools: formData.tools?.length ? formData.tools : undefined
+      implementation_tips: (formData.implementation_tips ?? []).length ? formData.implementation_tips : undefined,
+      potential_challenges: (formData.potential_challenges ?? []).length ? formData.potential_challenges : undefined,
+      success_metrics: (formData.success_metrics ?? []).length ? formData.success_metrics : undefined,
+      resources: (formData.resources ?? []).length ? formData.resources : undefined,
+      learning_resources: (formData.learning_resources ?? []).length ? formData.learning_resources : undefined,
+      tools: (formData.tools ?? []).length ? formData.tools : undefined
     };
     onSubmit(taskData);
   };
@@ -341,7 +427,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
           <input
             type="text"
             id="title"
-            value={formData.title}
+            value={formData.title ?? ''} // Handle potential undefined
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
@@ -354,7 +440,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
           </label>
           <textarea
             id="description"
-            value={formData.description}
+            value={formData.description ?? ''} // Handle potential undefined
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={3}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -415,8 +501,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
             <input
               type="number"
               id="estimated_hours"
-              value={formData.estimated_hours}
-              onChange={(e) => setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) })}
+              value={formData.estimated_hours ?? 1.0} // Handle potential undefined
+              onChange={(e) => setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })} // Ensure number
               min="0.5"
               step="0.5"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -461,7 +547,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
             </button>
           </div>
 
-          {(formData.implementation_tips?.length || 0) > 0 && (
+          {/* Use nullish coalescing before accessing .length or .map */}
+          {(formData.implementation_tips?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Implementation Tips</h4>
@@ -474,7 +561,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.implementation_tips.map((tip, index) => (
+                {(formData.implementation_tips ?? []).map((tip, index) => (
                   <div key={`tip-${index}`} className="text-sm text-gray-600">
                     {renderSuggestionItem('implementation_tips', tip, index)}
                   </div>
@@ -482,8 +569,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
               </div>
             </div>
           )}
-
-          {(formData.potential_challenges?.length || 0) > 0 && (
+          {(formData.potential_challenges?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Potential Challenges</h4>
@@ -496,7 +582,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.potential_challenges.map((challenge, index) => (
+                {(formData.potential_challenges ?? []).map((challenge, index) => (
                   <div key={`challenge-${index}`} className="text-sm text-gray-600">
                     {renderSuggestionItem('potential_challenges', challenge, index)}
                   </div>
@@ -504,8 +590,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
               </div>
             </div>
           )}
-
-          {(formData.success_metrics?.length || 0) > 0 && (
+          {(formData.success_metrics?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Success Metrics</h4>
@@ -518,7 +603,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.success_metrics.map((metric, index) => (
+                {(formData.success_metrics ?? []).map((metric, index) => (
                   <div key={`metric-${index}`} className="text-sm text-gray-600">
                     {renderSuggestionItem('success_metrics', metric, index)}
                   </div>
@@ -526,8 +611,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
               </div>
             </div>
           )}
-
-          {(formData.resources?.length || 0) > 0 && (
+          {(formData.resources?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Suggested Resources</h4>
@@ -540,7 +624,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.resources.map((resource, index) => (
+                {(formData.resources ?? []).map((resource, index) => (
                   <div key={`resource-${index}`}>
                     {renderSuggestionItem('resources', resource, index)}
                   </div>
@@ -548,8 +632,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
               </div>
             </div>
           )}
-
-          {(formData.learning_resources?.length || 0) > 0 && (
+          {(formData.learning_resources?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Learning Resources</h4>
@@ -562,7 +645,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.learning_resources.map((resource, index) => (
+                {(formData.learning_resources ?? []).map((resource, index) => (
                   <div key={`learning-${index}`}>
                     {renderSuggestionItem('learning_resources', resource, index)}
                   </div>
@@ -570,8 +653,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
               </div>
             </div>
           )}
-
-          {(formData.tools?.length || 0) > 0 && (
+          {(formData.tools?.length ?? 0) > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-700">Recommended Tools</h4>
@@ -584,7 +666,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, isSubmitt
                 </button>
               </div>
               <div className="space-y-2">
-                {formData.tools.map((tool, index) => (
+                {(formData.tools ?? []).map((tool, index) => (
                   <div key={`tool-${index}`}>
                     {renderSuggestionItem('tools', tool, index)}
                   </div>

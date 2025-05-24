@@ -203,8 +203,22 @@ export default function CompanySetup() {
     }
   };
 
-  const handleSave = async (goToDashboard = false) => {
-    if (!user || !formData.name || formData.industries.length === 0) return;
+    const handleSave = async (goToDashboard = false) => {
+    console.log('handleSave called', { user, name: formData.name, industries: formData.industries });
+    alert('handleSave called: ' + JSON.stringify({ user: !!user, name: formData.name, industries: formData.industries }));
+
+    if (!user) {
+      setError('You must be logged in to create a company.');
+      return;
+    }
+    if (!formData.name) {
+      setError('Company name is required.');
+      return;
+    }
+    if (formData.industries.length === 0) {
+      setError('At least one industry is required.');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
@@ -249,15 +263,22 @@ export default function CompanySetup() {
         if (updateError) throw updateError;
       } else {
         // Create new company
+        console.log('Attempting to create company:', companyData);
         const { data: company, error: companyError } = await supabase
           .from('companies')
-          .insert([companyData]) // Insert the prepared data
+          .insert([{ name: formData.name }])
           .select()
           .single();
+        console.log('Company insert result:', { company, companyError });
+        alert('Company insert result: ' + JSON.stringify({ company, companyError }));
 
-        if (companyError) throw companyError;
+        if (companyError) {
+          setError(companyError.message || 'Error creating company');
+          throw companyError;
+        }
 
         if (!company) {
+          setError('Failed to create company (no data returned)');
           throw new Error('Failed to create company');
         }
 
@@ -270,7 +291,6 @@ export default function CompanySetup() {
           .insert({
             company_id: company.id,
             user_id: user.id,
-            // role: 'owner', // Removed: Role is handled by RBAC trigger
             title: 'Founder',
             joined_at: new Date().toISOString()
           });
@@ -283,6 +303,56 @@ export default function CompanySetup() {
             .eq('id', company.id);
           throw memberError;
         }
+
+        // --- NEW: Create default Executive Team and add creator as member ---
+        // Create team
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .insert({
+            name: 'Executive Team',
+            company_id: company.id
+          })
+          .select()
+          .single();
+
+        if (teamError) {
+          // If team creation fails, delete company and company_members to maintain consistency
+          await supabase.from('company_members').delete().eq('company_id', company.id);
+          await supabase.from('companies').delete().eq('id', company.id);
+          throw teamError;
+        }
+
+        // Add creator as team member (owner)
+        const { error: teamMemberError } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: team.id,
+            user_id: user.id,
+            member_role: 'owner'
+          });
+
+        if (teamMemberError) {
+          // If team member creation fails, clean up
+          await supabase.from('teams').delete().eq('id', team.id);
+          await supabase.from('company_members').delete().eq('company_id', company.id);
+          await supabase.from('companies').delete().eq('id', company.id);
+          throw teamMemberError;
+        }
+        // --- END NEW ---
+
+        // Initialize Business Operations Hub for this company
+        try {
+          const { BusinessOpsInitializationService } = await import('../../lib/services/businessOpsInitialization.service');
+          await BusinessOpsInitializationService.initializeForCompany({
+            companyId: company.id,
+            userId: user.id,
+            industries: formData.industries,
+            businessModel: formData.business_model
+          });
+        } catch (initError: any) {
+          console.error('Error initializing Business Ops Hub:', initError);
+          // Optionally: show a warning to the user, but do not block company creation
+        }
       }
 
       // Navigate to dashboard if requested
@@ -290,6 +360,9 @@ export default function CompanySetup() {
         // Clear session storage
         sessionStorage.removeItem('companySetupData');
         navigate('/company/dashboard');
+      } else {
+        // Advance to next step after successful save
+        handleNext();
       }
     } catch (error: any) {
       console.error('Error saving company:', error);
@@ -865,7 +938,11 @@ export default function CompanySetup() {
                 </button>
               )}
               <button
-                onClick={() => handleSave(false)}
+                type="button"
+                onClick={() => {
+                  alert('Save & Continue button clicked');
+                  handleSave(false);
+                }}
                 disabled={isLoading || !formData.name || formData.industries.length === 0}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
@@ -873,6 +950,7 @@ export default function CompanySetup() {
               </button>
               {currentStep === SETUP_STEPS[SETUP_STEPS.length - 1].id && (
                 <button
+                  type="button"
                   onClick={() => handleSave(true)}
                   disabled={isLoading || !formData.name || formData.industries.length === 0}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"

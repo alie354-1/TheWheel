@@ -15,6 +15,7 @@ import FeedbackSection from './StepDetails/FeedbackSection';
 import ActionSection from './StepDetails/ActionSection';
 import ToolSelector from './ToolSelector/ToolSelector';
 import AdviceCard from './StepDetails/AdviceCard';
+import ContentImprovementAdvice from './StepDetails/ContentImprovementAdvice';
 import { RecommendationsPanel } from './StepRecommendations';
 
 interface JourneyStepDetailsProps {
@@ -190,6 +191,9 @@ const JourneyStepDetails: React.FC<JourneyStepDetailsProps> = ({ companyId }) =>
           {(step.checklists?.length ?? 0) > 0 && <ChecklistSection checklists={step.checklists!} />}
           {(step.tips?.length ?? 0) > 0 && <TipsSection tips={step.tips!} />}
         </div>
+
+        {/* Content Improvement Suggestions */}
+        <ContentImprovementAdvice stepId={stepId || ""} />
 
         <NotesSection
           notes={notes}

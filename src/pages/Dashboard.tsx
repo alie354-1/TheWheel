@@ -317,6 +317,11 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+          <div>
+            <Link to="/company/dashboard-new" className="btn btn-sm btn-outline">
+              Try New Dashboard
+            </Link>
+          </div>
         </div>
 
         {/* Onboarding Progress */}

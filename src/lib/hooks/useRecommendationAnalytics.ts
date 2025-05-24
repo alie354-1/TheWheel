@@ -140,12 +140,40 @@ export const useRecommendationAnalytics = () => {
     [currentCompany?.id]
   );
 
+  /**
+   * Track feature usage throughout the journey system
+   * Added in Sprint 3 for advanced UI analytics
+   * @param featureName Name of the feature being used
+   * @param details Additional details about the usage
+   */
+  const trackFeatureUsage = useCallback(
+    async (featureName: string, details?: Record<string, any>) => {
+      if (!currentCompany?.id) return;
+
+      try {
+        await supabase.from('journey_feature_events').insert({
+          company_id: currentCompany.id,
+          feature_name: featureName,
+          event_data: {
+            ...details,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      } catch (error) {
+        console.error(`Failed to track ${featureName} usage:`, error);
+        // Fail silently - tracking shouldn't affect main functionality
+      }
+    },
+    [currentCompany?.id]
+  );
+
   return {
     trackRecommendationView,
     trackRecommendationSelect,
     trackRecommendationFilter,
     trackRelationshipInteraction,
     trackRecommendationClick, // Add for backwards compatibility
+    trackFeatureUsage, // Added for Sprint 3
   };
 };
 

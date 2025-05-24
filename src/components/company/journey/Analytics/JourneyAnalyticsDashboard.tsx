@@ -1,536 +1,450 @@
 import React, { useState, useEffect } from 'react';
-import { useCompany } from '@/lib/hooks/useCompany';
-import { RecommendationService } from '@/lib/services/recommendation.service';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement } from 'chart.js';
-import { Pie, Bar, Line } from 'react-chartjs-2';
-import { motion } from 'framer-motion';
+import { useParams } from 'react-router-dom';
+import {
+  fetchAnalyticsAggregates,
+  fetchAnalyticsEvents
+} from '../../../../lib/services/analytics.service';
+import { useCompany } from '../../../../lib/hooks/useCompany';
+import { useJourneyPreferences } from '../../../../lib/hooks/useJourneyPreferences';
+import { companyService } from '../../../../lib/services/company.service';
 
-// Register ChartJS components
-ChartJS.register(
-  ArcElement, 
-  Tooltip, 
-  Legend, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title,
-  PointElement,
-  LineElement
-);
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
+
+// Chart components would be imported from a charting library like recharts
+// For this implementation, we'll structure it to be ready for such integration
 
 interface JourneyAnalyticsDashboardProps {
+  companyId?: string;
+  timeRange?: 'week' | 'month' | 'quarter' | 'year';
+  showPredictions?: boolean;
   className?: string;
-  timeRange?: 'week' | 'month' | 'quarter' | 'year' | 'all';
 }
 
-/**
- * JourneyAnalyticsDashboard Component
- * 
- * A comprehensive analytics dashboard for company journey progress visualization
- * Part of Sprint 3 Journey UI enhancements
- */
-export const JourneyAnalyticsDashboard: React.FC<JourneyAnalyticsDashboardProps> = ({
-  className = '',
-  timeRange = 'month'
+const JourneyAnalyticsDashboard: React.FC<JourneyAnalyticsDashboardProps> = ({
+  companyId: propCompanyId,
+  timeRange = 'month',
+  showPredictions = true,
 }) => {
-  const { currentCompany } = useCompany();
+  // Get company ID from URL params if not provided as prop
+  const { companyId: urlCompanyId } = useParams<{ companyId: string }>();
+  const companyId = propCompanyId || urlCompanyId;
+  
+  // Get company data and journey preferences
+  const companyContext = useCompany();
+  const companyLoading = companyContext.loading;
+  
+  const preferencesContext = useJourneyPreferences();
+  const preferencesLoading = preferencesContext.isLoading;
+  
+  // State for analytics data
+  const [completionRate, setCompletionRate] = useState<number | null>(null);
+  const [toolAdoptionRate, setToolAdoptionRate] = useState<number | null>(null);
+  const [progressTrend, setProgressTrend] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'phases' | 'comparison'>('overview');
+  const [error, setError] = useState<string | null>(null);
 
-  // Load analytics data
+  // State for company profile
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+
+  // State for cohort benchmarking
+  const [cohortAverages, setCohortAverages] = useState<{ completionRate: number | null; toolAdoptionRate: number | null } | null>(null);
+  const [cohortEnabled, setCohortEnabled] = useState(true);
+
+  // Export CSV
+  const exportCSV = () => {
+    // Export progress trend as CSV
+    const headers = ["Date", "Steps Completed"];
+    const rows = progressTrend.map((row: any) => [row.date, row.value]);
+    const csvContent =
+      [headers, ...rows]
+        .map((e) => e.map((v) => `"${v}"`).join(","))
+        .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "analytics_progress_trend.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>(timeRange);
+  const [dateRange, setDateRange] = useState<{start: string, end: string}>(() => {
+    // Calculate date range based on timeRange prop
+    const end = new Date();
+    let start = new Date();
+
+    switch (timeRange) {
+      case 'week':
+        start.setDate(end.getDate() - 7);
+        break;
+      case 'month':
+        start.setMonth(end.getMonth() - 1);
+        break;
+      case 'quarter':
+        start.setMonth(end.getMonth() - 3);
+        break;
+      case 'year':
+        start.setFullYear(end.getFullYear() - 1);
+        break;
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString()
+    };
+  });
+
+  // Update dateRange when selectedTimeRange changes
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      if (!currentCompany?.id) return;
-      
+    const end = new Date();
+    let start = new Date();
+
+    switch (selectedTimeRange) {
+      case 'week':
+        start.setDate(end.getDate() - 7);
+        break;
+      case 'month':
+        start.setMonth(end.getMonth() - 1);
+        break;
+      case 'quarter':
+        start.setMonth(end.getMonth() - 3);
+        break;
+      case 'year':
+        start.setFullYear(end.getFullYear() - 1);
+        break;
+    }
+
+    setDateRange({
+      start: start.toISOString(),
+      end: end.toISOString()
+    });
+  }, [selectedTimeRange]);
+  
+  // Fetch analytics data and company profile
+  useEffect(() => {
+    if (!companyId) return;
+
+    const fetchAnalyticsData = async () => {
       setLoading(true);
       try {
-        const data = await RecommendationService.getJourneyAnalytics(currentCompany.id);
-        setAnalytics(data);
-      } catch (error) {
-        console.error('Error loading journey analytics:', error);
-      } finally {
+        // Fetch company profile
+        const profile = await companyService.getCompany(companyId);
+        setCompanyProfile(profile);
+
+        // Fetch aggregates for metrics
+        const aggregates = await fetchAnalyticsAggregates(companyId);
+
+        // Find completion rate and tool adoption rate from aggregates
+        const completionAgg = aggregates.find(
+          (agg) => agg.metric_name === "completion_rate"
+        );
+        setCompletionRate(
+          completionAgg && typeof completionAgg.value === "number"
+            ? completionAgg.value
+            : null
+        );
+
+        const adoptionAgg = aggregates.find(
+          (agg) => agg.metric_name === "tool_adoption_rate"
+        );
+        setToolAdoptionRate(
+          adoptionAgg && typeof adoptionAgg.value === "number"
+            ? adoptionAgg.value
+            : null
+        );
+
+        // Build progress trend from step_completed events
+        const events = await fetchAnalyticsEvents(companyId);
+        // Filter for step_completed events in date range
+        const stepEvents = events.filter(
+          (e) =>
+            e.event_name === "step_completed" &&
+            e.created_at >= dateRange.start &&
+            e.created_at <= dateRange.end
+        );
+        // Group by date
+        const trendMap: { [date: string]: number } = {};
+        stepEvents.forEach((e) => {
+          const date = e.created_at.slice(0, 10);
+          trendMap[date] = (trendMap[date] || 0) + 1;
+        });
+        const trendArr = Object.entries(trendMap)
+          .map(([date, value]) => ({ date, value }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        setProgressTrend(trendArr);
+
+        // Recent activity: show last 3 events (any type)
+        setRecentActivity(events.slice(0, 3));
+
+        // --- Cohort Benchmarking ---
+        // Only run if enabled and profile is available and has cohort fields
+        if (cohortEnabled && profile && (profile.industry || profile.size || profile.stage)) {
+          // Query companies in the same cohort (excluding current company)
+          const { data: cohortCompanies, error: cohortError } = await (window as any).supabase
+            .from('companies')
+            .select('id')
+            .neq('id', companyId)
+            .eq('industry', profile.industry || null)
+            .eq('size', profile.size || null)
+            .eq('stage', profile.stage || null);
+
+          if (cohortError) {
+            setCohortAverages(null);
+          } else if (cohortCompanies && cohortCompanies.length > 0) {
+            // Fetch aggregates for each cohort company
+            const cohortIds = cohortCompanies.map((c: any) => c.id);
+            let completionRates: number[] = [];
+            let adoptionRates: number[] = [];
+            for (const cohortId of cohortIds) {
+              try {
+                const cohortAggs = await fetchAnalyticsAggregates(cohortId);
+                const cAgg = cohortAggs.find((agg) => agg.metric_name === "completion_rate");
+                const aAgg = cohortAggs.find((agg) => agg.metric_name === "tool_adoption_rate");
+                if (cAgg && typeof cAgg.value === "number") completionRates.push(cAgg.value);
+                if (aAgg && typeof aAgg.value === "number") adoptionRates.push(aAgg.value);
+              } catch (e) {
+                // Ignore errors for individual companies
+              }
+            }
+            // Compute averages
+            const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+            setCohortAverages({
+              completionRate: avg(completionRates),
+              toolAdoptionRate: avg(adoptionRates)
+            });
+          } else {
+            setCohortAverages(null);
+          }
+        } else {
+          setCohortAverages(null);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching analytics data:", err);
+        setError("Failed to load analytics data. Please try again later.");
         setLoading(false);
       }
     };
-    
-    fetchAnalytics();
-  }, [currentCompany?.id, timeRange]);
 
-  // Prepare chart data
-  const getPhaseCompletionData = () => {
-    if (!analytics?.phaseStatistics) return null;
+    fetchAnalyticsData();
+  }, [companyId, dateRange]);
+
+  // Calculate predicted completion date
+  const getPredictedCompletionDate = (): string => {
+    if (!progressTrend || progressTrend.length === 0 || !showPredictions) {
+      return 'Not available';
+    }
     
-    return {
-      labels: analytics.phaseStatistics.map((stat: any) => stat.phase_name),
-      datasets: [
-        {
-          label: 'Completed Steps',
-          data: analytics.phaseStatistics.map((stat: any) => stat.completed_count),
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        },
-        {
-          label: 'Total Steps',
-          data: analytics.phaseStatistics.map((stat: any) => stat.total_count),
-          backgroundColor: 'rgba(201, 203, 207, 0.6)',
-        }
-      ]
-    };
+    // Simple linear prediction based on completion rate and trend
+    // This would be replaced by a more sophisticated algorithm in production
+    const completionPerDay = progressTrend.reduce((sum, point) => sum + point.value, 0) / progressTrend.length;
+    
+    if (completionPerDay <= 0) {
+      return 'Not available';
+    }
+    
+    // Assuming completionRate is a percentage (0-1) and we know the total number of steps
+    const totalSteps = 100; // This would come from actual data in production
+    const completedSteps = Math.round((completionRate || 0) * totalSteps);
+    const remainingSteps = totalSteps - completedSteps;
+    
+    const daysToCompletion = Math.ceil(remainingSteps / completionPerDay);
+    const completionDate = new Date();
+    completionDate.setDate(completionDate.getDate() + daysToCompletion);
+    
+    return completionDate.toLocaleDateString();
   };
 
-  const getCompletionTimeData = () => {
-    if (!analytics?.completionTimeStatistics) return null;
-    
-    return {
-      labels: analytics.completionTimeStatistics.map((stat: any) => stat.step_name),
-      datasets: [
-        {
-          label: 'Actual Time (days)',
-          data: analytics.completionTimeStatistics.map((stat: any) => stat.actual_days),
-          backgroundColor: 'rgba(54, 162, 235, 0.6)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1,
-        },
-        {
-          label: 'Estimated Time (days)',
-          data: analytics.completionTimeStatistics.map((stat: any) => stat.estimated_days),
-          backgroundColor: 'rgba(255, 99, 132, 0.6)',
-          borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 1,
-        }
-      ]
-    };
+  // Identify bottlenecks
+  const getBottlenecks = (): string[] => {
+    // This would use actual data in production
+    // For now, return placeholder bottlenecks
+    return [
+      'Team onboarding (3 weeks behind)',
+      'Market research phase (2 steps stuck)',
+      'Financial planning (completion rate 25%)'
+    ];
   };
 
-  const getIndustryComparisonData = () => {
-    if (!analytics?.industryComparison) return null;
-    
-    return {
-      labels: ['Your Company', 'Industry Average', 'Top Performers'],
-      datasets: [
-        {
-          label: 'Completion Rate (%)',
-          data: [
-            analytics.industryComparison.your_completion_rate,
-            analytics.industryComparison.industry_average,
-            analytics.industryComparison.top_performers_average
-          ],
-          backgroundColor: [
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(75, 192, 192, 0.6)'
-          ],
-          borderColor: [
-            'rgba(255, 206, 86, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(75, 192, 192, 1)'
-          ],
-          borderWidth: 1,
-        }
-      ]
-    };
-  };
-
-  // Render loading state
-  if (loading) {
-    return (
-      <div className={`bg-white p-6 rounded-lg shadow-md ${className}`}>
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-gray-600">Loading analytics data...</p>
-        </div>
-      </div>
-    );
+  // Loading and error states
+  if (companyLoading || preferencesLoading || loading) {
+    return <div className="p-4 text-center">Loading analytics data...</div>;
   }
-
-  // Render error state if data couldn't be loaded
-  if (!analytics) {
-    return (
-      <div className={`bg-white p-6 rounded-lg shadow-md ${className}`}>
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-16 h-16 text-red-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="mt-4 text-gray-600">Failed to load analytics data</p>
-          <button 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
+  
+  if (error) {
+    return <div className="p-4 text-center text-red-500">{error}</div>;
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}>
-      {/* Header */}
-      <div className="bg-blue-700 px-6 py-4">
-        <h2 className="text-xl font-bold text-white">Journey Analytics Dashboard</h2>
-        <p className="text-blue-100 text-sm">Track your progress and compare with similar companies</p>
-      </div>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Journey Analytics Dashboard</h2>
       
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex -mb-px">
-          <button
-            className={`px-6 py-3 border-b-2 font-medium text-sm ${
-              activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button
-            className={`px-6 py-3 border-b-2 font-medium text-sm ${
-              activeTab === 'phases'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            onClick={() => setActiveTab('phases')}
-          >
-            Phase Progress
-          </button>
-          <button
-            className={`px-6 py-3 border-b-2 font-medium text-sm ${
-              activeTab === 'comparison'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            onClick={() => setActiveTab('comparison')}
-          >
-            Industry Comparison
-          </button>
-        </nav>
+      {/* Cohort Profile Debug */}
+      {companyProfile && (
+        <div className="mb-4 p-3 bg-gray-50 rounded">
+          <div className="font-semibold mb-1 flex items-center gap-4">
+            Cohort Profile
+            <label className="flex items-center gap-2 text-xs font-normal">
+              <input
+                type="checkbox"
+                checked={cohortEnabled}
+                onChange={e => setCohortEnabled(e.target.checked)}
+              />
+              Enable Cohort Benchmarking
+            </label>
+          </div>
+          <div>
+            <span className="mr-4">Industry: <span className="font-mono">{companyProfile.industry || "N/A"}</span></span>
+            <span className="mr-4">Size: <span className="font-mono">{companyProfile.size || "N/A"}</span></span>
+            <span className="mr-4">Stage: <span className="font-mono">{companyProfile.stage || "N/A"}</span></span>
+          </div>
+        </div>
+      )}
+
+      {/* Export Buttons */}
+      <div className="mb-4 flex gap-4">
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          onClick={exportCSV}
+        >
+          Export CSV
+        </button>
+        {/* PDF export can be added here */}
       </div>
 
       {/* Time Range Selector */}
-      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Time Range:</span>
-          <div className="flex space-x-2">
-            {(['week', 'month', 'quarter', 'year', 'all'] as const).map((range) => (
-              <button
-                key={range}
-                className={`px-3 py-1 text-xs rounded-full ${
-                  timeRange === range
-                    ? 'bg-blue-100 text-blue-800 font-medium'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                onClick={() => {/* setTimeRange(range) */}}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </button>
-            ))}
-          </div>
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
+        <select 
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          value={selectedTimeRange}
+          onChange={(e) => {
+            setSelectedTimeRange(e.target.value as 'week' | 'month' | 'quarter' | 'year');
+          }}
+        >
+          <option value="week">Last 7 Days</option>
+          <option value="month">Last 30 Days</option>
+          <option value="quarter">Last 90 Days</option>
+          <option value="year">Last 365 Days</option>
+        </select>
+      </div>
+      
+      {/* Main Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h3 className="text-lg font-medium text-blue-700">Completion Rate</h3>
+          <p className="text-3xl font-bold mt-2">
+            {completionRate !== null ? `${Math.round((completionRate || 0) * 100)}%` : 'N/A'}
+          </p>
+          {cohortAverages && (
+            <div className="text-xs text-blue-700 mt-1">
+              Cohort Avg: {cohortAverages.completionRate !== null ? `${Math.round(cohortAverages.completionRate * 100)}%` : 'N/A'}
+            </div>
+          )}
+        </div>
+        
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h3 className="text-lg font-medium text-green-700">Tool Adoption Rate</h3>
+          <p className="text-3xl font-bold mt-2">
+            {toolAdoptionRate !== null ? `${Math.round((toolAdoptionRate || 0) * 100)}%` : 'N/A'}
+          </p>
+          {cohortAverages && (
+            <div className="text-xs text-green-700 mt-1">
+              Cohort Avg: {cohortAverages.toolAdoptionRate !== null ? `${Math.round(cohortAverages.toolAdoptionRate * 100)}%` : 'N/A'}
+            </div>
+          )}
+        </div>
+        
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <h3 className="text-lg font-medium text-purple-700">Active Steps</h3>
+          <p className="text-3xl font-bold mt-2">
+            {/* This would be calculated from actual data */}
+            5
+          </p>
         </div>
       </div>
-
-      {/* Dashboard Content */}
-      <div className="p-6">
-        {activeTab === 'overview' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Completion Rate</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {analytics.industryComparison?.your_completion_rate || 0}%
-                </p>
-                <div className="mt-2 text-xs text-gray-500">
-                  <span className={analytics.industryComparison?.comparison_to_average > 0 ? 'text-green-500' : 'text-red-500'}>
-                    {analytics.industryComparison?.comparison_to_average > 0 ? '↑' : '↓'} 
-                    {Math.abs(analytics.industryComparison?.comparison_to_average || 0)}%
-                  </span>
-                  {' from industry average'}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-4 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Steps Completed</p>
-                <p className="text-2xl font-bold text-teal-600">
-                  {analytics.phaseStatistics?.reduce((acc: number, stat: any) => acc + stat.completed_count, 0) || 0}/
-                  {analytics.phaseStatistics?.reduce((acc: number, stat: any) => acc + stat.total_count, 0) || 0}
-                </p>
-                <div className="mt-2 text-xs text-gray-500">
-                  {analytics.completionTimeStatistics?.length > 0 ? `Last completed: ${analytics.completionTimeStatistics[0].step_name}` : 'No steps completed yet'}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Avg. Completion Time</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {analytics.completionTimeStatistics?.length > 0 
-                    ? (analytics.completionTimeStatistics.reduce((acc: number, stat: any) => acc + stat.actual_days, 0) / analytics.completionTimeStatistics.length).toFixed(1) 
-                    : 0} days
-                </p>
-                <div className="mt-2 text-xs text-gray-500">
-                  Per step (estimated: {analytics.completionTimeStatistics?.length > 0 
-                    ? (analytics.completionTimeStatistics.reduce((acc: number, stat: any) => acc + stat.estimated_days, 0) / analytics.completionTimeStatistics.length).toFixed(1) 
-                    : 0} days)
-                </div>
-              </div>
+      
+      {/* Progress Trend Chart */}
+      <div className="mb-8">
+        <h3 className="text-lg font-medium text-gray-700 mb-4">Progress Trend</h3>
+        <div className="bg-gray-100 p-4 rounded-lg h-64 flex items-center justify-center">
+          {progressTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={progressTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="value" name="Steps Completed" stroke="#8884d8" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-500">
+              No progress data available for the selected time period
+            </p>
+          )}
+        </div>
+      </div>
+      
+      {/* Predictive Insights */}
+      {showPredictions && (
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-gray-700 mb-4">Predictive Insights</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h4 className="font-medium text-yellow-700">Estimated Completion Date</h4>
+              <p className="text-xl font-bold mt-2">{getPredictedCompletionDate()}</p>
             </div>
-
-            {/* Main Chart - Completion Over Time */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Completion Progress Over Time</h3>
-              <div className="h-64">
-                <Line 
-                  data={{
-                    labels: Array.from({ length: 12 }, (_, i) => {
-                      const date = new Date();
-                      date.setMonth(date.getMonth() - 11 + i);
-                      return date.toLocaleDateString('en-US', { month: 'short' });
-                    }),
-                    datasets: [
-                      {
-                        label: 'Completed Steps',
-                        data: [2, 5, 8, 12, 15, 18, 22, 25, 28, 30, 32, 35],
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.4,
-                        fill: true
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false
-                  }}
-                />
-              </div>
+            
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h4 className="font-medium text-red-700">Identified Bottlenecks</h4>
+              <ul className="mt-2 space-y-1">
+                {getBottlenecks().map((bottleneck, index) => (
+                  <li key={index} className="text-sm">{bottleneck}</li>
+                ))}
+              </ul>
             </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'phases' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            {/* Phase Completion Chart */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Phase Completion Progress</h3>
-              <div className="h-64">
-                <Bar 
-                  data={getPhaseCompletionData() || {
-                    labels: ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5'],
-                    datasets: [
-                      {
-                        label: 'Completed Steps',
-                        data: [5, 3, 2, 1, 0],
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                      },
-                      {
-                        label: 'Total Steps',
-                        data: [5, 8, 6, 4, 3],
-                        backgroundColor: 'rgba(201, 203, 207, 0.6)',
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: {
-                        stacked: true,
-                      },
-                      y: {
-                        stacked: false
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Time Estimation Accuracy */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Time Estimation Accuracy</h3>
-              <div className="h-64">
-                <Bar 
-                  data={getCompletionTimeData() || {
-                    labels: ['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5'],
-                    datasets: [
-                      {
-                        label: 'Actual Time (days)',
-                        data: [3, 5, 2, 7, 4],
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1,
-                      },
-                      {
-                        label: 'Estimated Time (days)',
-                        data: [2, 4, 3, 5, 3],
-                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 1,
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'comparison' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            {/* Industry Comparison */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Industry Comparison</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <Pie 
-                    data={getIndustryComparisonData() || {
-                      labels: ['Your Company', 'Industry Average', 'Top Performers'],
-                      datasets: [
-                        {
-                          label: 'Completion Rate (%)',
-                          data: [65, 60, 85],
-                          backgroundColor: [
-                            'rgba(255, 206, 86, 0.6)',
-                            'rgba(153, 102, 255, 0.6)',
-                            'rgba(75, 192, 192, 0.6)'
-                          ],
-                          borderColor: [
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(75, 192, 192, 1)'
-                          ],
-                          borderWidth: 1,
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <h4 className="font-medium text-gray-700 mb-4">How You Compare</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">Your Completion</span>
-                        <span className="text-sm font-medium text-gray-700">
-                          {analytics.industryComparison?.your_completion_rate || 65}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-yellow-400 h-2 rounded-full" 
-                          style={{ width: `${analytics.industryComparison?.your_completion_rate || 65}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">Industry Average</span>
-                        <span className="text-sm font-medium text-gray-700">
-                          {analytics.industryComparison?.industry_average || 60}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-400 h-2 rounded-full" 
-                          style={{ width: `${analytics.industryComparison?.industry_average || 60}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">Top Performers</span>
-                        <span className="text-sm font-medium text-gray-700">
-                          {analytics.industryComparison?.top_performers_average || 85}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-teal-400 h-2 rounded-full" 
-                          style={{ width: `${analytics.industryComparison?.top_performers_average || 85}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Step Comparison Table */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">Popular Steps in Your Industry</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Step Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Industry Adoption
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Avg. Completion Time
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Your Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Placeholder rows - would be populated from analytics data */}
-                    {[1, 2, 3, 4, 5].map((_, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          Top Industry Step {index + 1}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {90 - index * 10}%
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {index + 2} days
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            index < 2 ? 'bg-green-100 text-green-800' : index < 4 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {index < 2 ? 'Completed' : index < 4 ? 'In Progress' : 'Not Started'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        )}
+          </div>
+        </div>
+      )}
+      
+      {/* Recent Activity */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-700 mb-4">Recent Activity</h3>
+        <ul className="space-y-2">
+          {recentActivity.length > 0 ? (
+            recentActivity.map((event, idx) => (
+              <li key={event.id || idx} className="p-3 bg-gray-50 rounded-md">
+                <span className="font-medium">{event.event_name}</span>
+                {event.user_id && (
+                  <>
+                    {" "}
+                    by <span className="text-blue-600">{event.user_id}</span>
+                  </>
+                )}
+                <span className="block text-xs text-gray-500 mt-1">
+                  {new Date(event.created_at).toLocaleString()}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li className="p-3 bg-gray-50 rounded-md text-gray-500">
+              No recent activity found.
+            </li>
+          )}
+        </ul>
       </div>
     </div>
   );

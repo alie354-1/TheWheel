@@ -1,429 +1,444 @@
-import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
-
-export interface FeedbackItem {
-  id?: string;
-  userId: string;
-  companyId?: string;
-  entityType: 'step' | 'tool' | 'resource';
-  entityId: string;
-  rating: number;
-  comment?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface FeedbackStats {
-  entityId: string;
-  averageRating: number;
-  ratingCount: number;
-  ratings: {
-    '1': number;
-    '2': number;
-    '3': number;
-    '4': number;
-    '5': number;
-  };
-}
-
-export interface ImprovementSuggestion {
-  id?: string;
-  userId: string;
-  companyId?: string;
-  entityType: 'step' | 'tool' | 'resource';
-  entityId: string;
-  category: string;
-  title: string;
-  description: string;
-  impactDescription?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'implemented';
-  votes?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface SuggestionVote {
-  id?: string;
-  suggestionId: string;
-  userId: string;
-  voteType: 'up' | 'down';
-  createdAt?: string;
-}
+import { supabase } from '../supabase';
 
 /**
- * FeedbackService
+ * Feedback Service
  * 
- * This service handles the storage, retrieval, and analysis of user feedback
- * including ratings, comments, and improvement suggestions.
- * 
- * Part of the Sprint 4 User Feedback Collection System.
+ * Provides methods for managing user feedback for journey steps and tools.
  */
 export class FeedbackService {
-  /**
-   * Submit a new feedback rating and optional comment
-   * 
-   * @param feedback The feedback item to submit
-   * @returns The created feedback item
-   */
-  public static async submitFeedback(feedback: FeedbackItem): Promise<FeedbackItem> {
-    try {
-      // Check if user has already submitted feedback for this entity
-      const { data: existingFeedback } = await supabase
-        .from('feedback')
-        .select('id')
-        .eq('user_id', feedback.userId)
-        .eq('entity_id', feedback.entityId)
-        .eq('entity_type', feedback.entityType)
-        .single();
-      
-      if (existingFeedback) {
-        // Update existing feedback
-        const { data, error } = await supabase
-          .from('feedback')
-          .update({
-            rating: feedback.rating,
-            comment: feedback.comment || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingFeedback.id)
-          .select('*')
-          .single();
-          
-        if (error) throw error;
-        
-        return this.mapFeedbackFromDB(data);
-      } else {
-        // Insert new feedback
-        const { data, error } = await supabase
-          .from('feedback')
-          .insert({
-            user_id: feedback.userId,
-            company_id: feedback.companyId || null,
-            entity_type: feedback.entityType,
-            entity_id: feedback.entityId,
-            rating: feedback.rating,
-            comment: feedback.comment || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select('*')
-          .single();
-          
-        if (error) throw error;
-        
-        return this.mapFeedbackFromDB(data);
-      }
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
-      throw error;
-    }
-  }
   
   /**
-   * Get feedback for a specific entity
-   * 
-   * @param entityId The entity ID
-   * @param entityType The entity type
-   * @returns Array of feedback items
+   * Submit feedback for a journey step
    */
-  public static async getFeedbackForEntity(
-    entityId: string,
-    entityType: 'step' | 'tool' | 'resource'
-  ): Promise<FeedbackItem[]> {
+  async submitStepFeedback(
+    stepId: string,
+    companyId: string,
+    userId: string,
+    feedback: {
+      ratingClarity?: number;
+      ratingDifficulty?: number;
+      ratingUsefulness?: number;
+      ratingOverall?: number;
+      feedbackText?: string;
+      improvementSuggestion?: string;
+      reportedIssues?: string;
+      screenshotUrls?: string[];
+    }
+  ): Promise<string | null> {
     try {
       const { data, error } = await supabase
-        .from('feedback')
-        .select('*')
-        .eq('entity_id', entityId)
-        .eq('entity_type', entityType)
-        .order('created_at', { ascending: false });
+        .from('step_feedback')
+        .insert({
+          step_id: stepId,
+          company_id: companyId,
+          user_id: userId,
+          rating_clarity: feedback.ratingClarity,
+          rating_difficulty: feedback.ratingDifficulty,
+          rating_usefulness: feedback.ratingUsefulness,
+          rating_overall: feedback.ratingOverall,
+          feedback_text: feedback.feedbackText,
+          improvement_suggestion: feedback.improvementSuggestion,
+          reported_issues: feedback.reportedIssues,
+          screenshot_urls: feedback.screenshotUrls,
+        })
+        .select('id')
+        .single();
         
       if (error) throw error;
       
-      return (data || []).map(this.mapFeedbackFromDB);
+      return data.id;
     } catch (error) {
-      console.error('Error getting feedback for entity:', error);
+      console.error('Error submitting step feedback:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get feedback for a step
+   */
+  async getStepFeedback(
+    stepId: string,
+    companyId: string,
+    options: {
+      limit?: number;
+      offset?: number;
+      includeResolutions?: boolean;
+      includeCategories?: boolean;
+    } = {}
+  ): Promise<any[]> {
+    try {
+      let query = supabase
+        .from('step_feedback')
+        .select(`
+          *,
+          user:user_id(id, email, display_name),
+          ${options.includeResolutions ? 'resolution:feedback_resolutions(*),' : ''}
+          ${options.includeCategories ? 'categories:feedback_category_assignments(*, category:feedback_categories(*))' : ''}
+        `)
+        .eq('step_id', stepId)
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+        
+      if (options.limit) {
+        const offset = options.offset || 0;
+        query = query.range(offset, offset + options.limit - 1);
+      }
+      
+      const { data, error } = await query;
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting step feedback:', error);
       return [];
     }
   }
-  
+
   /**
-   * Get feedback statistics for an entity
-   * 
-   * @param entityId The entity ID
-   * @param entityType The entity type
-   * @returns Feedback statistics
+   * Get average ratings for a step
    */
-  public static async getFeedbackStats(
-    entityId: string,
-    entityType: 'step' | 'tool' | 'resource'
-  ): Promise<FeedbackStats> {
+  async getStepAverageRatings(stepId: string): Promise<{
+    avgClarity: number;
+    avgDifficulty: number;
+    avgUsefulness: number;
+    avgOverall: number;
+    totalRatings: number;
+  } | null> {
     try {
       const { data, error } = await supabase
-        .rpc('get_feedback_stats', { 
-          p_entity_id: entityId,
-          p_entity_type: entityType
+        .rpc('calculate_step_average_ratings', {
+          p_step_id: stepId
         });
         
       if (error) throw error;
       
-      if (!data || !data[0]) {
-        // Return default stats if no data
-        return {
-          entityId,
-          averageRating: 0,
-          ratingCount: 0,
-          ratings: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
-        };
-      }
-      
-      return {
-        entityId,
-        averageRating: data[0].average_rating || 0,
-        ratingCount: data[0].rating_count || 0,
-        ratings: {
-          '1': data[0].rating_1_count || 0,
-          '2': data[0].rating_2_count || 0,
-          '3': data[0].rating_3_count || 0,
-          '4': data[0].rating_4_count || 0,
-          '5': data[0].rating_5_count || 0
-        }
-      };
+      return data;
     } catch (error) {
-      console.error('Error getting feedback stats:', error);
-      
-      // Return default stats on error
-      return {
-        entityId,
-        averageRating: 0,
-        ratingCount: 0,
-        ratings: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
-      };
-    }
-  }
-  
-  /**
-   * Get feedback submitted by the current user for an entity
-   * 
-   * @param entityId The entity ID
-   * @param entityType The entity type
-   * @param user The current user
-   * @returns The user's feedback item or null if not found
-   */
-  public static async getUserFeedbackForEntity(
-    entityId: string,
-    entityType: 'step' | 'tool' | 'resource',
-    user: User
-  ): Promise<FeedbackItem | null> {
-    try {
-      const { data, error } = await supabase
-        .from('feedback')
-        .select('*')
-        .eq('entity_id', entityId)
-        .eq('entity_type', entityType)
-        .eq('user_id', user.id)
-        .single();
-        
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned, which is fine
-          return null;
-        }
-        throw error;
-      }
-      
-      return data ? this.mapFeedbackFromDB(data) : null;
-    } catch (error) {
-      console.error('Error getting user feedback for entity:', error);
+      console.error('Error getting step average ratings:', error);
       return null;
     }
   }
-  
+
   /**
-   * Submit an improvement suggestion
-   * 
-   * @param suggestion The improvement suggestion to submit
-   * @returns The created suggestion
+   * Submit tool feedback
    */
-  public static async submitImprovementSuggestion(
-    suggestion: ImprovementSuggestion
-  ): Promise<ImprovementSuggestion> {
+  async submitToolFeedback(
+    toolId: string,
+    companyId: string,
+    userId: string,
+    feedback: {
+      stepId?: string;
+      ratingEaseOfUse?: number;
+      ratingFunctionality?: number;
+      ratingValue?: number;
+      ratingOverall?: number;
+      pros?: string;
+      cons?: string;
+      reviewText?: string;
+      wouldRecommend?: boolean;
+    }
+  ): Promise<string | null> {
     try {
       const { data, error } = await supabase
-        .from('improvement_suggestions')
+        .from('tool_feedback')
         .insert({
-          user_id: suggestion.userId,
-          company_id: suggestion.companyId || null,
-          entity_type: suggestion.entityType,
-          entity_id: suggestion.entityId,
-          category: suggestion.category,
-          title: suggestion.title,
-          description: suggestion.description,
-          impact_description: suggestion.impactDescription || null,
-          status: 'pending',
-          votes: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          tool_id: toolId,
+          company_id: companyId,
+          user_id: userId,
+          step_id: feedback.stepId,
+          rating_ease_of_use: feedback.ratingEaseOfUse,
+          rating_functionality: feedback.ratingFunctionality,
+          rating_value: feedback.ratingValue,
+          rating_overall: feedback.ratingOverall,
+          pros: feedback.pros,
+          cons: feedback.cons,
+          review_text: feedback.reviewText,
+          would_recommend: feedback.wouldRecommend
         })
-        .select('*')
+        .select('id')
         .single();
         
       if (error) throw error;
       
-      return this.mapSuggestionFromDB(data);
+      return data.id;
     } catch (error) {
-      console.error('Error submitting improvement suggestion:', error);
-      throw error;
+      console.error('Error submitting tool feedback:', error);
+      return null;
     }
   }
-  
+
   /**
-   * Get improvement suggestions for an entity
-   * 
-   * @param entityId The entity ID
-   * @param entityType The entity type
-   * @param status Optional status filter
-   * @returns Array of improvement suggestions
+   * Get tool feedback
    */
-  public static async getImprovementSuggestions(
-    entityId: string,
-    entityType: 'step' | 'tool' | 'resource',
-    status?: 'pending' | 'approved' | 'rejected' | 'implemented'
-  ): Promise<ImprovementSuggestion[]> {
+  async getToolFeedback(
+    toolId: string,
+    options: {
+      companyId?: string;
+      stepId?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<any[]> {
     try {
       let query = supabase
-        .from('improvement_suggestions')
-        .select('*')
-        .eq('entity_id', entityId)
-        .eq('entity_type', entityType);
+        .from('tool_feedback')
+        .select(`
+          *,
+          user:user_id(id, email, display_name)
+        `)
+        .eq('tool_id', toolId)
+        .order('created_at', { ascending: false });
         
-      if (status) {
-        query = query.eq('status', status);
+      if (options.companyId) {
+        query = query.eq('company_id', options.companyId);
       }
       
-      const { data, error } = await query.order('votes', { ascending: false });
+      if (options.stepId) {
+        query = query.eq('step_id', options.stepId);
+      }
+      
+      if (options.limit) {
+        const offset = options.offset || 0;
+        query = query.range(offset, offset + options.limit - 1);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
-      return (data || []).map(this.mapSuggestionFromDB);
+      return data;
     } catch (error) {
-      console.error('Error getting improvement suggestions:', error);
+      console.error('Error getting tool feedback:', error);
       return [];
     }
   }
-  
+
   /**
-   * Vote on an improvement suggestion
-   * 
-   * @param suggestionId The suggestion ID
-   * @param userId The user ID
-   * @param voteType The vote type ('up' or 'down')
-   * @returns Boolean indicating success
+   * Get average ratings for a tool
    */
-  public static async voteOnSuggestion(
-    suggestionId: string,
-    userId: string,
-    voteType: 'up' | 'down'
-  ): Promise<boolean> {
-    try {
-      // Check for existing vote
-      const { data: existingVote } = await supabase
-        .from('suggestion_votes')
-        .select('id, vote_type')
-        .eq('suggestion_id', suggestionId)
-        .eq('user_id', userId)
-        .single();
-      
-      // Start a transaction
-      const { error: txError } = await supabase.rpc('vote_on_suggestion', {
-        p_suggestion_id: suggestionId,
-        p_user_id: userId,
-        p_vote_type: voteType,
-        p_previous_vote_type: existingVote?.vote_type || null
-      });
-      
-      if (txError) throw txError;
-      
-      return true;
-    } catch (error) {
-      console.error('Error voting on suggestion:', error);
-      return false;
-    }
-  }
-  
-  /**
-   * Check if a user has voted on a suggestion
-   * 
-   * @param suggestionId The suggestion ID
-   * @param userId The user ID
-   * @returns The vote type or null if no vote
-   */
-  public static async getUserVoteOnSuggestion(
-    suggestionId: string,
-    userId: string
-  ): Promise<'up' | 'down' | null> {
+  async getToolAverageRatings(toolId: string): Promise<{
+    avgEaseOfUse: number;
+    avgFunctionality: number;
+    avgValue: number;
+    avgOverall: number;
+    recommendationPercentage: number;
+    totalRatings: number;
+  } | null> {
     try {
       const { data, error } = await supabase
-        .from('suggestion_votes')
-        .select('vote_type')
-        .eq('suggestion_id', suggestionId)
-        .eq('user_id', userId)
-        .single();
+        .rpc('calculate_tool_average_ratings', {
+          p_tool_id: toolId
+        });
         
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned, which is fine
-          return null;
-        }
-        throw error;
-      }
+      if (error) throw error;
       
-      return data?.vote_type as 'up' | 'down' | null;
+      return data;
     } catch (error) {
-      console.error('Error getting user vote on suggestion:', error);
+      console.error('Error getting tool average ratings:', error);
       return null;
     }
   }
-  
-  // Private helper methods
-  
+
   /**
-   * Map a feedback DB row to a FeedbackItem
-   * @private
+   * Add category to feedback
    */
-  private static mapFeedbackFromDB(dbRow: any): FeedbackItem {
-    return {
-      id: dbRow.id,
-      userId: dbRow.user_id,
-      companyId: dbRow.company_id,
-      entityType: dbRow.entity_type,
-      entityId: dbRow.entity_id,
-      rating: dbRow.rating,
-      comment: dbRow.comment,
-      createdAt: dbRow.created_at,
-      updatedAt: dbRow.updated_at
-    };
+  async addFeedbackCategory(
+    feedbackId: string,
+    categoryId: string,
+    assignedBy?: string,
+    confidenceScore?: number,
+    isAutoAssigned = false
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('feedback_category_assignments')
+        .insert({
+          feedback_id: feedbackId,
+          category_id: categoryId,
+          assigned_by: assignedBy,
+          confidence_score: confidenceScore,
+          is_auto_assigned: isAutoAssigned
+        });
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding feedback category:', error);
+      return false;
+    }
   }
-  
+
   /**
-   * Map a suggestion DB row to an ImprovementSuggestion
-   * @private
+   * Remove category from feedback
    */
-  private static mapSuggestionFromDB(dbRow: any): ImprovementSuggestion {
-    return {
-      id: dbRow.id,
-      userId: dbRow.user_id,
-      companyId: dbRow.company_id,
-      entityType: dbRow.entity_type,
-      entityId: dbRow.entity_id,
-      category: dbRow.category,
-      title: dbRow.title,
-      description: dbRow.description,
-      impactDescription: dbRow.impact_description,
-      status: dbRow.status,
-      votes: dbRow.votes,
-      createdAt: dbRow.created_at,
-      updatedAt: dbRow.updated_at
-    };
+  async removeFeedbackCategory(
+    feedbackId: string,
+    categoryId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('feedback_category_assignments')
+        .delete()
+        .eq('feedback_id', feedbackId)
+        .eq('category_id', categoryId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing feedback category:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update feedback resolution status
+   */
+  async updateFeedbackResolution(
+    feedbackId: string,
+    status: 'open' | 'in_progress' | 'resolved' | 'wont_fix' | 'duplicate',
+    resolvedBy?: string,
+    resolutionNote?: string
+  ): Promise<boolean> {
+    try {
+      const updates: any = {
+        status,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (resolvedBy) {
+        updates.resolved_by = resolvedBy;
+      }
+      
+      if (resolutionNote) {
+        updates.resolution_note = resolutionNote;
+      }
+      
+      if (status === 'resolved') {
+        updates.resolution_date = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from('feedback_resolutions')
+        .update(updates)
+        .eq('feedback_id', feedbackId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating feedback resolution:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get feedback categories
+   */
+  async getFeedbackCategories(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('feedback_categories')
+        .select('*')
+        .order('name');
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting feedback categories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get feedback summary for steps in a company
+   */
+  async getFeedbackSummaryByStep(companyId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('feedback_summary_by_step')
+        .select('*')
+        .order('total_feedback', { ascending: false });
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting feedback summary by step:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get trending feedback issues
+   */
+  async getTrendingFeedbackIssues(companyId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('trending_feedback_issues')
+        .select('*')
+        .limit(10);
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting trending feedback issues:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create a feedback notification
+   */
+  async createFeedbackNotification(
+    feedbackId: string,
+    feedbackType: 'step' | 'tool',
+    userId: string,
+    eventType: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('feedback_notifications')
+        .insert({
+          feedback_id: feedbackId,
+          feedback_type: feedbackType,
+          user_id: userId,
+          event_type: eventType,
+          is_read: false
+        });
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating feedback notification:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark feedback notification as read
+   */
+  async markFeedbackNotificationAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('feedback_notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error marking feedback notification as read:', error);
+      return false;
+    }
   }
 }
+
+// Create an instance to export
+export const feedbackService = new FeedbackService();

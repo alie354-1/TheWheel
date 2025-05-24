@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { multiPersonaProfileService } from '../../lib/services/multi-persona-profile.service';
+import { getServiceRegistry } from '../../lib/services/registry';
 import { useAuthStore } from '../../lib/store';
+import { ProfilePersona } from '../../lib/services/profile/types';
+import { useLogger } from '../../lib/hooks/useLogger';
 import { Plus, Edit, Trash, Check, RefreshCw } from 'lucide-react';
 
 const PersonaManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [personas, setPersonas] = useState<any[]>([]);
+  const [personas, setPersonas] = useState<ProfilePersona[]>([]);
   const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const logger = useLogger();
+  
+  // Get profile service from registry
+  const profileService = getServiceRegistry().profileService;
   
   // Load personas on component mount
   useEffect(() => {
@@ -21,15 +27,18 @@ const PersonaManagementPage: React.FC = () => {
       
       try {
         setLoading(true);
-        const userPersonas = await multiPersonaProfileService.getPersonas(user.id);
+        const userPersonas = await profileService.getPersonas(user.id);
         setPersonas(userPersonas);
         
-        const active = await multiPersonaProfileService.getActivePersona(user.id);
+        const active = await profileService.getActivePersona(user.id);
         if (active) {
           setActivePersonaId(active.id);
         }
+        
+        // Log success
+        logger.info('Personas loaded successfully', { count: userPersonas.length });
       } catch (error) {
-        console.error('Error loading personas:', error);
+        logger.error('Error loading personas', error as Error);
         setError('Failed to load personas. Please try again.');
       } finally {
         setLoading(false);
@@ -37,7 +46,7 @@ const PersonaManagementPage: React.FC = () => {
     };
     
     loadPersonas();
-  }, [user?.id]);
+  }, [user?.id, profileService, logger]);
   
   // Handle showing success message with auto-clear
   const showSuccessMessage = (message: string) => {
@@ -54,13 +63,16 @@ const PersonaManagementPage: React.FC = () => {
     
     setActionLoading(personaId);
     try {
-      await multiPersonaProfileService.setActivePersona(user.id, personaId);
+      await profileService.setActivePersona(user.id, personaId);
       setActivePersonaId(personaId);
+      
+      // Log the action
+      logger.logUserAction('set_active_persona', 'PersonaManagementPage', { personaId });
       
       // Show temporary success message
       showSuccessMessage('Persona activated successfully!');
     } catch (error) {
-      console.error('Error setting active persona:', error);
+      logger.error('Error setting active persona', error as Error);
       setError('Failed to set active persona. Please try again.');
     } finally {
       setActionLoading(null);
@@ -73,14 +85,17 @@ const PersonaManagementPage: React.FC = () => {
     
     setActionLoading(personaId);
     try {
-      await multiPersonaProfileService.deletePersona(user.id, personaId);
+      await profileService.deletePersona(personaId);
       setPersonas(personas.filter(p => p.id !== personaId));
       setDeleteConfirmId(null);
+      
+      // Log the action
+      logger.logUserAction('delete_persona', 'PersonaManagementPage', { personaId });
       
       // Show temporary success message
       showSuccessMessage('Persona deleted successfully!');
     } catch (error) {
-      console.error('Error deleting persona:', error);
+      logger.error('Error deleting persona', error as Error);
       setError('Failed to delete persona. Please try again.');
     } finally {
       setActionLoading(null);

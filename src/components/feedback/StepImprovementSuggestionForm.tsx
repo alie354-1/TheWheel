@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import { useCompany } from '@/lib/hooks/useCompany';
-import { FeedbackService, ImprovementSuggestion } from '@/lib/services/feedback.service';
+import { feedbackService } from '@/lib/services/feedback.service';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { motion } from 'framer-motion';
+
+// Interface for improvement suggestion
+interface ImprovementSuggestion {
+  userId: string;
+  companyId: string;
+  entityId: string;
+  entityType: 'step' | 'tool' | 'resource';
+  category: string;
+  title: string;
+  description: string;
+  impactDescription?: string;
+}
 
 const CATEGORIES = [
   { id: 'content', label: 'Content Improvement' },
@@ -78,18 +90,21 @@ export const StepImprovementSuggestionForm: React.FC<SuggestionFormProps> = ({
     setIsSubmitting(true);
     
     try {
-      const suggestion: ImprovementSuggestion = {
-        userId: user.id,
-        companyId: currentCompany.id,
-        entityId,
-        entityType,
-        category,
-        title: title.trim(),
-        description: description.trim(),
-        impactDescription: impactDescription.trim() || undefined
+      // Prepare feedback data for submission
+      const feedbackData = {
+        improvementSuggestion: description.trim(),
+        feedbackText: `${title.trim()} - ${impactDescription.trim() || "No impact description provided"}`,
+        ratingOverall: undefined, // Not applicable for improvement suggestions
+        screenshotUrls: []
       };
       
-      await FeedbackService.submitImprovementSuggestion(suggestion);
+      // Use the new submitStepFeedback method from our feedback service
+      await feedbackService.submitStepFeedback(
+        entityId,
+        currentCompany.id,
+        user.id,
+        feedbackData
+      );
       
       setSubmitSuccess(true);
       

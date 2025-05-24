@@ -707,14 +707,71 @@ export const companyJourneyService = {
     return { steps: [], isCustom: false }; // Placeholder
   },
 
-  // Add a custom step to a company's journey
+  // Add a custom step to a company's journey, or activate a consideration as a company-specific step
   async addCustomStep(companyJourneyMapId: string, stepData: Record<string, any>) {
-    // TODO: Insert into company_journey_steps with is_custom = true
+    // Insert into company_journey_steps with is_custom = true
+    const { data, error } = await supabase
+      .from('company_journey_steps')
+      .insert({
+        company_journey_map_id: companyJourneyMapId,
+        ...stepData,
+        is_custom: true,
+        is_activated: true,
+        is_dismissed: false
+      })
+      .select()
+      .single();
+    if (error) {
+      console.error('Error adding custom step:', error);
+      throw new Error(`Failed to add custom step: ${error.message}`);
+    }
+    return data;
+  },
+
+  /**
+   * Activate a consideration as a company-specific step
+   * @param companyJourneyMapId The company journey map id
+   * @param stepId The id of the step to activate
+   * @param domainId The domain to activate the step in
+   * @param companyId The company id
+   * @returns The created company_journey_step record
+   */
+  async activateConsideration(companyJourneyMapId: string, stepId: string, domainId: string, companyId: string) {
+    // Insert a new company_journey_step for the consideration
+    const { data, error } = await supabase
+      .from('company_journey_steps')
+      .insert({
+        company_journey_map_id: companyJourneyMapId,
+        step_id: stepId,
+        domain_id: domainId,
+        company_id: companyId,
+        is_custom: false,
+        is_activated: true,
+        is_dismissed: false
+      })
+      .select()
+      .single();
+    if (error) {
+      console.error('Error activating consideration:', error);
+      throw new Error(`Failed to activate consideration: ${error.message}`);
+    }
+    return data;
   },
 
   // Remove (dismiss) a step from a company's journey
   async dismissStep(companyJourneyStepId: string) {
-    // TODO: Set is_dismissed = true
+    // Set is_dismissed = true for the company_journey_step
+    const { data, error } = await supabase
+      .from('company_journey_steps')
+      .update({ is_dismissed: true })
+      .eq('id', companyJourneyStepId)
+      .select()
+      .single();
+    if (error) {
+      console.error('Error dismissing step:', error);
+      throw new Error(`Failed to dismiss step: ${error.message}`);
+    }
+    return data;
   },
 
   // Reorder steps in a company's journey

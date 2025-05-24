@@ -179,6 +179,32 @@ export default function ProfileSetup() {
       return;
     }
 
+    // Accept pending company invitations for this user
+    async function acceptInvitations() {
+      try {
+        if (!user.email) return;
+        // Find pending invitations for this email
+        const { data: invites, error } = await supabase
+          .from('company_members')
+          .select('id')
+          .eq('user_email', user.email)
+          .is('user_id', null)
+          .eq('invitation_status', 'pending');
+        if (error) return;
+        if (invites && invites.length > 0) {
+          // Accept all pending invitations
+          const ids = invites.map((i: { id: string }) => i.id);
+          await supabase
+            .from('company_members')
+            .update({ user_id: user.id, invitation_status: 'accepted' })
+            .in('id', ids);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    acceptInvitations();
+
     // Load saved progress
     if (profile?.setup_progress) {
       setCurrentStep(profile.setup_progress.current_step || 'basic');

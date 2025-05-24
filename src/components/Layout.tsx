@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
 import { useAuth } from '../lib/hooks/useAuth';
+import { trackEvent } from '../lib/services/analytics.service'; // Import trackEvent
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   LayoutDashboard,
@@ -27,8 +28,11 @@ import {
   User,
   UserCircle,
   Construction,
-  Map // Import Map icon
+  Map, // Import Map icon
+  BarChart3 // Import Analytics icon
 } from 'lucide-react';
+
+import { companyService } from '../lib/services/company.service';
 
 interface NavItem {
   name: string;
@@ -38,6 +42,8 @@ interface NavItem {
   isEnabled?: boolean;
   children?: NavItem[];
 }
+
+import BusinessOpsSidebar from '../business-ops-hub/components/BusinessOpsSidebar';
 
 export default function Layout() { // Remove children prop
   const navigate = useNavigate();
@@ -50,12 +56,35 @@ export default function Layout() { // Remove children prop
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [hasCompany, setHasCompany] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const previousPathnameRef = useRef<string | null>(null); // Ref to track previous path
 
   useEffect(() => {
-    // Simulate company check for demo purposes
-    setHasCompany(true);
-    setIsLoading(false);
-  }, []);
+    async function fetchCompany() {
+      if (user?.id) {
+        const companies = await companyService.getUserCompanies(user.id);
+        if (companies && companies.length > 0) {
+          setHasCompany(true);
+          setCompanyId(companies[0].id);
+        } else {
+          setHasCompany(false);
+          setCompanyId(null);
+        }
+      }
+      setIsLoading(false);
+    }
+    fetchCompany();
+    // eslint-disable-next-line
+  }, [user?.id]);
+
+  // Track page views
+  useEffect(() => {
+    // Only track if the pathname has actually changed
+    if (location.pathname !== previousPathnameRef.current) {
+      trackEvent('page_view', null, null, { path: location.pathname });
+      previousPathnameRef.current = location.pathname; // Update the ref
+    }
+  }, [location.pathname]); // Depend on pathname
 
   const handleSignOut = async () => {
     await signOut();
@@ -71,6 +100,9 @@ export default function Layout() { // Remove children prop
       badge: !hasCompany && !isLoading ? 'Setup' : undefined,
       isEnabled: true,
       children: [
+        { name: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard, isEnabled: true },
+        { name: 'Profile', href: companyId ? `/company/profile/${companyId}` : '/company/profile', icon: UserCircle, isEnabled: !!companyId },
+        { name: 'Members', href: '/company/members', icon: Users, isEnabled: true },
         { name: 'Journey', href: '/company/journey/challenges', icon: Map, isEnabled: true }
       ]
     },
@@ -83,7 +115,9 @@ export default function Layout() { // Remove children prop
     { name: 'Dev Hub', href: '#', icon: Code2, isEnabled: false },
     { name: 'Utilities', href: '#', icon: Wrench, isEnabled: false },
     { name: 'Idea Hub', href: '/idea-hub', icon: Lightbulb, isEnabled: true },
-    { name: 'Finance Hub', href: '/financial-hub', icon: PiggyBank, isEnabled: true },
+  { name: 'Finance Hub', href: '/financial-hub', icon: PiggyBank, isEnabled: true },
+  { name: 'Business Operations Hub', href: '/business-ops-hub', icon: Construction, isEnabled: true },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, isEnabled: true }, // Add Analytics link
     { name: 'Settings', href: '/profile', icon: Settings, isEnabled: true, children: [
       ...(isAdmin ? [
         { name: 'Admin Panel', href: '/admin', icon: Shield, isEnabled: true },
@@ -144,7 +178,20 @@ export default function Layout() { // Remove children prop
     );
   };
 
-  return (
+  // Show BusinessOpsSidebar for all /business-ops-hub routes
+  const isBusinessOpsHub = location.pathname.startsWith("/business-ops-hub");
+
+  return isBusinessOpsHub ? (
+    <div className="flex min-h-screen bg-base-200">
+      <BusinessOpsSidebar />
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  ) : (
+    // Default layout for all other routes
     <div className="flex min-h-screen bg-base-200">
       {/* Sidebar */}
       <aside className="w-64 bg-base-100 border-r border-base-300 flex flex-col p-4 space-y-2">

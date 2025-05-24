@@ -1,12 +1,20 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useCompany } from '@/lib/hooks/useCompany';
-import { RecommendationService } from '@/lib/services/recommendation.service';
+import { useAuth } from '@/lib/hooks/useAuth'; // Import useAuth
+import { CoreRecommendationService } from '@/lib/services/recommendation'; // Updated import
+import { fetchAnalyticsAggregates } from '@/lib/services/analytics.service';
+import { getUserLearningProfile } from '@/lib/services/learningProfile.service'; // Import learning profile service
+import type { UserLearningProfile } from '@/lib/types/profile.types'; // Import type
 import type { StepRecommendation } from '@/lib/types/journey-steps.types';
 import { calculateTimeEstimate } from '@/lib/utils/time-utils';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import useRecommendationAnalytics from '@/lib/hooks/useRecommendationAnalytics';
+import { toast } from 'sonner'; // Import toast
 
-interface NextBestStepsProps {
+// Export the props interface
+export interface NextBestStepsProps {
+  companyId: string;
+  currentStepId?: string;
   limit?: number;
   onStepSelect?: (stepId: string) => void;
   showFilters?: boolean;
@@ -18,23 +26,30 @@ interface NextBestStepsProps {
  * Enhanced in Sprint 3 with interactive features and improved UX
  */
 export const NextBestSteps: React.FC<NextBestStepsProps> = ({
+  companyId,
+  currentStepId, // Destructure currentStepId (optional)
   limit = 3,
   onStepSelect,
   showFilters = true,
   className = '',
 }) => {
-  const { currentCompany } = useCompany();
+  const { currentCompany } = useCompany(); // Keep for fallback if companyId prop isn't passed? Or remove? Let's keep for now.
   const [recommendations, setRecommendations] = useState<StepRecommendation[]>([]);
   const [filteredRecommendations, setFilteredRecommendations] = useState<StepRecommendation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [timeConstraint, setTimeConstraint] = useState<number | undefined>(undefined);
-  const [focusAreas, setFocusAreas] = useState<string[]>([]);
+  const [focusAreas, setFocusAreas] = useState<string[]>([]); // Keep for potential future use
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth(); // Get user from auth hook
+  const [learningProfile, setLearningProfile] = useState<UserLearningProfile | null>(null);
   const { trackRecommendationView, trackRecommendationSelect } = useRecommendationAnalytics();
   const controls = useAnimation();
+
+  // Analytics context
+  const [analyticsContext, setAnalyticsContext] = useState<Record<string, any>>({});
 
   // Filter options
   const filterOptions = [
@@ -51,31 +66,66 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
     { value: 30, label: '1 Month' }
   ];
 
+  // Fetch learning profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      const profile = await getUserLearningProfile(user.id);
+      setLearningProfile(profile);
+    };
+    fetchProfile();
+  }, [user?.id]);
+
+  // Fetch analytics aggregates for context
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!companyId) return;
+      try {
+        const aggs = await fetchAnalyticsAggregates(companyId);
+        // Extract relevant metrics for context
+        const context: Record<string, any> = {};
+        for (const metric of ["bottleneck_prediction", "tool_adoption_projection", "team_velocity"]) {
+          const agg = aggs.find(a => a.metric_name === metric);
+          if (agg) context[metric] = agg.value?.value || agg.value;
+        }
+        setAnalyticsContext(context);
+      } catch (err) {
+        setAnalyticsContext({});
+      }
+    };
+    fetchAnalytics();
+  }, [companyId]);
+
   // Load recommendations with filters
   const loadRecommendations = useCallback(async () => {
-    if (!currentCompany?.id) return;
+    const targetCompanyId = companyId || currentCompany?.id; // Use passed prop first
+    if (!targetCompanyId || !user?.id) return;
 
     try {
       setLoading(true);
       controls.start({ opacity: 0.7 });
 
-      // Context for personalized recommendations
+      // Context for personalized recommendations, now including learning profile and analytics
       const context = {
+        userId: user.id,
         focusAreas,
-        timeConstraint
+        timeConstraint,
+        learningStyle: learningProfile?.learning_style_preference,
+        pacePreference: learningProfile?.pace_preference,
+        ...analyticsContext, // Add analytics metrics to context
       };
 
-      const stepRecommendations = await RecommendationService.getRecommendations(
-        currentCompany.id,
+      const stepRecommendations = await CoreRecommendationService.getRecommendations(
+        targetCompanyId,
         limit + 3, // Request more then filter
-        context
+        context // Pass the enhanced context
       );
 
       setRecommendations(stepRecommendations);
-      
+
       // Track impression
       trackRecommendationView(stepRecommendations.map(r => r.id));
-      
+
       // Apply filters immediately
       applyFilters(stepRecommendations, activeFilters);
       setError(null);
@@ -86,7 +136,7 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
       setLoading(false);
       controls.start({ opacity: 1 });
     }
-  }, [currentCompany?.id, limit, activeFilters, timeConstraint, focusAreas, controls, trackRecommendationView]);
+  }, [companyId, currentCompany?.id, user?.id, limit, activeFilters, timeConstraint, focusAreas, learningProfile, controls, trackRecommendationView]); // Add dependencies
 
   // Apply filters to recommendations
   const applyFilters = useCallback((recs: StepRecommendation[], filters: string[]) => {
@@ -99,19 +149,19 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
 
     // Apply each active filter
     if (filters.includes('quick-wins')) {
-      filtered = filtered.filter(rec => 
+      filtered = filtered.filter(rec =>
         (rec.estimated_time_max || 120) < 60 // Less than 1 hour
       );
     }
 
     if (filters.includes('high-impact')) {
-      filtered = filtered.filter(rec => 
+      filtered = filtered.filter(rec =>
         rec.relevance_score >= 7 // High relevance score
       );
     }
 
     if (filters.includes('prerequisites')) {
-      filtered = filtered.filter(rec => 
+      filtered = filtered.filter(rec =>
         rec.reasoning.some(r => r.includes('prerequisites complete'))
       );
     }
@@ -157,37 +207,37 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
       // Navigate between recommendations with arrow keys
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        
+
         if (filteredRecommendations.length === 0) return;
-        
-        const currentIndex = expandedCard 
+
+        const currentIndex = expandedCard
           ? filteredRecommendations.findIndex(r => r.id === expandedCard)
           : -1;
-          
+
         let newIndex = currentIndex;
-        
+
         if (e.key === 'ArrowDown') {
           newIndex = currentIndex === filteredRecommendations.length - 1 ? 0 : currentIndex + 1;
         } else {
-          newIndex = currentIndex === -1 || currentIndex === 0 
-            ? filteredRecommendations.length - 1 
+          newIndex = currentIndex === -1 || currentIndex === 0
+            ? filteredRecommendations.length - 1
             : currentIndex - 1;
         }
-        
+
         setExpandedCard(filteredRecommendations[newIndex].id);
       }
-      
+
       // Select currently expanded recommendation with Enter
       if (e.key === 'Enter' && expandedCard) {
         handleStepSelect(expandedCard);
       }
     };
-    
+
     // Add listener if we have recommendations
     if (filteredRecommendations.length > 0) {
       window.addEventListener('keydown', handleKeyDown);
     }
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -217,7 +267,7 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
               Personalized steps to move your business forward
             </p>
           </div>
-          
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -241,8 +291,8 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
                   key={filter.id}
                   onClick={() => toggleFilter(filter.id)}
                   className={`px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1
-                    ${activeFilters.includes(filter.id) 
-                      ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                    ${activeFilters.includes(filter.id)
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
                       : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'}`}
                 >
                   <span>{filter.icon}</span>
@@ -250,7 +300,7 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
                 </button>
               ))}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">Time frame:</span>
               <div className="flex gap-1">
@@ -259,8 +309,8 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
                     key={option.value?.toString() || 'any'}
                     onClick={() => handleTimeChange(option.value)}
                     className={`px-2 py-1 rounded text-xs
-                      ${timeConstraint === option.value 
-                        ? 'bg-blue-100 text-blue-800' 
+                      ${timeConstraint === option.value
+                        ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     {option.label}
@@ -306,8 +356,8 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
                 exit={{ opacity: 0 }}
                 className="p-4 text-center text-gray-500"
               >
-                {recommendations.length === 0 
-                  ? "No recommendations available at this time." 
+                {recommendations.length === 0
+                  ? "No recommendations available at this time."
                   : "No matching recommendations with current filters."}
                 {recommendations.length > 0 && (
                   <button
@@ -327,6 +377,14 @@ export const NextBestSteps: React.FC<NextBestStepsProps> = ({
                   isExpanded={expandedCard === rec.id}
                   onToggleExpand={() => toggleCardExpansion(rec.id)}
                   onSelect={() => handleStepSelect(rec.id)}
+                  // Pass feedback handler (placeholder for now)
+                  onFeedback={(stepId, helpful) => {
+                    console.log(`Feedback for ${stepId}: ${helpful ? 'Helpful' : 'Not Helpful'}`);
+                    // TODO: Call actual feedback service
+                    // Example: feedbackService.submitRecommendationFeedback(user.id, stepId, helpful);
+                    // Show toast notification
+                    toast.info(`Feedback received for ${rec.name}. Thank you!`);
+                  }}
                 />
               ))
             )}
@@ -343,6 +401,7 @@ interface RecommendationCardProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onSelect: () => void;
+  onFeedback: (stepId: string, helpful: boolean) => void; 
 }
 
 const RecommendationCard: React.FC<RecommendationCardProps> = ({
@@ -351,14 +410,15 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   isExpanded,
   onToggleExpand,
   onSelect,
+  onFeedback, // Destructure the new prop
 }) => {
   const timeEstimate = calculateTimeEstimate(
     recommendation.estimated_time_min,
     recommendation.estimated_time_max
   );
-  
+
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   // Scroll into view when expanded
   useEffect(() => {
     if (isExpanded && cardRef.current) {
@@ -387,14 +447,14 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
     <motion.div
       ref={cardRef}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ 
-        opacity: 1, 
-        y: 0, 
+      animate={{
+        opacity: 1,
+        y: 0,
         height: 'auto',
         backgroundColor: isExpanded ? 'rgba(239, 246, 255, 0.6)' : 'transparent',
       }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ 
+      transition={{
         delay: index * 0.1,
         height: { duration: 0.3 },
         backgroundColor: { duration: 0.2 }
@@ -444,7 +504,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         </div>
       </div>
 
-      <motion.div 
+      <motion.div
         initial="collapsed"
         animate={isExpanded ? "expanded" : "collapsed"}
         variants={{
@@ -465,9 +525,32 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
                 </li>
               ))}
             </ul>
+            {/* Adaptive context summary */}
+            <div className="mt-2 text-xs text-blue-600">
+              {learningProfile?.learning_style_preference && (
+                <div>
+                  <strong>Personalized for your learning style:</strong> {learningProfile.learning_style_preference}
+                </div>
+              )}
+              {analyticsContext.bottleneck_prediction && (
+                <div>
+                  <strong>Current bottleneck:</strong> {analyticsContext.bottleneck_prediction}
+                </div>
+              )}
+              {analyticsContext.tool_adoption_projection && (
+                <div>
+                  <strong>Tool adoption rate:</strong> {analyticsContext.tool_adoption_projection}
+                </div>
+              )}
+              {analyticsContext.team_velocity && (
+                <div>
+                  <strong>Team velocity:</strong> {analyticsContext.team_velocity}
+                </div>
+              )}
+            </div>
           </div>
         )}
-        
+
         <div className="bg-gray-50 rounded-md p-3 mb-3">
           <h5 className="text-sm font-medium text-gray-700 mb-2">Step Details</h5>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -489,6 +572,35 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Feedback Section - Rendered when expanded */}
+        {isExpanded && (
+          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end space-x-3">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Was this recommendation helpful?</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onFeedback(recommendation.id, true); }}
+              className="p-1 rounded-full text-gray-400 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+              aria-label="Helpful"
+              title="Helpful"
+            >
+              {/* Thumbs Up Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onFeedback(recommendation.id, false); }}
+              className="p-1 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+              aria-label="Not Helpful"
+              title="Not Helpful"
+            >
+              {/* Thumbs Down Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                 <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.106-1.79l-.05-.025A4 4 0 0011.057 2H5.641a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.2-1.867a4 4 0 00.8-2.4z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </motion.div>
 
       <div className={`mt-3 flex justify-end ${isExpanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}>
@@ -516,7 +628,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
           </svg>
         </motion.button>
       </div>
-      
+
       {/* Keyboard shortcut hint - NEW in Sprint 3 */}
       {isExpanded && (
         <div className="absolute bottom-2 left-2 text-xs text-gray-400">
@@ -527,4 +639,6 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   );
 };
 
-export default NextBestSteps;
+// Corrected export: Use named export for the component
+// export default NextBestSteps; // Remove default export if not intended
+// Keep named export: export const NextBestSteps ... (already done above)

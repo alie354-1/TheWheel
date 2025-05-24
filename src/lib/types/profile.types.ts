@@ -16,6 +16,7 @@ export interface UserProfile {
     form_data: Record<string, any>;
     last_updated?: string;
   };
+  // theme?: 'light' | 'dark'; // This was already present, removing duplicate
 }
 
 /**
@@ -53,4 +54,17 @@ export interface FeatureFlags {
     enabled: boolean;
     visible: boolean;
   };
+}
+
+// Interface for the user_learning_profiles table data
+export interface UserLearningProfile {
+  user_id: string; // Matches the primary key which is the user's ID
+  learning_style_preference?: string | null;
+  preferred_content_types?: string[] | null;
+  pace_preference?: number | null; // Assuming smallint maps to number
+  engagement_level?: number | null; // Assuming float maps to number
+  skill_gaps?: Record<string, any> | null; // Assuming jsonb maps to an object
+  preferences_payload?: Record<string, any> | null; // Assuming jsonb maps to an object
+  created_at: string;
+  updated_at: string;
 }

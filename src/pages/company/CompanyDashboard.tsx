@@ -71,7 +71,16 @@ const OverviewTab = ({ companyId }: { companyId: string }) => (
 );
 const JourneyTab = ({ companyId }: { companyId: string }) => (
    <div className="p-6 bg-base-100 rounded-lg shadow mt-4">
-    <h3 className="text-xl font-semibold mb-4">Journey Map</h3>
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-xl font-semibold">Journey Map</h3>
+  <Link to={`/company/${companyId}/journey/unified`} className="btn btn-lg btn-primary font-bold">
+    🚀 Launch NEW Redesigned Journey Experience
+  </Link>
+    </div>
+    <div className="alert alert-info mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>The journey experience has been completely redesigned with new features! Click the button above to access it.</span>
+    </div>
     <JourneyMapView companyId={companyId} /> {/* Use the new component */}
    </div>
 );

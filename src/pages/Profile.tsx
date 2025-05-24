@@ -5,10 +5,26 @@ import { UserCircle, Save, Camera, Briefcase, GraduationCap, Building, Cog, Targ
 import { enhancedProfileService } from '../lib/services/enhanced-profile.service';
 import { Link } from 'react-router-dom';
 import { UserRoleType, CompanyStageType } from '../lib/types/enhanced-profile.types';
+import LearningProfileDisplay from '../components/profile/LearningProfileDisplay'; // Import the display component
+import LearningProfileEditor from '../components/profile/LearningProfileEditor'; // Import the editor component
+import CredentialManager from '../components/profile/CredentialManager';
+import { listIntegrations, ExternalLMSIntegration } from '../lib/services/externalTrainingIntegration.service';
 
 export default function Profile() {
   const { user, profile, setProfile } = useAuthStore();
-  const [isEditing, setIsEditing] = useState(!profile?.full_name);
+  const [isEditing, setIsEditing] = useState(!profile?.full_name); // State for editing the main profile
+  const [integrations, setIntegrations] = useState<ExternalLMSIntegration[]>([]);
+  const [loadingIntegrations, setLoadingIntegrations] = useState(false);
+  const companyId = enhancedProfile?.company_id || profile?.company_id || ""; // Try to get companyId
+
+  useEffect(() => {
+    if (!companyId) return;
+    setLoadingIntegrations(true);
+    listIntegrations(companyId)
+      .then(setIntegrations)
+      .finally(() => setLoadingIntegrations(false));
+  }, [companyId]);
+  const [isEditingLearningProfile, setIsEditingLearningProfile] = useState(false); // State for editing learning profile
   const [isLoading, setIsLoading] = useState(false);
   const [enhancedProfile, setEnhancedProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -541,6 +557,49 @@ export default function Profile() {
                       </label>
                     </div>
                   </div>
+
+                  {/* Learning Profile Display Section */}
+                  {user && (
+                    <div className="md:col-span-2">
+                       <div className="flex justify-between items-center mb-4 border-b pb-2">
+                         <h2 className="text-lg font-medium text-gray-900">Learning Preferences</h2>
+                         {!isEditingLearningProfile && user && (
+                           <button 
+                             type="button" 
+                             onClick={() => setIsEditingLearningProfile(true)} 
+                             className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                           >
+                             Edit
+                           </button>
+                         )}
+                       </div>
+                       {user && (
+                         isEditingLearningProfile ? (
+                           <LearningProfileEditor 
+                             userId={user.id} 
+                             onSave={() => setIsEditingLearningProfile(false)} // Hide editor on save
+                             onCancel={() => setIsEditingLearningProfile(false)} // Hide editor on cancel
+                           />
+                         ) : (
+                           <LearningProfileDisplay userId={user.id} />
+                         )
+                       )}
+                    </div>
+                  )}
+                  {/* End Learning Profile Display Section */}
+
+                  {/* External Credentials Section */}
+                  {user && companyId && (
+                    <div className="md:col-span-2 mt-8">
+                      <h2 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">External Credentials & Certificates</h2>
+                      {loadingIntegrations ? (
+                        <div className="text-gray-400">Loading integrations...</div>
+                      ) : (
+                        <CredentialManager userId={user.id} companyId={companyId} integrations={integrations} />
+                      )}
+                    </div>
+                  )}
+                  {/* End External Credentials Section */}
 
                   <div className="md:col-span-2 flex justify-end">
                     <button

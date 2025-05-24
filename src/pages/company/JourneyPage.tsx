@@ -10,6 +10,7 @@ import { StepStatus } from '../../components/company/journey/StepCard/StepCardPr
 import { Term } from '../../components/terminology/Term';
 import { StepAssistant } from '../../components/company/journey/StepAssistant';
 import { MilestoneCelebrationAnimation } from '../../components/visualization';
+import { ActionPanel } from '../../components/company/journey/ActionPanel';
 
 import { useJourneyPageData } from '../../lib/hooks/useJourneyPageData';
 
@@ -142,6 +143,12 @@ const JourneyPage: React.FC = () => {
             </h1>
             
             <div className="flex items-center space-x-4">
+              <a 
+                href={`/company/journey-new`} 
+                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md bg-white hover:bg-gray-50"
+              >
+                Try New Journey UI
+              </a>
               <button 
                 className={`inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md ${
                   filterActive ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-gray-700'
@@ -230,8 +237,8 @@ const JourneyPage: React.FC = () => {
           </div>
         )}
 
-        {/* Journey Views */}
-        <div className="flex">
+        {/* Journey Views with Action Panel - Updated for Sprint 3 */}
+        <div className="flex gap-4">
           {/* Main Content Area */}
           <div className={`flex-grow ${showStepPanel ? 'pr-4' : ''}`}>
             {viewMode === 'timeline' ? (
@@ -255,50 +262,58 @@ const JourneyPage: React.FC = () => {
             )}
           </div>
 
-          {/* Step Preview Panel */}
-          {showStepPanel && selectedStepId && (
-            <div className="w-80 bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="p-4 border-b border-gray-200 flex justify-between">
-                <h3 className="font-medium">
-                  <Term keyPath="journeyTerms.step.singular" fallback="Step" /> Details
-                </h3>
-                <button 
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowStepPanel(false)}
-                >
-                  <X size={18} />
-                </button>
+          {/* Action Panel - Sprint 3 Addition */}
+          <div className="w-80 flex flex-col gap-4">
+            <ActionPanel 
+              companyId={companyId || ''} 
+              onStepSelect={handleStepSelect}
+            />
+            
+            {/* Step Preview Panel */}
+            {showStepPanel && selectedStepId && (
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="p-4 border-b border-gray-200 flex justify-between">
+                  <h3 className="font-medium">
+                    <Term keyPath="journeyTerms.step.singular" fallback="Step" /> Details
+                  </h3>
+                  <button 
+                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowStepPanel(false)}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4">
+                  {selectedStep && (
+                    <>
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-900">{selectedStep.name}</h4>
+                        {selectedStep.description && (
+                          <p className="text-sm text-gray-600 mt-1">{selectedStep.description}</p>
+                        )}
+                      </div>
+                      
+                      <StepAssistant
+                        stepId={selectedStepId}
+                        stepName={selectedStep.name}
+                        stepDescription={selectedStep.description}
+                        stepDifficulty={selectedStep.difficulty || 'medium'}
+                      />
+                      
+                      <div className="mt-4">
+                        <button 
+                          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                          onClick={() => navigate(`/company/${companyId}/journey/step/${selectedStepId}`)}
+                        >
+                          View Full Details
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="p-4">
-                {selectedStep && (
-                  <>
-                    <div className="mb-4">
-                      <h4 className="font-medium text-gray-900">{selectedStep.name}</h4>
-                      {selectedStep.description && (
-                        <p className="text-sm text-gray-600 mt-1">{selectedStep.description}</p>
-                      )}
-                    </div>
-                    
-                    <StepAssistant
-                      stepId={selectedStepId}
-                      stepName={selectedStep.name}
-                      stepDescription={selectedStep.description}
-                      stepDifficulty={selectedStep.difficulty || 'medium'}
-                    />
-                    
-                    <div className="mt-4">
-                      <button 
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-                        onClick={() => navigate(`/company/${companyId}/journey/step/${selectedStepId}`)}
-                      >
-                        View Full Details
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
       

@@ -17,7 +17,11 @@ export interface LoggingService {
   logInteraction: (elementId: string, action: string, data?: any) => Promise<void>;
   logPerformance: (metric: string, value: number, context?: any) => Promise<void>;
   getSessionId: () => string | null;
-  
+
+  // Optional methods potentially available in enhanced implementations
+  logInfo?: (message: string, context?: any) => Promise<void>;
+  logWarning?: (message: string, context?: any) => Promise<void>;
+
   // Additional methods used by hooks
   logSystemEvent: (category: string, source: string, action: string, data?: any) => Promise<void>;
   logUserAction: (action: string, component: string, data?: any, metadata?: any) => Promise<string>;

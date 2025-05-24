@@ -3,6 +3,7 @@ import { Coins, ArrowLeft, Save, Plus, DollarSign, MinusCircle } from 'lucide-re
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/store';
+import { useLogger } from '../../lib/hooks/useLogger';
 
 interface RevenueStream {
   name: string;
@@ -31,6 +32,7 @@ export default function BusinessModel() {
   const [title, setTitle] = useState('Business Model');
   const [modelId, setModelId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const logger = useLogger();
 
   const [revenueStreams, setRevenueStreams] = useState<RevenueStream[]>([
     {
@@ -62,35 +64,51 @@ export default function BusinessModel() {
 
   useEffect(() => {
     const loadModel = async () => {
-      const { data: model } = await supabase
-        .from('business_models')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
+      try {
+        logger.info('Loading business model', { userId: user?.id });
+        
+        const { data: model, error } = await supabase
+          .from('business_models')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      if (model) {
-        setModelId(model.id);
-        setTitle(model.title);
-        setRevenueStreams(model.revenue_streams);
-        setCostStructure(model.cost_structure);
-        setKeyMetrics(model.key_metrics);
+        if (error && error.code !== 'PGRST116') { // PGRST116 is not found, which is fine
+          logger.error('Error loading business model', error);
+          return;
+        }
+
+        if (model) {
+          setModelId(model.id);
+          setTitle(model.title);
+          setRevenueStreams(model.revenue_streams);
+          setCostStructure(model.cost_structure);
+          setKeyMetrics(model.key_metrics);
+          logger.info('Business model loaded successfully', { modelId: model.id });
+        } else {
+          logger.info('No existing business model found', { userId: user?.id });
+        }
+      } catch (error) {
+        logger.error('Exception loading business model', error as Error);
       }
     };
 
     if (user) {
       loadModel();
     }
-  }, [user]);
+  }, [user, logger]);
 
   const handleSave = async () => {
     if (!user) return;
     
     setIsSaving(true);
     try {
+      logger.info('Saving business model', { userId: user.id, modelId, isUpdate: !!modelId });
+      
       if (modelId) {
-        await supabase
+        const { error } = await supabase
           .from('business_models')
           .update({
             title,
@@ -100,8 +118,14 @@ export default function BusinessModel() {
             updated_at: new Date().toISOString()
           })
           .eq('id', modelId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        logger.info('Business model updated successfully', { modelId });
       } else {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('business_models')
           .insert({
             user_id: user.id,
@@ -113,12 +137,17 @@ export default function BusinessModel() {
           .select()
           .single();
 
+        if (error) {
+          throw error;
+        }
+        
         if (data) {
           setModelId(data.id);
+          logger.info('New business model created', { newModelId: data.id });
         }
       }
     } catch (error) {
-      console.error('Error saving business model:', error);
+      logger.error('Error saving business model', error as Error);
     } finally {
       setIsSaving(false);
     }

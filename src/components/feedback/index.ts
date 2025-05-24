@@ -1,2 +1,3 @@
-export { default as InlineRatingComponent } from './InlineRatingComponent';
-export { default as StepImprovementSuggestionForm } from './StepImprovementSuggestionForm';
+export { default as LoadingSpinner } from './LoadingSpinner';
+export { default as ErrorDisplay } from './ErrorDisplay';
+export { default as NotificationManager } from './NotificationManager';

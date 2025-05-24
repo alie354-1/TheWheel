@@ -61,11 +61,11 @@ export default function IdeaHub() {
     },
     {
       icon: Rocket,
-      title: 'Pitch Deck',
-      description: 'Create compelling investor presentations.',
+      title: 'Deck Builder',
+      description: 'Create and manage presentations with themes and templates.',
       action: {
-        text: 'Create Deck',
-        href: '/idea-hub/pitch-deck'
+        text: 'Open Deck Builder',
+        href: '/idea-hub/deck-builder' // Updated to direct route
       }
     },
     {
@@ -123,25 +123,24 @@ export default function IdeaHub() {
             <div className="sm:flex sm:items-start sm:justify-between">
               <div className="sm:flex-1">
           <h2 className="text-xl font-semibold text-white sm:text-2xl">
-            New: Enhanced Idea Playground
+            New: Enhanced Idea Hub & Deck Builder
           </h2>
           <p className="mt-2 text-sm text-indigo-100 sm:text-base">
-            Experience our most powerful tool yet - a complete end-to-end workflow for idea generation,
-            exploration, refinement, and validation. The enhanced idea playground provides a seamless
-            experience for developing your startup ideas from concept to launch.
+            Explore the new Enhanced Idea Hub, featuring our powerful Deck Builder. Create, manage,
+            and customize presentations with themes and templates.
           </p>
           <div className="mt-4">
             <Link
-              to="/idea-hub/playground"
+              to="/idea-hub/deck-builder" // Updated to direct route
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-indigo-50"
             >
-              Try Enhanced Playground
+              Go to Deck Builder
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </div>
               </div>
               <div className="mt-4 sm:mt-0 sm:ml-6">
-                <Library className="h-12 w-12 text-white opacity-75" />
+                <Rocket className="h-12 w-12 text-white opacity-75" /> 
               </div>
             </div>
           </div>
