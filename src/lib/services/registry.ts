@@ -5,13 +5,13 @@
  * Provides typed access to services and prevents circular dependencies.
  */
 
-import { featureFlagsService } from './feature-flags';
+import { featureFlagsService } from './feature-flags.service'; // Corrected import
 import { loggingService } from './logging.service';
-import { analyticsService } from './analytics';
+import { analyticsService } from './analytics.service'; // Corrected import
 import { supabaseService } from './supabase';
-import { companyAccessService } from './company-access';
-import { notificationService } from './notification';
-import { preferencesService } from './preferences';
+import { companyAccessService } from './company-access.service';
+import { notificationService } from './notification.service'; // Corrected import
+import { preferencesService } from './preferences'; // Corrected import path
 import { authService } from './auth.service';
 
 /**
@@ -107,9 +107,9 @@ export const serviceRegistry = ServiceRegistry.getInstance();
 // Type-safe access functions for common services
 export const getFeatureFlagsService = () => serviceRegistry.get<typeof featureFlagsService>('featureFlags');
 export const getLoggingService = () => serviceRegistry.get<typeof loggingService>('logging');
-export const getAnalyticsService = () => serviceRegistry.get<typeof analyticsService>('analytics');
+export const getAnalyticsService = () => serviceRegistry.get<typeof analyticsService>('analytics'); // Ensure typeof matches imported service
 export const getSupabaseService = () => serviceRegistry.get<typeof supabaseService>('supabase');
 export const getAuthService = () => serviceRegistry.get<typeof authService>('auth');
 export const getCompanyAccessService = () => serviceRegistry.get<typeof companyAccessService>('companyAccess');
-export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification');
-export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences');
+export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification'); // Ensure typeof matches
+export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences'); // Ensure typeof matches

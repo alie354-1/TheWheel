@@ -160,3 +160,13 @@ export interface ClientInfo {
   browser?: string;
   timestamp: string;
 }
+
+// Interface for the logging service
+export interface ILoggingService {
+  logInfo: (message: string, metadata?: Record<string, any>) => void;
+  logWarn: (message: string, metadata?: Record<string, any>) => void;
+  logError: (error: Error | string, metadata?: Record<string, any>) => void;
+  // Add any other methods the actual logging service might have, e.g., for specific event types
+  // logUserAction?: (event: Omit<UserActionEvent, 'user_id' | 'company_id' | 'session_id' | 'client_info'>) => void;
+  // logAIInteraction?: (event: Omit<AIInteractionEvent, 'user_id' | 'company_id' | 'session_id' | 'client_info'>) => void;
+}

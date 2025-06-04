@@ -100,3 +100,11 @@ export async function trackEvent(
     .insert([{ event_name, user_id, company_id, payload }]);
   if (error) throw error;
 }
+
+export const analyticsService = {
+  fetchAnalyticsEvents,
+  fetchAnalyticsAggregates,
+  fetchAnalyticsReports,
+  fetchAnalyticsDashboards,
+  trackEvent,
+};

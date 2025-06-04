@@ -7,7 +7,7 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { User } from '../types/profile.types';
 import { LoadingSpinner } from '../../components/feedback';
-import { serviceRegistry } from '../services/registry';
+import { getAuthService, serviceRegistry } from '../services/registry'; // Import getAuthService
 
 // Define the context interface
 export interface AuthContextValue {
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   // Get auth service from registry
-  const authService = serviceRegistry.get('auth');
+  const authService = getAuthService(); // Use typed getter
   
   // Refresh user data
   const refreshUser = useCallback(async () => {
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         
         if (userData.user) {
           // We have a user, now get their profile from the users table
-          const { data: userProfile } = await serviceRegistry.get('supabase')
+          const { data: userProfile } = await serviceRegistry.get('supabase').supabase
             .from('users')
             .select('*')
             .eq('id', userData.user.id)
@@ -149,7 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       
       // Use Supabase to sign up
-      const { data, error } = await serviceRegistry.get('supabase').auth.signUp({
+      const { data, error } = await serviceRegistry.get('supabase').supabase.auth.signUp({
         email,
         password,
         options: {
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       
       // Update profile in the users table
-      const { error } = await serviceRegistry.get('supabase')
+      const { error } = await serviceRegistry.get('supabase').supabase
         .from('users')
         .update(updates)
         .eq('id', userId);

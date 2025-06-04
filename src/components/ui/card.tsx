@@ -54,6 +54,33 @@ export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = ''
   );
 };
 
+type CardTitleProps = {
+  children: ReactNode;
+  className?: string;
+  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+};
+
+export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '', as: Component = 'h3' }) => {
+  return (
+    <Component className={`text-lg font-semibold leading-none tracking-tight ${className}`}>
+      {children}
+    </Component>
+  );
+};
+
+type CardDescriptionProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = '' }) => {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`}>
+      {children}
+    </p>
+  );
+};
+
 type CardContentProps = {
   children: ReactNode;
   className?: string;

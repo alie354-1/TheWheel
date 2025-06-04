@@ -12,18 +12,22 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  if (typeof loggingService?.logError === 'function') {
-    loggingService.logError(
+  if (typeof loggingService?.error === 'function') {
+    loggingService.error(
+      'Missing Supabase environment variables',
       new Error('Missing Supabase environment variables'), 
       { context: 'supabaseClient' }
     );
   }
-  console.error('Missing required environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY');
+  console.error('Missing required environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Application cannot start.');
+  // Throw an error to halt execution if critical env vars are missing
+  throw new Error('Supabase URL and/or Anon Key are missing. Check environment variables.');
 }
 
 /**
  * Create a Supabase client instance
  */
+// This line will only be reached if supabaseUrl and supabaseAnonKey are present
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
@@ -39,14 +43,15 @@ export const supabaseService = {
     try {
       await supabase.auth.signOut();
       
-      if (typeof loggingService?.logInfo === 'function') {
-        loggingService.logInfo('Supabase auth reset', { context: 'supabaseClient' });
+      if (typeof loggingService?.info === 'function') {
+        loggingService.info('Supabase auth reset', { context: 'supabaseClient' });
       }
       
       return { success: true };
     } catch (error) {
-      if (typeof loggingService?.logError === 'function') {
-        loggingService.logError(
+      if (typeof loggingService?.error === 'function') {
+        loggingService.error(
+          'Error resetting Supabase auth',
           error instanceof Error ? error : new Error(String(error)), 
           { context: 'supabaseClient.resetAuth' }
         );
@@ -68,8 +73,9 @@ export const supabaseService = {
       
       return { authenticated: !!data.session, session: data.session };
     } catch (error) {
-      if (typeof loggingService?.logError === 'function') {
-        loggingService.logError(
+      if (typeof loggingService?.error === 'function') {
+        loggingService.error(
+          'Error checking Supabase auth status',
           error instanceof Error ? error : new Error(String(error)), 
           { context: 'supabaseClient.isAuthenticated' }
         );

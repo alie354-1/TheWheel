@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    // Explicitly list essential libs for Deno's LSP,
+    // complementing what's in tsconfig.app.json.
+    // Deno's own libs are implicitly included when using Deno runtime.
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx", // Match tsconfig.app.json
+    "baseUrl": ".",     // Match tsconfig.json
+    "paths": {          // Match tsconfig.json
+      "@/*": ["./src/*"]
+    }
+  },
+  "lint": {
+    "files": {
+      "include": ["src/"]
+    },
+    "rules": {
+      "tags": ["recommended"],
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100, // Adjusted for common preference
+      "indentWidth": 2,
+      "singleQuote": true // Common preference, adjust if needed
+    }
+  },
+  // Example tasks if you run Vite via Deno tasks (uncomment and adjust if used)
+  // "tasks": {
+  //   "dev": "deno run --allow-net --allow-read --allow-env npm:vite",
+  //   "build": "deno run --allow-net --allow-read --allow-write --allow-env npm:vite build",
+  //   "preview": "deno run --allow-net --allow-read --allow-env npm:vite preview"
+  // },
+  // If you have an import map, specify it here:
+  // "importMap": "./import_map.json", 
+  "exclude": [
+    "node_modules",
+    "dist",
+    "backup",
+    "archive",
+    "backup_20250316095214"
+  ]
+}

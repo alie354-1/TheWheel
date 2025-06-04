@@ -65,7 +65,7 @@ export default function IdeaHub() {
       description: 'Create and manage presentations with themes and templates.',
       action: {
         text: 'Open Deck Builder',
-        href: '/idea-hub/deck-builder' // Updated to direct route
+        href: '/deck-builder'
       }
     },
     {
@@ -131,7 +131,7 @@ export default function IdeaHub() {
           </p>
           <div className="mt-4">
             <Link
-              to="/idea-hub/deck-builder" // Updated to direct route
+              to="/deck-builder"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-indigo-50"
             >
               Go to Deck Builder

@@ -9,6 +9,14 @@
 import { useAuthStore, FeatureFlags } from '../store';
 import { supabase } from '../supabase';
 
+// Define the type for a single feature flag's settings
+type FeatureFlagSetting = {
+  enabled: boolean;
+  visible?: boolean;
+  value?: any;
+  description?: string;
+};
+
 /**
  * Feature Flags Service
  * This service is responsible for loading and saving feature flags
@@ -73,6 +81,87 @@ class FeatureFlagsService {
     }
     
     return Promise.resolve();
+  }
+
+  /**
+   * Get all feature flags from memory
+   */
+  getAllFlags(): Record<string, { enabled: boolean; visible: boolean }> {
+    // Transform inMemoryFlags to the expected structure if necessary,
+    // or assume inMemoryFlags already holds flags in the { enabled, visible } structure.
+    // For now, let's assume it's compatible or FeatureFlags type is flexible.
+    const allFlags: Record<string, { enabled: boolean; visible: boolean }> = {};
+    for (const key in this.inMemoryFlags) {
+      if (Object.prototype.hasOwnProperty.call(this.inMemoryFlags, key)) {
+        const flag = this.inMemoryFlags[key];
+        // Assuming flag structure is { enabled: boolean, visible: boolean, ...otherProps }
+        // or just a boolean for enabled and visible is implicitly true or handled by consumer.
+        // For simplicity, let's assume the context expects the direct flag object.
+        // This might need adjustment based on actual FeatureFlag type.
+        if (typeof flag === 'object' && flag !== null && 'enabled' in flag) {
+          allFlags[key] = { enabled: !!flag.enabled, visible: !!flag.visible };
+        } else if (typeof flag === 'boolean') { // Handle simple boolean flags
+          allFlags[key] = { enabled: flag, visible: true }; // Assume visible if just boolean
+        }
+      }
+    }
+    return allFlags;
+    // A simpler approach if inMemoryFlags directly matches FeatureFlags type from store:
+    // return this.inMemoryFlags as FeatureFlags; 
+  }
+
+  /**
+   * Check if a feature is enabled
+   */
+  isEnabled(key: string): boolean {
+    const flag = this.inMemoryFlags[key];
+    if (typeof flag === 'object' && flag !== null && 'enabled' in flag) {
+      return !!flag.enabled;
+    }
+    if (typeof flag === 'boolean') {
+      return flag;
+    }
+    return false; // Default to false if flag or enabled property doesn't exist
+  }
+
+  /**
+   * Check if a feature is visible (simplified, assumes visible if enabled)
+   */
+  isVisible(key: string): boolean {
+    const flag = this.inMemoryFlags[key];
+     if (typeof flag === 'object' && flag !== null && 'visible' in flag) {
+      return !!flag.visible;
+    }
+    // If only enabled is present, or it's a boolean, assume visible if enabled
+    return this.isEnabled(key); 
+  }
+  
+  /**
+   * Get a specific feature flag object
+   */
+  getFlag(key: string): FeatureFlagSetting | undefined {
+    const flag = this.inMemoryFlags[key];
+    if (typeof flag === 'object' && flag !== null && 'enabled' in flag) {
+      // Ensure the returned object matches FeatureFlagSetting structure
+      return {
+        enabled: !!flag.enabled,
+        visible: !!flag.visible,
+        value: flag.value,
+        description: flag.description,
+      };
+    }
+    if (typeof flag === 'boolean') {
+      // Adapt simple boolean to FeatureFlagSetting structure
+      return { enabled: flag, visible: true, value: flag, description: `Feature flag ${key}` };
+    }
+    return undefined;
+  }
+
+  /**
+   * Reload feature flags
+   */
+  async reload(): Promise<void> {
+    await this.loadFeatureFlags();
   }
   
   /**
