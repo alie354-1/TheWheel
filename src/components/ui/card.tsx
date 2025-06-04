@@ -30,9 +30,9 @@ export const Card: React.FC<CardProps> = ({
   const shadowClass = getShadowClass(shadow);
   const borderClass = bordered ? 'border border-base-300' : '';
   const cursorClass = onClick ? 'cursor-pointer' : '';
-  
+
   return (
-    <div 
+    <div
       className={`bg-base-100 rounded-lg ${shadowClass} ${borderClass} ${cursorClass} ${className}`}
       onClick={onClick}
     >

@@ -104,6 +104,9 @@ export class ServiceRegistry {
 // Export singleton instance
 export const serviceRegistry = ServiceRegistry.getInstance();
 
+// Export function to get the service registry instance
+export const getServiceRegistry = () => serviceRegistry;
+
 // Type-safe access functions for common services
 export const getFeatureFlagsService = () => serviceRegistry.get<typeof featureFlagsService>('featureFlags');
 export const getLoggingService = () => serviceRegistry.get<typeof loggingService>('logging');
@@ -111,5 +114,10 @@ export const getAnalyticsService = () => serviceRegistry.get<typeof analyticsSer
 export const getSupabaseService = () => serviceRegistry.get<typeof supabaseService>('supabase');
 export const getAuthService = () => serviceRegistry.get<typeof authService>('auth');
 export const getCompanyAccessService = () => serviceRegistry.get<typeof companyAccessService>('companyAccess');
+<<<<<<< HEAD
 export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification'); // Ensure typeof matches
 export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences'); // Ensure typeof matches
+=======
+export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification');
+export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences');
+>>>>>>> origin/desktop
