@@ -6,7 +6,7 @@
  * support for user and company-specific overrides.
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../supabase';
 import { loggingService } from '../logging.service';
 import { FeatureFlag, FeatureFlags, FeatureFlagDefinition, FeatureFlagGroup, IFeatureFlagsService } from './types';
 import { defaultFeatureFlags, featureFlagDefinitions, featureFlagGroups } from './defaults';
