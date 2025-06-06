@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserLearningProfile } from '../../lib/types/profile.types';
-import { getUserLearningProfile } from '../../lib/services/learningProfile.service';
-import { useAuthStore } from '../../lib/store'; // To get current user ID
-import LearningProfileEditor from "./LearningProfileEditor";
+import { UserLearningProfile } from '../../lib/types/profile.types.ts';
+import { getUserLearningProfile } from '../../lib/services/learningProfile.service.ts';
+import { useAuthStore } from '../../lib/store.ts'; // To get current user ID
+import LearningProfileEditor from "./LearningProfileEditor.tsx";
 
 interface LearningProfileDisplayProps {
   userId: string; // Explicitly require userId
@@ -27,6 +27,7 @@ const LearningProfileDisplay: React.FC<LearningProfileDisplayProps> = ({ userId 
   const [profile, setProfile] = useState<UserLearningProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,8 +59,6 @@ const LearningProfileDisplay: React.FC<LearningProfileDisplayProps> = ({ userId 
   if (error) {
     return <ErrorDisplay message={error} />;
   }
-
-  const [editing, setEditing] = useState(false);
 
   if (!profile) {
     return (

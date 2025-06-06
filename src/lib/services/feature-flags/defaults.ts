@@ -20,11 +20,20 @@ export const defaultFeatureFlags: FeatureFlags = {
   utilities: { enabled: false, visible: false },
   financeHub: { enabled: false, visible: false },
   adminPanel: { enabled: true, visible: true },
+  company: { enabled: true, visible: true },
+  companyDashboard: { enabled: true, visible: true },
+  companyProfile: { enabled: true, visible: true },
+  companyMembers: { enabled: true, visible: true },
+  companyJourney: { enabled: true, visible: true },
+  businessOpsHub: { enabled: true, visible: true },
+  settings: { enabled: true, visible: true },
+  journeyAdmin: { enabled: true, visible: true },
   
   // Component features
   aiCofounder: { enabled: true, visible: true },
   marketResearch: { enabled: true, visible: true },
   pitchDeck: { enabled: true, visible: true },
+  deckBuilder: { enabled: false, visible: false },
   documentStore: { enabled: true, visible: true },
   teamManagement: { enabled: true, visible: true },
   
@@ -127,6 +136,62 @@ export const featureFlagDefinitions: FeatureFlagDefinition[] = [
     category: FeatureFlagCategory.NAVIGATION,
     defaultValue: defaultFeatureFlags.adminPanel
   },
+  {
+    key: 'company',
+    name: 'Company',
+    description: 'Company navigation root',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.company
+  },
+  {
+    key: 'companyDashboard',
+    name: 'Company Dashboard',
+    description: 'Company dashboard page',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.companyDashboard
+  },
+  {
+    key: 'companyProfile',
+    name: 'Company Profile',
+    description: 'Company profile page',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.companyProfile
+  },
+  {
+    key: 'companyMembers',
+    name: 'Company Members',
+    description: 'Company members page',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.companyMembers
+  },
+  {
+    key: 'companyJourney',
+    name: 'Company Journey',
+    description: 'Company journey page',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.companyJourney
+  },
+  {
+    key: 'businessOpsHub',
+    name: 'Business Operations Hub',
+    description: 'Business Operations Hub navigation',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.businessOpsHub
+  },
+  {
+    key: 'settings',
+    name: 'Settings',
+    description: 'Settings navigation',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.settings
+  },
+  {
+    key: 'journeyAdmin',
+    name: 'Journey Admin',
+    description: 'Journey Admin navigation',
+    category: FeatureFlagCategory.NAVIGATION,
+    defaultValue: defaultFeatureFlags.journeyAdmin
+  },
   
   // Component Features
   {
@@ -149,6 +214,13 @@ export const featureFlagDefinitions: FeatureFlagDefinition[] = [
     description: 'Presentation builder',
     category: FeatureFlagCategory.COMPONENTS,
     defaultValue: defaultFeatureFlags.pitchDeck
+  },
+  {
+    key: 'deckBuilder',
+    name: 'Deck Builder',
+    description: 'Modern collaborative deck builder',
+    category: FeatureFlagCategory.COMPONENTS,
+    defaultValue: defaultFeatureFlags.deckBuilder
   },
   {
     key: 'documentStore',

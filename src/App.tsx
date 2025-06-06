@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
 import Login from './pages/Login.tsx';
+import Signup from './pages/Signup.tsx';
 import PrivateRoute from './components/PrivateRoute.tsx';
 
 // Layout components
@@ -17,7 +18,7 @@ import InitialOnboardingPage from './pages/InitialOnboardingPage.tsx';
 import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage.tsx';
 import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage.tsx';
 import DomainDetail from './business-ops-hub/pages/DomainDetail.tsx';
-import StepDetailPage from './business-ops-hub/pages/StepDetailPage.tsx';
+import StepDetailPage from './components/company/journey/pages/StepDetailPage.tsx';
 import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage.tsx';
 import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage.tsx';
 
@@ -85,6 +86,7 @@ const LoadingFallback = () => (
 // Import our AppProvider
 import { AppProvider } from './lib/contexts/AppProvider.tsx';
 import { Provider as TooltipProvider } from '@radix-ui/react-tooltip';
+import JourneyHomePage from './components/company/journey/pages/JourneyHomePage.tsx';
 
 const App: React.FC = () => {
   return (
@@ -94,6 +96,7 @@ const App: React.FC = () => {
           <Routes>
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           {/* Authentication & Onboarding */}
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/initial-onboarding" element={<InitialOnboardingPage />} />
@@ -143,7 +146,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<CompanyDashboard />} />
                 <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
-                <Route path="journey" element={<JourneyPage />} />
+                <Route path="journey" element={<JourneyHomePage />} />
                 <Route path="journey-new" element={<RefactoredJourneyPage />} />
                 <Route path="journey/steps" element={<JourneyStepsPage />} />
                 <Route path="journey/steps/:stepId" element={<JourneyStepPage />} />
@@ -215,6 +218,11 @@ const App: React.FC = () => {
               `}}/>
             </div>
           } />
+
+      {/* New Journey System */}
+      <Route path="/journey" element={<JourneyHomePage />} />
+          <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
+          <Route path="/journey/map" element={<JourneyMapPage />} />
           
           {/* Fallback for unknown routes - temporary error page */}
           <Route path="*" element={<Navigate to="/route-not-found" replace />} />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getFeatureFlagsService } from '../services/registry';
+import { useAuthStore } from '../store';
 import type { FeatureFlags, FeatureFlagDefinition, FeatureFlagGroup } from '../services/feature-flags';
 
 export interface UseFeatureFlagsReturn {
@@ -19,24 +20,25 @@ export interface UseFeatureFlagsReturn {
 }
 
 export const useFeatureFlags = (): UseFeatureFlagsReturn => {
-  // Direct service access implementation
-  const [loading, setLoading] = useState<boolean>(true);
+  // Use Zustand store for feature flags (global, reactive)
+  const flags = useAuthStore(state => state.featureFlags);
+  const setFeatureFlags = useAuthStore(state => state.setFeatureFlags);
+
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState<boolean>(false);
-  const [flags, setFlags] = useState<FeatureFlags>({});
-  
+
   // Get feature flags service from registry
   const featureFlagsService = getFeatureFlagsService();
-  
+
   // Initialize on first mount
   useEffect(() => {
     const initializeFlags = async () => {
       if (initialized) return;
-      
       try {
         setLoading(true);
         const loadedFlags = await featureFlagsService.loadFeatureFlags();
-        setFlags(loadedFlags);
+        setFeatureFlags(loadedFlags);
         setInitialized(true);
         setError(null);
       } catch (err: any) {
@@ -46,16 +48,16 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
         setLoading(false);
       }
     };
-    
     initializeFlags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featureFlagsService, initialized]);
-  
+
   // Reload function
   const reload = async () => {
     try {
       setLoading(true);
       const loadedFlags = await featureFlagsService.loadFeatureFlags();
-      setFlags(loadedFlags);
+      setFeatureFlags(loadedFlags);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to reload feature flags');
@@ -64,59 +66,60 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
       setLoading(false);
     }
   };
-  
+
   // Update a feature flag
   const updateFeatureFlag = async (key: string, updates: Partial<{ enabled: boolean; visible: boolean }>) => {
     try {
-      featureFlagsService.setFeatureFlag(key, updates);
-      await featureFlagsService.saveFeatureFlags({ [key]: featureFlagsService.getFeatureFlag(key)! });
-      setFlags(featureFlagsService.getFeatureFlags());
+      await featureFlagsService.setFeatureFlag(key, updates);
+      // After updating, reload from service to ensure consistency
+      const updatedFlags = featureFlagsService.getFeatureFlags();
+      setFeatureFlags(updatedFlags);
     } catch (err: any) {
       setError(err.message || 'Failed to update feature flag');
       console.error('Feature flag update error:', err);
       throw err;
     }
   };
-  
+
   // Reset to defaults
   const resetToDefaults = async () => {
     try {
       await featureFlagsService.resetToDefaults();
-      setFlags(featureFlagsService.getFeatureFlags());
+      setFeatureFlags(featureFlagsService.getFeatureFlags());
     } catch (err: any) {
       setError(err.message || 'Failed to reset feature flags');
       console.error('Feature flags reset error:', err);
       throw err;
     }
   };
-  
+
   // Clear overrides
   const clearOverrides = () => {
     featureFlagsService.clearOverrides();
-    setFlags(featureFlagsService.getFeatureFlags());
+    setFeatureFlags(featureFlagsService.getFeatureFlags());
   };
-  
+
   // Proxy the service methods
   const isEnabled = (featureKey: string): boolean => {
     return featureFlagsService.isEnabled(featureKey);
   };
-  
+
   const isVisible = (featureKey: string): boolean => {
     return featureFlagsService.isVisible(featureKey);
   };
-  
+
   const getFlag = (featureKey: string) => {
     return featureFlagsService.getFeatureFlag(featureKey);
   };
-  
+
   const getAllFlags = () => {
     return featureFlagsService.getFeatureFlags();
   };
-  
+
   const getGroupedDefinitions = () => {
     return featureFlagsService.getGroupedDefinitions();
   };
-  
+
   return {
     flags,
     initialized,

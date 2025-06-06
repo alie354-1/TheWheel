@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react'; // Import ReactNode and useRef
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
+import { useFeatureFlags } from '../lib/hooks/useFeatureFlags';
 import { useAuth } from '../lib/hooks/useAuth';
 import { trackEvent } from '../lib/services/analytics.service'; // Import trackEvent
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -110,7 +111,7 @@ export default function Layout() { // Remove children prop
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
-  const { featureFlags } = useAuthStore();
+  const { flags: featureFlags } = useFeatureFlags();
   // Check for 'Platform Admin' role (case-sensitive)
   const isAdmin = profile?.role === 'Platform Admin'; 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -152,52 +153,72 @@ export default function Layout() { // Remove children prop
     navigate('/login');
   };
 
+  // Use feature flags to control nav visibility
+  // (Remove duplicate declaration)
+
+  // Helper to determine nav item state
+  const navState = (flag: { enabled?: boolean; visible?: boolean }) => {
+    if (!flag?.enabled) return 'hidden';
+    if (flag.enabled && !flag.visible) return 'comingSoon';
+    return 'normal';
+  };
+
   const navigation: NavItem[] = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, isEnabled: true },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, isEnabled: navState(featureFlags?.dashboard) !== 'hidden', badge: navState(featureFlags?.dashboard) === 'comingSoon' ? 'Coming Soon' : undefined },
     {
       name: 'My Company',
       href: hasCompany ? '/company/dashboard' : '/company/setup',
       icon: Building2,
       badge: !hasCompany && !isLoading ? 'Setup' : undefined,
-      isEnabled: true,
+      isEnabled: navState(featureFlags?.company) !== 'hidden',
       children: [
-        { name: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard, isEnabled: true },
-        { name: 'Profile', href: companyId ? `/company/profile/${companyId}` : '/company/profile', icon: UserCircle, isEnabled: !!companyId },
-        { name: 'Members', href: '/company/members', icon: Users, isEnabled: true },
-        { name: 'Journey', href: '/company/journey/challenges', icon: Map, isEnabled: true }
+        { name: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard, isEnabled: navState(featureFlags?.companyDashboard) !== 'hidden', badge: navState(featureFlags?.companyDashboard) === 'comingSoon' ? 'Coming Soon' : undefined },
+        { name: 'Profile', href: companyId ? `/company/profile/${companyId}` : '/company/profile', icon: UserCircle, isEnabled: navState(featureFlags?.companyProfile) !== 'hidden' && !!companyId, badge: navState(featureFlags?.companyProfile) === 'comingSoon' ? 'Coming Soon' : undefined },
+        { name: 'Members', href: '/company/members', icon: Users, isEnabled: navState(featureFlags?.companyMembers) !== 'hidden', badge: navState(featureFlags?.companyMembers) === 'comingSoon' ? 'Coming Soon' : undefined },
+        { name: 'Journey', href: '/company/journey', icon: Map, isEnabled: navState(featureFlags?.companyJourney) !== 'hidden', badge: navState(featureFlags?.companyJourney) === 'comingSoon' ? 'Coming Soon' : undefined }
       ]
     },
-    { name: 'Messages', href: '/messages', icon: MessageSquare, isEnabled: true },
-    { name: 'Community', href: '/community', icon: Users, isEnabled: true },
-    { name: 'Directory', href: '/directory', icon: BookOpen, isEnabled: true },
-    { name: 'Library', href: '#', icon: FileText, isEnabled: false },
-    { name: 'Marketplace', href: '/tools-marketplace', icon: Wallet, isEnabled: true },
-    { name: 'Legal Hub', href: '#', icon: Scale, isEnabled: false },
-    { name: 'Dev Hub', href: '#', icon: Code2, isEnabled: false },
-    { name: 'Utilities', href: '#', icon: Wrench, isEnabled: false },
-    { name: 'Idea Hub', href: '/idea-hub', icon: Lightbulb, isEnabled: true },
-    { name: 'Deck Builder', href: '/deck-builder', icon: Presentation, isEnabled: true },
-  { name: 'Finance Hub', href: '/financial-hub', icon: PiggyBank, isEnabled: true },
-  { name: 'Business Operations Hub', href: '/business-ops-hub', icon: Construction, isEnabled: true },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, isEnabled: true }, // Add Analytics link
-    { name: 'Settings', href: '/profile', icon: Settings, isEnabled: true, children: [
+    { name: 'Messages', href: '/messages', icon: MessageSquare, isEnabled: navState(featureFlags?.messages) !== 'hidden', badge: navState(featureFlags?.messages) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Community', href: '/community', icon: Users, isEnabled: navState(featureFlags?.community) !== 'hidden', badge: navState(featureFlags?.community) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Directory', href: '/directory', icon: BookOpen, isEnabled: navState(featureFlags?.directory) !== 'hidden', badge: navState(featureFlags?.directory) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Library', href: '#', icon: FileText, isEnabled: navState(featureFlags?.library) !== 'hidden', badge: navState(featureFlags?.library) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Marketplace', href: '/tools-marketplace', icon: Wallet, isEnabled: navState(featureFlags?.marketplace) !== 'hidden', badge: navState(featureFlags?.marketplace) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Legal Hub', href: '#', icon: Scale, isEnabled: navState(featureFlags?.legalHub) !== 'hidden', badge: navState(featureFlags?.legalHub) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Dev Hub', href: '#', icon: Code2, isEnabled: navState(featureFlags?.devHub) !== 'hidden', badge: navState(featureFlags?.devHub) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Utilities', href: '#', icon: Wrench, isEnabled: navState(featureFlags?.utilities) !== 'hidden', badge: navState(featureFlags?.utilities) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Idea Hub', href: '/idea-hub', icon: Lightbulb, isEnabled: navState(featureFlags?.ideaHub) !== 'hidden', badge: navState(featureFlags?.ideaHub) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Deck Builder', href: '/deck-builder', icon: Presentation, isEnabled: navState(featureFlags?.deckBuilder) !== 'hidden', badge: navState(featureFlags?.deckBuilder) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Finance Hub', href: '/financial-hub', icon: PiggyBank, isEnabled: navState(featureFlags?.financeHub) !== 'hidden', badge: navState(featureFlags?.financeHub) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Business Operations Hub', href: '/business-ops-hub', icon: Construction, isEnabled: navState(featureFlags?.businessOpsHub) !== 'hidden', badge: navState(featureFlags?.businessOpsHub) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3, isEnabled: navState(featureFlags?.analytics) !== 'hidden', badge: navState(featureFlags?.analytics) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Settings', href: '/profile', icon: Settings, isEnabled: navState(featureFlags?.settings) !== 'hidden', badge: navState(featureFlags?.settings) === 'comingSoon' ? 'Coming Soon' : undefined, children: [
       ...(isAdmin ? [
-        { name: 'Admin Panel', href: '/admin', icon: Shield, isEnabled: true },
-        { name: 'Journey Admin', href: '/admin-journey-content', icon: Map, isEnabled: true } // Add Journey Admin link
+        { name: 'Admin Panel', href: '/admin', icon: Shield, isEnabled: navState(featureFlags?.adminPanel) !== 'hidden', badge: navState(featureFlags?.adminPanel) === 'comingSoon' ? 'Coming Soon' : undefined },
+        { name: 'Journey Admin', href: '/admin-journey-content', icon: Map, isEnabled: navState(featureFlags?.journeyAdmin) !== 'hidden', badge: navState(featureFlags?.journeyAdmin) === 'comingSoon' ? 'Coming Soon' : undefined }
       ] : [])
     ]},
   ];
 
   const renderNavItem = (item: NavItem) => {
     if (!item.isEnabled) {
+      // Do not render at all if not enabled
+      return null;
+    }
+
+    // Coming soon: enabled but not visible
+    if (item.badge === 'Coming Soon') {
       return (
         <Tooltip.Provider>
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              <div className="flex items-center px-2 py-2 text-sm font-medium text-base-content/40 cursor-not-allowed rounded-md group">
+              <div
+                className="flex items-center px-2 py-2 text-sm font-medium rounded-md group opacity-50 cursor-not-allowed"
+                tabIndex={0}
+                aria-disabled="true"
+                style={{ pointerEvents: 'auto' }}
+              >
                 <item.icon className="h-4 w-4 mr-3" />
                 {item.name}
-                <Construction className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </Tooltip.Trigger>
             <Tooltip.Portal>
@@ -214,6 +235,7 @@ export default function Layout() { // Remove children prop
       );
     }
 
+    // Normal nav item
     return (
       <Link
         to={item.href}
@@ -231,11 +253,6 @@ export default function Layout() { // Remove children prop
           } mr-3 h-4 w-4`}
         />
         {item.name}
-        {item.badge && (
-          <span className="ml-auto inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-            {item.badge}
-          </span>
-        )}
       </Link>
     );
   };
@@ -266,7 +283,8 @@ export default function Layout() { // Remove children prop
   
   // Default layout for all other routes
   const isDeckBuilderPage = location.pathname.startsWith("/deck-builder");
-  const mainContentClasses = isDeckBuilderPage
+  const isJourneyPage = location.pathname.startsWith("/company/journey");
+  const mainContentClasses = isDeckBuilderPage || isJourneyPage
     ? "flex-1 w-full h-full p-0 m-0"
     : "flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto";
   const mainWrapperClasses = "flex-1 flex flex-col";
@@ -284,34 +302,21 @@ export default function Layout() { // Remove children prop
           {navigation.map((item) => (
             <React.Fragment key={item.name}>
               {renderNavItem(item)}
-              {item.children?.map((child) => (
-                <React.Fragment key={child.name}>
-                  {child.isEnabled ? (
-                    <Link
-                      to={child.href}
-                      className={`${
-                        location.pathname === child.href
-                          ? 'bg-base-200 text-primary border-l-4 border-primary'
-                          : 'text-base-content hover:bg-base-200 hover:text-primary'
-                      } group flex items-center px-8 py-2 text-sm font-medium rounded-md transition-all duration-200`}
-                    >
-                      <child.icon
-                        className={`${
-                          location.pathname === child.href
-                            ? 'text-primary'
-                            : 'text-base-content/70 group-hover:text-primary'
-                        } mr-3 h-4 w-4`}
-                      />
-                      {child.name}
-                    </Link>
-                  ) : (
-                    <Tooltip.Provider>
+              {item.children?.map((child) => {
+                if (!child.isEnabled) return null;
+                if (child.badge === 'Coming Soon') {
+                  return (
+                    <Tooltip.Provider key={child.name}>
                       <Tooltip.Root>
                         <Tooltip.Trigger asChild>
-                          <div className="flex items-center px-8 py-2 text-sm font-medium text-base-content/40 cursor-not-allowed rounded-md group">
+                          <div
+                            className="flex items-center px-8 py-2 text-sm font-medium rounded-md group opacity-50 cursor-not-allowed"
+                            tabIndex={0}
+                            aria-disabled="true"
+                            style={{ pointerEvents: 'auto' }}
+                          >
                             <child.icon className="h-4 w-4 mr-3" />
                             {child.name}
-                            <Construction className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </Tooltip.Trigger>
                         <Tooltip.Portal>
@@ -325,9 +330,29 @@ export default function Layout() { // Remove children prop
                         </Tooltip.Portal>
                       </Tooltip.Root>
                     </Tooltip.Provider>
-                  )}
-                </React.Fragment>
-              ))}
+                  );
+                }
+                return (
+                  <Link
+                    key={child.name}
+                    to={child.href}
+                    className={`${
+                      location.pathname === child.href
+                        ? 'bg-base-200 text-primary border-l-4 border-primary'
+                        : 'text-base-content hover:bg-base-200 hover:text-primary'
+                    } group flex items-center px-8 py-2 text-sm font-medium rounded-md transition-all duration-200`}
+                  >
+                    <child.icon
+                      className={`${
+                        location.pathname === child.href
+                          ? 'text-primary'
+                          : 'text-base-content/70 group-hover:text-primary'
+                      } mr-3 h-4 w-4`}
+                    />
+                    {child.name}
+                  </Link>
+                );
+              })}
             </React.Fragment>
           ))}
         </nav>

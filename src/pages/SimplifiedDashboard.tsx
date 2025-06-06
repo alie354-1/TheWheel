@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../lib/store';
-import { supabase } from '../lib/supabase';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { useAuth } from '../lib/contexts/AuthContext.tsx';
+import { supabase } from '../lib/supabase.ts';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 
 /**
  * Simplified Dashboard Component
@@ -10,7 +10,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
  * to help isolate loading issues.
  */
 export default function SimplifiedDashboard() {
-  const { profile } = useAuthStore();
+  const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [componentMounted, setComponentMounted] = useState(false);

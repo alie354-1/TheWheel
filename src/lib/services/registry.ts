@@ -5,14 +5,15 @@
  * Provides typed access to services and prevents circular dependencies.
  */
 
-import { featureFlagsService } from './feature-flags.service'; // Corrected import
-import { loggingService } from './logging.service';
-import { analyticsService } from './analytics.service'; // Corrected import
-import { supabaseService } from './supabase';
-import { companyAccessService } from './company-access.service';
-import { notificationService } from './notification.service'; // Corrected import
-import { preferencesService } from './preferences'; // Corrected import path
-import { authService } from './auth.service';
+import { featureFlagsService } from './feature-flags.service.ts';
+import { loggingService } from './logging.service.ts';
+import { analyticsService } from './analytics.service.ts';
+import { supabaseService } from './supabase/index.ts';
+import { companyAccessService } from './company-access.service.ts';
+import { notificationService } from './notification.service.ts';
+import { preferencesService } from './preferences/index.ts';
+import { authService } from './auth.service.ts';
+import { profileService } from './profile.service.ts';
 
 /**
  * ServiceRegistry class provides a central place to register and access services
@@ -98,14 +99,14 @@ export class ServiceRegistry {
     
     // Register preferences service
     this.register('preferences', preferencesService);
+    
+    // Register profile service
+    this.register('profile', profileService);
   }
 }
 
 // Export singleton instance
 export const serviceRegistry = ServiceRegistry.getInstance();
-
-// Export function to get the service registry instance
-export const getServiceRegistry = () => serviceRegistry;
 
 // Type-safe access functions for common services
 export const getFeatureFlagsService = () => serviceRegistry.get<typeof featureFlagsService>('featureFlags');
@@ -114,10 +115,6 @@ export const getAnalyticsService = () => serviceRegistry.get<typeof analyticsSer
 export const getSupabaseService = () => serviceRegistry.get<typeof supabaseService>('supabase');
 export const getAuthService = () => serviceRegistry.get<typeof authService>('auth');
 export const getCompanyAccessService = () => serviceRegistry.get<typeof companyAccessService>('companyAccess');
-<<<<<<< HEAD
-export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification'); // Ensure typeof matches
-export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences'); // Ensure typeof matches
-=======
 export const getNotificationService = () => serviceRegistry.get<typeof notificationService>('notification');
 export const getPreferencesService = () => serviceRegistry.get<typeof preferencesService>('preferences');
->>>>>>> origin/desktop
+export const getProfileService = () => serviceRegistry.get<typeof profileService>('profile');

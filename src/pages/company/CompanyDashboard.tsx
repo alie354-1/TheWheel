@@ -182,6 +182,9 @@ function CompanyDashboard() {
         const accessInfo = await companyAccessService.checkUserCompanyAccess(user.id);
         if (accessInfo.hasCompany && accessInfo.companyData.length > 0) {
           setCompanyId(accessInfo.companyData[0]?.id || null);
+          if (accessInfo.companyData[0]?.id) {
+            localStorage.setItem("companyId", accessInfo.companyData[0].id);
+          }
         } else {
           setCompanyId(null);
         }
@@ -250,7 +253,13 @@ function CompanyDashboard() {
               ${activeTab === tab.id ? 
                 'tab-active text-primary border-primary font-medium' : 
                 'text-base-content hover:text-primary hover:border-base-300'}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              if (tab.id === 'journey') {
+                navigate('/company/journey');
+              } else {
+                setActiveTab(tab.id);
+              }
+            }}
             aria-selected={activeTab === tab.id}
           >
             <tab.icon className="h-4 w-4 mr-1" /> {tab.name}

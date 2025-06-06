@@ -36,7 +36,7 @@ function getSupabaseClient(): SupabaseClient {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: 'wheel-auth-storage', // Use a specific storage key to avoid conflicts
-        debug: import.meta.env.DEV // Enable debug mode only in development
+        debug: false // Disable debug logging to reduce console noise
       }
     });
 
