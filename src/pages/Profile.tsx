@@ -15,6 +15,11 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(!profile?.full_name); // State for editing the main profile
   const [integrations, setIntegrations] = useState<ExternalLMSIntegration[]>([]);
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
+  const [isEditingLearningProfile, setIsEditingLearningProfile] = useState(false); // State for editing learning profile
+  const [isLoading, setIsLoading] = useState(false);
+  const [enhancedProfile, setEnhancedProfile] = useState<any>(null);
+  
+  // Calculate companyId after enhancedProfile is declared
   const companyId = enhancedProfile?.company_id || profile?.company_id || ""; // Try to get companyId
 
   useEffect(() => {
@@ -24,9 +29,6 @@ export default function Profile() {
       .then(setIntegrations)
       .finally(() => setLoadingIntegrations(false));
   }, [companyId]);
-  const [isEditingLearningProfile, setIsEditingLearningProfile] = useState(false); // State for editing learning profile
-  const [isLoading, setIsLoading] = useState(false);
-  const [enhancedProfile, setEnhancedProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
     // Basic profile
     full_name: profile?.full_name || '',
@@ -149,6 +151,13 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user?.id) {
+      console.error('No user ID available');
+      alert('Error: User not found. Please try logging in again.');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -164,7 +173,7 @@ export default function Profile() {
           social_links: formData.social_links,
           updated_at: new Date().toISOString()
         })
-        .eq('id', profile?.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -203,6 +212,20 @@ export default function Profile() {
       setIsLoading(false);
     }
   };
+
+  // Don't render if user is not loaded yet
+  if (!user) {
+    return (
+      <div className="py-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-6">

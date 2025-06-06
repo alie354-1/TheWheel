@@ -65,4 +65,36 @@ export default {
     themes: ["light", "dark", "cupcake", "corporate"], // Add themes you might use
     // other daisyui config options
   },
+  safelist: [ 
+    'flex',
+    'flex-col',
+    'flex-row',
+    'grid',
+    'grid-cols-1',
+    'grid-cols-2',
+    'grid-cols-3',
+    'grid-cols-4',
+    'grid-cols-5',
+    'grid-cols-6',
+    'gap-1', 'gap-2', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8',
+    'p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7', 'p-8',
+    'm-1', 'm-2', 'm-3', 'm-4', 'm-5', 'm-6', 'm-7', 'm-8',
+    'w-1/2', 'w-1/3', 'w-2/3', 'w-1/4', 'w-3/4', 'w-full',
+    'w-1/5', 'w-2/5', 'w-3/5', 'w-4/5',
+    'w-1/6', 'w-5/6',
+    'h-full',
+    'text-left', 'text-center', 'text-right', 'text-justify',
+    'items-start', 'items-center', 'items-end', 'items-stretch', 'items-baseline',
+    'justify-start', 'justify-center', 'justify-end', 'justify-between', 'justify-around', 'justify-evenly',
+    'rounded', 'rounded-md', 'rounded-lg', 'rounded-xl', 'rounded-full',
+    'shadow', 'shadow-md', 'shadow-lg', 'shadow-xl',
+    'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl',
+    'font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold',
+    'leading-tight', 'leading-normal', 'leading-loose',
+    // Add any other specific layout classes you see in your HTML
+    // Example for dynamic classes if needed:
+    // {
+    //   pattern: /bg-(red|green|blue)-(100|500|700)/, 
+    // },
+  ]
 };

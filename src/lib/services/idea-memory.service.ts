@@ -219,56 +219,21 @@ class IdeaMemoryService {
   async isFeatureEnabled(featureName: string, userId?: string, context?: string): Promise<boolean> {
     // Enable enhanced_idea_generation feature only for idea refinement, not for standup
     if (featureName === 'enhanced_idea_generation') {
-      // If context is 'standup', disable the feature to prevent hanging
       if (context === 'standup') {
         console.log('Enhanced idea generation disabled for standup context');
-        return Promise.resolve(false);
+        return false;
       }
-      
-      // For idea refinement or unspecified context, enable the feature
       console.log('Enhanced idea generation feature enabled for idea refinement');
-      return Promise.resolve(true);
+      return true;
     }
-    
+    // Use the main feature flag system
     try {
-      // First check if the feature_flags table exists
-      const { error: tableCheckError } = await supabase
-        .from('feature_flags')
-        .select('count(*)', { count: 'exact', head: true });
-      
-      // If the table doesn't exist, return a default value
-      if (tableCheckError && tableCheckError.code === '42P01') {
-        console.log('Feature flags table does not exist, using default values');
-        return Promise.resolve(false);
-      }
-      
-      // If the table exists, proceed with normal checks
-      // Check for user-specific flag first
-      if (userId) {
-        const { data: userFlag } = await supabase
-          .from('feature_flags')
-          .select('value')
-          .eq('name', featureName)
-          .eq('user_id', userId)
-          .single();
-          
-        if (userFlag) {
-          return Promise.resolve(userFlag.value);
-        }
-      }
-      
-      // Fall back to global flag
-      const { data: globalFlag } = await supabase
-        .from('feature_flags')
-        .select('value')
-        .eq('name', featureName)
-        .is('user_id', null)
-        .single();
-        
-      return Promise.resolve(globalFlag?.value || false);
+      // Dynamically import to avoid circular dependency if needed
+      const { featureFlagsService } = await import('./feature-flags.service');
+      return featureFlagsService.isEnabled(featureName);
     } catch (error) {
-      console.error(`Error checking feature flag ${featureName}:`, error);
-      return Promise.resolve(false); // Default to disabled if there's an error
+      console.error(`Error checking feature flag ${featureName} via main feature flag system:`, error);
+      return false;
     }
   }
 }

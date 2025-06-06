@@ -6,8 +6,18 @@
  */
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { FeatureFlags, FeatureFlag } from '../services/feature-flags';
-import { serviceRegistry } from '../services/registry';
+// import { FeatureFlags, FeatureFlag } from '../services/feature-flags'; // This import might need to be from '../services/feature-flags.service' if types are there
+import { FeatureFlags } from '../store'; // Import FeatureFlags from store
+import { getFeatureFlagsService, serviceRegistry } from '../services/registry'; // Import getFeatureFlagsService
+
+// Define a basic FeatureFlag type, align with what FeatureFlagsService.getFlag might return
+export interface FeatureFlag {
+  enabled: boolean;
+  visible?: boolean;
+  value?: any;
+  [key: string]: any; // Allow other properties
+}
+
 
 // Define the context interface
 interface FeatureFlagsContextValue {
@@ -51,14 +61,14 @@ export const FeatureFlagsProvider: React.FC<FeatureFlagsProviderProps> = ({ chil
   const [error, setError] = useState<string | null>(null);
   
   // Get feature flags service from registry
-  const featureFlagsService = serviceRegistry.get('featureFlags');
+  const featureFlagsService = getFeatureFlagsService(); // Use typed getter
   
   // Initialize on first mount
   useEffect(() => {
     const initializeFlags = async () => {
       try {
         setLoading(true);
-        await featureFlagsService.initialize();
+        await featureFlagsService.loadFeatureFlags(); // Changed from initialize
         setFlags(featureFlagsService.getAllFlags());
         setInitialized(true);
         setError(null);

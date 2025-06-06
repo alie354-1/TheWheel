@@ -32,24 +32,29 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   
   // Subscribe to notification changes
+  /*
   useEffect(() => {
-    const unsubscribe = notificationService.subscribe(updatedNotifications => {
-      setNotifications(updatedNotifications);
-    });
-    
-    return unsubscribe;
+    // TODO: Implement subscribe method in notificationService or use a different approach
+    // const unsubscribe = notificationService.subscribe(updatedNotifications => {
+    //   setNotifications(updatedNotifications);
+    // });
+    // return unsubscribe;
+    console.warn("NotificationService.subscribe is not implemented. Real-time notifications will not work.");
+    return () => {}; // Return an empty function for cleanup
   }, [notificationService]);
+  */
   
   // Create context value
   const contextValue: NotificationContextValue = {
     notifications,
-    notify: (message, type, options) => notificationService.notify(message, type, options),
-    success: (message, options) => notificationService.success(message, options),
-    info: (message, options) => notificationService.info(message, options),
-    warning: (message, options) => notificationService.warning(message, options),
-    error: (message, options) => notificationService.error(message, options),
-    dismiss: (id) => notificationService.dismiss(id),
-    clear: () => notificationService.clear()
+    // Provide dummy implementations for now
+    notify: (message, type, options) => { console.warn(`Notification.notify called (not implemented): ${message}`); return 'mock-id'; },
+    success: (message, options) => { console.warn(`Notification.success called (not implemented): ${message}`); return 'mock-id'; },
+    info: (message, options) => { console.warn(`Notification.info called (not implemented): ${message}`); return 'mock-id'; },
+    warning: (message, options) => { console.warn(`Notification.warning called (not implemented): ${message}`); return 'mock-id'; },
+    error: (message, options) => { console.warn(`Notification.error called (not implemented): ${message}`); return 'mock-id'; },
+    dismiss: (id) => { console.warn(`Notification.dismiss called (not implemented): ${id}`); },
+    clear: () => { console.warn(`Notification.clear called (not implemented)`); setNotifications([]); }
   };
   
   return (

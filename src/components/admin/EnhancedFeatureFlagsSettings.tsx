@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Save, RotateCw, AlertCircle, Check, Layers, Eye, EyeOff, RefreshCw, User, Building } from 'lucide-react';
 import { useFeatureFlags } from '../../lib/hooks/useFeatureFlags';
 import { FeatureFlagCategory, FeatureFlagDefinition, FeatureFlagGroup } from '../../lib/services/feature-flags';
+import { featureFlagsService } from '../../lib/services/feature-flags';
 
 const EnhancedFeatureFlagsSettings: React.FC = () => {
   const { 
@@ -26,52 +27,41 @@ const EnhancedFeatureFlagsSettings: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [groups, setGroups] = useState<FeatureFlagGroup[]>([]);
   
-  // Load feature flag groups on component mount
+  // Load all feature flag groups on component mount
   useEffect(() => {
     if (initialized) {
-      const flagGroups = getGroupedDefinitions();
+      const flagGroups = featureFlagsService.getGroupedDefinitions();
       setGroups(flagGroups);
-      
+
       // Set default active tab
       if (flagGroups.length > 0 && !activeTab) {
         setActiveTab(flagGroups[0].name);
       }
     }
-  }, [initialized, getGroupedDefinitions, activeTab]);
+  }, [initialized, activeTab]);
+  
+  // No-op: Save button is removed, saving is instant on toggle
+  const handleSave = async () => {};
   
   /**
-   * Handle saving all feature flag changes
+   * Handle toggling a feature flag (instant save)
    */
-  const handleSave = async () => {
+  const toggleFlag = async (key: string, type: 'enabled' | 'visible') => {
     setIsLoading(true);
     setError('');
     setSuccess('');
-    
-    try {
-      // No need to explicitly save - all changes are already saved individually
-      // This is just a feedback mechanism
-      setSuccess('Feature flags updated successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      console.error('Error processing feature flags:', error);
-      setError(error.message || JSON.stringify(error));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  /**
-   * Handle toggling a feature flag
-   */
-  const toggleFlag = async (key: string, type: 'enabled' | 'visible') => {
     try {
       const currentFlag = flags[key];
       if (currentFlag) {
         await updateFeatureFlag(key, { [type]: !currentFlag[type] });
+        setSuccess('Saved');
+        setTimeout(() => setSuccess(''), 1000);
       }
     } catch (error: any) {
       console.error(`Error updating feature flag ${key}:`, error);
       setError(`Error updating ${key}: ${error.message || JSON.stringify(error)}`);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -209,69 +199,92 @@ const EnhancedFeatureFlagsSettings: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {group.features.map((feature) => (
-              <div key={feature.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h5 className="text-sm font-medium text-gray-900">{feature.name}</h5>
-                  <p className="text-sm text-gray-500">{feature.description}</p>
-                  {flags[feature.key]?.override && (
-                    <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      Override
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-4">
-                  {/* Visibility toggle */}
-                  <button
-                    onClick={() => toggleFlag(feature.key, 'visible')}
-                    className="p-1 rounded-full hover:bg-gray-200"
-                    title={flags[feature.key]?.visible ? 'Hide from navigation' : 'Show in navigation'}
+            {group.features.map((feature) => {
+              const isVisible = flags[feature.key]?.visible;
+              return (
+                  <div
+                    key={feature.key}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    style={{
+                      opacity: isVisible ? 1 : 0.5,
+                      cursor: isVisible ? "pointer" : "not-allowed",
+                      position: "relative",
+                    }}
+                    title={
+                      isVisible
+                        ? "Click to toggle visibility"
+                        : "Coming soon"
+                    }
                   >
-                    {flags[feature.key]?.visible ? (
-                      <Eye className="h-5 w-5 text-gray-600" />
-                    ) : (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-900">{feature.name}</h5>
+                    <p className="text-sm text-gray-500">{feature.description}</p>
+                    {flags[feature.key]?.override && (
+                      <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        Override
+                      </span>
                     )}
-                  </button>
-
-                  {/* Enabled/disabled toggle */}
-                  <button
-                    onClick={() => toggleFlag(feature.key, 'enabled')}
-                    className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                      flags[feature.key]?.enabled ? 'bg-indigo-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                        flags[feature.key]?.enabled ? 'translate-x-5' : 'translate-x-0'
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    {/* Visibility toggle */}
+                    <button
+                      onClick={() => {
+                        // Only allow toggling visibility if enabled
+                        if (flags[feature.key]?.enabled) {
+                          toggleFlag(feature.key, 'visible');
+                        }
+                      }}
+                      className="p-1 rounded-full hover:bg-gray-200"
+                      title={flags[feature.key]?.enabled ? (isVisible ? 'Hide from navigation' : 'Show in navigation') : 'Enable the feature to toggle visibility'}
+                      disabled={!flags[feature.key]?.enabled}
+                    >
+                      {flags[feature.key]?.enabled
+                        ? (isVisible ? (
+                            <Eye className="h-5 w-5 text-gray-600" />
+                          ) : (
+                            <EyeOff className="h-5 w-5 text-gray-400" />
+                          ))
+                        : (
+                            <EyeOff className="h-5 w-5 text-gray-300" />
+                          )
+                      }
+                    </button>
+                    {/* Enabled/disabled toggle */}
+                    <button
+                      onClick={() => toggleFlag(feature.key, 'enabled')}
+                      className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                        flags[feature.key]?.enabled ? 'bg-indigo-600' : 'bg-gray-200'
                       }`}
-                    />
-                  </button>
+                      title={flags[feature.key]?.enabled ? 'Turn off feature' : 'Turn on feature'}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                          flags[feature.key]?.enabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
 
+      {/* No Save button needed, saving is instant */}
       <div className="mt-6 flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={isLoading}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {isLoading ? (
-            <>
-              <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </button>
+        {isLoading && (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500">
+            <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+            Saving...
+          </span>
+        )}
+        {success && !isLoading && (
+          <span className="inline-flex items-center px-4 py-2 text-sm font-medium text-green-600">
+            <Check className="h-4 w-4 mr-2" />
+            {success}
+          </span>
+        )}
       </div>
     </div>
   );

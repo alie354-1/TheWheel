@@ -23,7 +23,13 @@
 
 /* Base styles that work with DaisyUI themes */
 @layer base {
+  html, body, #root {
+    @apply h-full m-0 p-0; /* Ensure full height and no margin/padding */
+  }
   body {
-    @apply bg-base-100 text-base-content;
+    @apply bg-base-100 text-base-content; /* This can still apply, but height/margin/padding are set above */
+  }
+  #root {
+    @apply h-full; /* Ensure #root itself is full height. display:flex might not be needed here. */
   }
 }

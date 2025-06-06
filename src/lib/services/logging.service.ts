@@ -9,18 +9,21 @@
  * Logging Service Interface
  */
 export interface LoggingService {
+  trace: (message: string, context?: any) => Promise<void>; // Added
+  debug: (message: string, context?: any) => Promise<void>; // Added
+  info: (message: string, context?: any) => Promise<void>; // Changed from logInfo and made mandatory
+  warn: (message: string, context?: any) => Promise<void>; // Changed from logWarning and made mandatory
+  error: (message: string, error?: Error, context?: any) => Promise<void>; // Signature updated to match useLogger
+  fatal: (message: string, error?: Error, context?: any) => Promise<void>; // Added
+
   logEvent: (eventType: string | any, data?: any) => Promise<void>;
   startSession: (userId?: string, companyId?: string) => Promise<string>;
   endSession: (sessionId?: string) => Promise<void>;
-  logError: (error: Error, context?: any) => Promise<void>;
+  // logError: (error: Error, context?: any) => Promise<void>; // Replaced by new error signature
   logNavigation: (path: string, referrer?: string) => Promise<void>;
   logInteraction: (elementId: string, action: string, data?: any) => Promise<void>;
   logPerformance: (metric: string, value: number, context?: any) => Promise<void>;
   getSessionId: () => string | null;
-
-  // Optional methods potentially available in enhanced implementations
-  logInfo?: (message: string, context?: any) => Promise<void>;
-  logWarning?: (message: string, context?: any) => Promise<void>;
 
   // Additional methods used by hooks
   logSystemEvent: (category: string, source: string, action: string, data?: any) => Promise<void>;
@@ -81,8 +84,43 @@ class DisabledLoggingService implements LoggingService {
   /**
    * Log an error (no-op)
    */
-  async logError(error: Error, context: any = {}): Promise<void> {
-    console.error(`[LoggingService] Error (DISABLED):`, error.message, context);
+  async trace(message: string, context: any = {}): Promise<void> {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[LoggingService] Trace (DISABLED): ${message}`, context);
+    }
+    return Promise.resolve();
+  }
+
+  async debug(message: string, context: any = {}): Promise<void> {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[LoggingService] Debug (DISABLED): ${message}`, context);
+    }
+    return Promise.resolve();
+  }
+  
+  async info(message: string, context: any = {}): Promise<void> { // Renamed from logInfo
+    // Only log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[LoggingService] Info (DISABLED): ${message}`, context);
+    }
+    return Promise.resolve();
+  }
+
+  async warn(message: string, context: any = {}): Promise<void> { // Renamed from logWarning
+    // Only log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[LoggingService] Warning (DISABLED): ${message}`, context);
+    }
+    return Promise.resolve();
+  }
+
+  async error(message: string, error?: Error, context: any = {}): Promise<void> { // Updated signature
+    console.error(`[LoggingService] Error (DISABLED): ${message}`, error || '', context);
+    return Promise.resolve();
+  }
+
+  async fatal(message: string, error?: Error, context: any = {}): Promise<void> {
+    console.error(`[LoggingService] Fatal (DISABLED): ${message}`, error || '', context);
     return Promise.resolve();
   }
 

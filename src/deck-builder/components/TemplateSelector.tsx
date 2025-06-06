@@ -1,27 +1,34 @@
 import React from 'react';
-import { Template } from '../types';
+import { DeckDataTemplate, SectionType, DeckSection } from '../types'; // Added DeckSection for explicit typing
 import { DeckService } from '../services/deckService';
+import { Sparkles, ArrowRight, CheckCircle, FileText } from 'lucide-react';
 
 interface TemplateSelectorProps {
   onSelectTemplate: (templateId: string, title: string) => void;
+  onCreateEmpty?: (title: string) => void; // Made onCreateEmpty prop optional
   onCancel: () => void;
 }
 
-export function TemplateSelector({ onSelectTemplate, onCancel }: TemplateSelectorProps) {
+export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel }: TemplateSelectorProps) {
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [deckTitle, setDeckTitle] = React.useState<string>('');
   
-  const templates = DeckService.getTemplates();
+  const templates: DeckDataTemplate[] = DeckService.getTemplates(); // Explicitly type as DeckDataTemplate[]
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedTemplate && deckTitle.trim()) {
-      onSelectTemplate(selectedTemplate, deckTitle.trim());
-    }
-  };
+  // handleSubmit is not directly used for form submission anymore, but logic is in the button onClick
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (selectedTemplate && deckTitle.trim()) {
+  //     onSelectTemplate(selectedTemplate, deckTitle.trim());
+  //   }
+  // };
 
-  const getCategoryIcon = (category: Template['category']) => {
-    switch (category) {
+  const getCategoryIcon = (category: DeckDataTemplate['category']) => { // Use DeckDataTemplate['category']
+    switch (category?.toLowerCase()) { // Add optional chaining and toLowerCase for robustness
+      case 'business':
+        return '💼'; // Business icon
+      case 'portfolio':
+        return '🎨'; // Portfolio icon
       case 'vc-pitch':
         return '💰';
       case 'product-demo':
@@ -31,139 +38,222 @@ export function TemplateSelector({ onSelectTemplate, onCancel }: TemplateSelecto
       case 'technical':
         return '⚡';
       default:
-        return '📊';
+        return '📊'; // Default icon
     }
   };
 
-  const getCategoryColor = (category: Template['category']) => {
-    switch (category) {
+  const getCategoryGradient = (category: DeckDataTemplate['category']) => { // Use DeckDataTemplate['category']
+    switch (category?.toLowerCase()) { // Add optional chaining and toLowerCase
+      case 'business':
+        return 'from-sky-100 via-cyan-100 to-blue-100 border-sky-200';
+      case 'portfolio':
+        return 'from-purple-100 via-pink-100 to-rose-100 border-purple-200';
       case 'vc-pitch':
-        return 'border-green-200 bg-green-50';
+        return 'from-green-100 via-emerald-100 to-teal-100 border-green-200';
       case 'product-demo':
-        return 'border-blue-200 bg-blue-50';
+        return 'from-blue-100 via-indigo-100 to-purple-100 border-blue-200';
       case 'market-opportunity':
-        return 'border-purple-200 bg-purple-50';
+        return 'from-fuchsia-100 via-pink-100 to-rose-100 border-fuchsia-200'; // Adjusted gradient
       case 'technical':
-        return 'border-orange-200 bg-orange-50';
+        return 'from-orange-100 via-amber-100 to-yellow-100 border-orange-200';
       default:
-        return 'border-gray-200 bg-gray-50';
+        return 'from-slate-100 via-gray-100 to-slate-100 border-gray-200';
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Create New Pitch Deck</h2>
-          <p className="text-gray-600 mt-1">Choose a template to get started</p>
+    <div className="p-8">
+      {/* Removed form onSubmit as it's handled by button click now */}
+      <div className="space-y-8">
+        {/* Deck Title Input */}
+        <div className="space-y-3">
+          <label htmlFor="deckTitle" className="block text-lg font-semibold text-slate-900">
+            What's your deck called?
+          </label>
+          <input
+            type="text"
+            id="deckTitle"
+            value={deckTitle}
+            onChange={(e) => setDeckTitle(e.target.value)}
+            placeholder="Enter your pitch deck title..."
+            className="w-full px-6 py-4 text-lg border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/80 backdrop-blur-sm"
+            required
+          />
+          <p className="text-sm text-slate-600">Give your deck a memorable name that captures your vision</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Deck Title Input */}
-          <div className="mb-6">
-            <label htmlFor="deckTitle" className="block text-sm font-medium text-gray-700 mb-2">
-              Deck Title
-            </label>
-            <input
-              type="text"
-              id="deckTitle"
-              value={deckTitle}
-              onChange={(e) => setDeckTitle(e.target.value)}
-              placeholder="Enter your pitch deck title..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
+        {/* Template Selection */}
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Choose Your Starting Point</h3>
+            <p className="text-slate-600">Each template is designed for different presentation goals</p>
           </div>
 
-          {/* Template Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4">
-              Choose Template
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`relative cursor-pointer rounded-lg border-2 p-4 hover:shadow-md transition-all ${
-                    selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : `${getCategoryColor(template.category)} hover:border-gray-300`
-                  }`}
-                  onClick={() => setSelectedTemplate(template.id)}
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="text-2xl">{getCategoryIcon(template.category)}</div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{template.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                      <div className="mt-3">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {template.sections.length} sections
-                        </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Start from Scratch Option */}
+            <div
+              key="start-from-scratch"
+              className={`group relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                selectedTemplate === 'start-from-scratch'
+                  ? 'border-blue-500 shadow-lg shadow-blue-100 scale-[1.02]'
+                  : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-100 border-gray-200 hover:border-slate-300'
+              }`}
+              onClick={() => setSelectedTemplate('start-from-scratch')}
+            >
+              {selectedTemplate === 'start-from-scratch' && (
+                <div className="absolute -top-2 -right-2 z-10">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 bg-white/90 rounded-2xl shadow-lg flex items-center justify-center text-2xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                    📄
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    Start from Scratch
+                  </h3>
+                  <p className="text-slate-700 mb-4 leading-relaxed">
+                    Begin with a blank canvas and build your deck your way.
+                  </p>
+                  {selectedTemplate === 'start-from-scratch' && (
+                      <div className="flex items-center space-x-2 text-blue-600">
+                        <span className="text-sm font-medium">Selected</span>
+                        <ArrowRight className="w-4 h-4" />
                       </div>
+                    )}
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className={`group relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                  selectedTemplate === template.id
+                    ? 'border-blue-500 shadow-lg shadow-blue-100 scale-[1.02]'
+                    : `bg-gradient-to-br ${getCategoryGradient(template.category)} hover:border-slate-300`
+                }`}
+                onClick={() => setSelectedTemplate(template.id)}
+              >
+                {/* Selection Indicator */}
+                {selectedTemplate === template.id && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Template Content */}
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-white/90 rounded-2xl shadow-lg flex items-center justify-center text-2xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+                      {getCategoryIcon(template.category)}
                     </div>
                   </div>
                   
-                  {selectedTemplate === template.id && (
-                    <div className="absolute top-2 right-2">
-                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      {template.name}
+                    </h3>
+                    <p className="text-slate-700 mb-4 leading-relaxed">
+                      {template.description}
+                    </p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-sm text-slate-600">
+                        <FileText className="w-4 h-4" />
+                        {/* Access sections from template.deck */}
+                        <span className="font-medium">{template.deck.sections.length} sections</span>
                       </div>
+                      
+                      {selectedTemplate === template.id && (
+                        <div className="flex items-center space-x-2 text-blue-600">
+                          <span className="text-sm font-medium">Selected</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Template Preview */}
-          {selectedTemplate && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">Template Preview</h4>
-              <div className="text-sm text-gray-600">
-                {(() => {
-                  const template = templates.find(t => t.id === selectedTemplate);
-                  return template ? (
-                    <div className="space-y-1">
-                      <p><strong>Sections included:</strong></p>
-                      <ul className="list-disc list-inside space-y-1 ml-4">
-                        {template.sections.map((sectionType, index) => (
-                          <li key={index} className="capitalize">
-                            {sectionType.replace('-', ' ')}
-                          </li>
+                {/* Hover Effect Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Template Preview */}
+        {selectedTemplate && (
+          <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-slate-900 mb-3">Your deck will include:</h4>
+                <div className="text-slate-700">
+                  {(() => {
+                    const template = templates.find(t => t.id === selectedTemplate);
+                    return template && template.deck && Array.isArray(template.deck.sections) ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {template.deck.sections.map((section: DeckSection, index: number) => ( // Explicitly type section and index
+                          <div key={section.id || index} className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="capitalize font-medium">
+                              {section.title || (section.type as SectionType).replace('-', ' ')}
+                            </span>
+                          </div>
                         ))}
-                      </ul>
-                    </div>
-                  ) : null;
-                })()}
+                      </div>
+                    ) : (selectedTemplate === 'start-from-scratch' ? <p>A single blank slide will be created.</p> : null) ;
+                  })()}
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!selectedTemplate || !deckTitle.trim()}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Create Deck
-            </button>
           </div>
-        </form>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-end space-x-4 pt-6 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-3 text-slate-600 border-2 border-slate-300 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all duration-200"
+          >
+            Back to Library
+          </button>
+          <button
+            type="button" 
+            onClick={() => {
+              if (deckTitle.trim()) {
+                if (selectedTemplate === 'start-from-scratch') {
+                  if (onCreateEmpty) {
+                    onCreateEmpty(deckTitle.trim());
+                  } else {
+                    console.error('onCreateEmpty function is not provided');
+                  }
+                } else if (selectedTemplate) {
+                  onSelectTemplate(selectedTemplate, deckTitle.trim());
+                }
+              }
+            }}
+            disabled={!deckTitle.trim() || !selectedTemplate}
+            className="group inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            <span>Create Deck</span>
+            <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+          </button>
+        </div>
       </div>
     </div>
   );

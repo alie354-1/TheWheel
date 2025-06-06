@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "../lib/supabase.ts";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -57,6 +57,14 @@ const Login: React.FC = () => {
           {loading ? "Signing in..." : "Sign In"}
         </button>
       </form>
+      <div className="mt-4 text-center">
+        <p className="text-sm text-gray-600">
+          Don't have an account?{" "}
+          <Link to="/signup" className="text-indigo-600 hover:underline">
+            Sign up here
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };

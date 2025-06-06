@@ -1,69 +1,80 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
-import Login from './pages/Login';
-import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login.tsx';
+import Signup from './pages/Signup.tsx';
+import PrivateRoute from './components/PrivateRoute.tsx';
 
 // Layout components
-import Layout from './components/Layout';
+import Layout from './components/Layout.tsx';
 
 // Static (eagerly loaded) pages
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import ProfileSetup from './pages/ProfileSetup';
-import OnboardingPage from './pages/OnboardingPage';
-import InitialOnboardingPage from './pages/InitialOnboardingPage';
+import Dashboard from './pages/Dashboard.tsx';
+import Profile from './pages/Profile.tsx';
+import ProfileSetup from './pages/ProfileSetup.tsx';
+import OnboardingPage from './pages/OnboardingPage.tsx';
+import InitialOnboardingPage from './pages/InitialOnboardingPage.tsx';
 
-import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage';
-import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage';
-import DomainDetail from './business-ops-hub/pages/DomainDetail';
-import StepDetailPage from './business-ops-hub/pages/StepDetailPage';
-import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage';
-import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage';
+import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage.tsx';
+import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage.tsx';
+import DomainDetail from './business-ops-hub/pages/DomainDetail.tsx';
+import StepDetailPage from './components/company/journey/pages/StepDetailPage.tsx';
+import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage.tsx';
+import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage.tsx';
 
 // Sprint 13-16 feature components
-import TeamManager from './business-ops-hub/components/team/TeamManager';
-import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository';
-import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager';
-import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide';
+import TeamManager from './business-ops-hub/components/team/TeamManager.tsx';
+import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository.tsx';
+import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager.tsx';
+import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide.tsx';
+
+// Test pages
+const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage.tsx'));
+const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage.tsx'));
+const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage.tsx'));
 
 // Lazily loaded pages for better initial load performance
-const IdeaHub = lazy(() => import('./pages/IdeaHub'));
-const EnhancedIdeaHubPage = lazy(() => import('./pages/EnhancedIdeaHubPage'));
-const DeckBuilderPage = lazy(() => import('./pages/DeckBuilderPage')); // Phase 1 Deck Builder
-const DeckLibraryPage = lazy(() => import('./deck-builder/pages/DeckLibraryPage')); // Phase 2 Deck Library
-const DeckEditPage = lazy(() => import('./deck-builder/pages/DeckEditPage')); // Phase 2 Deck Edit
-const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage'));
-const CompanySetup = lazy(() => import('./pages/company/CompanySetup'));
-const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard'));
-const RefactoredCompanyDashboard = lazy(() => import('./pages/company/RefactoredCompanyDashboard'));
-const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage'));
-const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage'));
-const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage'));
-const JourneyPage = lazy(() => import('./pages/company/JourneyPage'));
-const RefactoredJourneyPage = lazy(() => import('./pages/company/RefactoredJourneyPage'));
-const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage'));
-const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage'));
-const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage'));
-const JourneyOverviewPage = lazy(() => import('./pages/company/JourneyOverviewPage'));
-const CompanyToolsPage = lazy(() => import('./pages/company/CompanyToolsPage'));
-const CompanyToolEvaluationPage = lazy(() => import('./pages/company/CompanyToolEvaluationPage'));
-const FinancialHubPage = lazy(() => import('./pages/FinancialHubPage'));
-const ToolsMarketplacePage = lazy(() => import('./pages/ToolsMarketplacePage'));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
-const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage'));
-const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage'));
-const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage'));
-const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage'));
-const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage'));
-const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard'));
+const IdeaHub = lazy(() => import('./pages/IdeaHub.tsx'));
+const EnhancedIdeaHubPage = lazy(() => import('./pages/EnhancedIdeaHubPage.tsx'));
+// const DeckBuilderPage = lazy(() => import('./pages/DeckBuilderPage.tsx')); // Phase 1 Deck Builder - REMOVED
+// const VisualDeckBuilderPage = lazy(() => import('./pages/VisualDeckBuilderPage.tsx')); // Visual Deck Builder - REMOVED
+const DeckLibraryPage = lazy(() => import('./deck-builder/pages/DeckLibraryPage.tsx')); // Phase 2 Deck Library
+const DeckEditPage = lazy(() => import('./deck-builder/pages/DeckEditPage.tsx')); // Phase 2 Deck Edit
+// const DeckPreviewPage = lazy(() => import('./deck-builder/pages/DeckPreviewPage.tsx')); // Phase 2 Deck Preview - REPLACED
+const DeckPreviewHostPage = lazy(() => import('./deck-builder/pages/DeckPreviewHostPage.tsx')); // New Preview Host Page
+const SharedDeckViewerPage = lazy(() => import('./pages/SharedDeckViewerPage.tsx')); // Added for Unified Sharing
+const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage.tsx'));
+const CompanySetup = lazy(() => import('./pages/company/CompanySetup.tsx'));
+const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard.tsx'));
+const RefactoredCompanyDashboard = lazy(() => import('./pages/company/RefactoredCompanyDashboard.tsx'));
+const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage.tsx'));
+const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage.tsx'));
+const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage.tsx'));
+const JourneyPage = lazy(() => import('./pages/company/JourneyPage.tsx'));
+const RefactoredJourneyPage = lazy(() => import('./pages/company/RefactoredJourneyPage.tsx'));
+const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage.tsx'));
+const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage.tsx'));
+const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage.tsx'));
+const JourneyOverviewPage = lazy(() => import('./pages/company/JourneyOverviewPage.tsx'));
+const CompanyToolsPage = lazy(() => import('./pages/company/CompanyToolsPage.tsx'));
+const CompanyToolEvaluationPage = lazy(() => import('./pages/company/CompanyToolEvaluationPage.tsx'));
+const FinancialHubPage = lazy(() => import('./pages/FinancialHubPage.tsx'));
+const ToolsMarketplacePage = lazy(() => import('./pages/ToolsMarketplacePage.tsx'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage.tsx'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel.tsx'));
+const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage.tsx'));
+const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage.tsx'));
+const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage.tsx'));
+const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage.tsx'));
+const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage.tsx')); // Added for Deck Admin
+const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage.tsx'));
+const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard.tsx'));
 
 // Idea Hub pages
-const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration'));
-const Refinement = lazy(() => import('./pages/idea-hub/Refinement'));
-const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage'));
-const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot'));
+const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration.tsx'));
+const Refinement = lazy(() => import('./pages/idea-hub/Refinement.tsx'));
+const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage.tsx'));
+const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot.tsx'));
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -73,22 +84,41 @@ const LoadingFallback = () => (
 );
 
 // Import our AppProvider
-import { AppProvider } from './lib/contexts/AppProvider';
+import { AppProvider } from './lib/contexts/AppProvider.tsx';
+import { Provider as TooltipProvider } from '@radix-ui/react-tooltip';
+import JourneyHomePage from './components/company/journey/pages/JourneyHomePage.tsx';
 
 const App: React.FC = () => {
   return (
     <AppProvider captureErrors={true} displayErrors={true}>
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes>
+      <TooltipProvider>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           {/* Authentication & Onboarding */}
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/initial-onboarding" element={<InitialOnboardingPage />} />
           <Route path="/onboarding-wizard" element={<OnboardingWizardPage />} />
           <Route path="/profile-setup" element={<ProfileSetup />} />
 
+          {/* Publicly accessible shared deck view */}
+          <Route path="/deck/shared/:shareToken" element={<SharedDeckViewerPage />} />
+
+          {/* Deck Preview Host Page - outside main Layout for true full-screen */}
+          <Route element={<PrivateRoute />}> {/* Assuming preview requires auth */}
+            <Route path="deck-builder/preview/:deckId" element={<DeckPreviewHostPage />} />
+          </Route>
+
           {/* Main Application */}
+          {/* Visual Deck Builder route removed as UnifiedDeckBuilder is used via DeckEditPage and potentially a new deck route */}
+          {/* 
+          <Route element={<PrivateRoute />}>
+            <Route path="visual-deck-builder" element={<VisualDeckBuilderPage />} />
+          </Route> 
+          */}
+
           <Route element={<PrivateRoute />}>
             <Route path="/" element={<Layout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />
@@ -116,7 +146,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<CompanyDashboard />} />
                 <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
-                <Route path="journey" element={<JourneyPage />} />
+                <Route path="journey" element={<JourneyHomePage />} />
                 <Route path="journey-new" element={<RefactoredJourneyPage />} />
                 <Route path="journey/steps" element={<JourneyStepsPage />} />
                 <Route path="journey/steps/:stepId" element={<JourneyStepPage />} />
@@ -136,15 +166,15 @@ const App: React.FC = () => {
                 <Route path="refinement" element={<Refinement />} />
                 <Route path="saved" element={<SavedIdeasPage />} />
                 <Route path="cofounder-bot" element={<CofounderBot />} />
-                <Route path="deck-builder" element={<DeckBuilderPage />} /> {/* Phase 1 Deck Builder */}
+                {/* <Route path="deck-builder" element={<DeckBuilderPage />} /> Phase 1 Deck Builder - REMOVED */}
               </Route>
 
-              {/* Deck Builder - Phase 2 */}
+              {/* Deck Builder - Unified routes */}
               <Route path="deck-builder">
                 <Route index element={<Navigate to="library" replace />} />
                 <Route path="library" element={<DeckLibraryPage />} />
                 <Route path="edit/:deckId" element={<DeckEditPage />} />
-                <Route path="preview/:deckId" element={<DeckEditPage />} />
+                {/* preview/:deckId route moved outside Layout */}
               </Route>
               
               {/* Financial Hub */}
@@ -163,10 +193,14 @@ const App: React.FC = () => {
                 <Route path="tool-moderation" element={<AdminToolModerationPage />} />
                 <Route path="journey-content" element={<AdminJourneyContentPage />} />
                 <Route path="ask-wheel-requests" element={<AskWheelRequestsPage />} />
+                <Route path="deck-insights" element={<DeckAdminDashboardPage />} /> {/* Added Deck Admin Route */}
               </Route>
               
               {/* Demo & Development */}
               <Route path="terminology-demo" element={<TerminologyDemoPage />} />
+              <Route path="test-deck-builder" element={<TestDeckBuilderPage />} />
+              <Route path="simple-drag-test" element={<SimpleDragTestPage />} />
+              <Route path="manual-drag-test" element={<ManualDragTestPage />} />
             </Route>
           </Route>
           
@@ -184,11 +218,17 @@ const App: React.FC = () => {
               `}}/>
             </div>
           } />
+
+      {/* New Journey System */}
+      <Route path="/journey" element={<JourneyHomePage />} />
+          <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
+          <Route path="/journey/map" element={<JourneyMapPage />} />
           
           {/* Fallback for unknown routes - temporary error page */}
           <Route path="*" element={<Navigate to="/route-not-found" replace />} />
         </Routes>
       </Suspense>
+      </TooltipProvider>
     </AppProvider>
   );
 };

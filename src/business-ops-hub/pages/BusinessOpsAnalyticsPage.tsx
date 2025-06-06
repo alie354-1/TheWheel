@@ -1,5 +1,5 @@
 import React from "react";
-import JourneyAnalyticsDashboard from "../../components/company/journey/Analytics/JourneyAnalyticsDashboard";
+import JourneyAnalyticsDashboard from "../../components/company/journey/LegacyAnalytics/LegacyJourneyAnalyticsDashboard.tsx";
 
 /**
  * Business Operations Hub Analytics Dashboard Page

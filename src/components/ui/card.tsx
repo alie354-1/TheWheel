@@ -30,9 +30,9 @@ export const Card: React.FC<CardProps> = ({
   const shadowClass = getShadowClass(shadow);
   const borderClass = bordered ? 'border border-base-300' : '';
   const cursorClass = onClick ? 'cursor-pointer' : '';
-  
+
   return (
-    <div 
+    <div
       className={`bg-base-100 rounded-lg ${shadowClass} ${borderClass} ${cursorClass} ${className}`}
       onClick={onClick}
     >
@@ -51,6 +51,33 @@ export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = ''
     <div className={`px-6 py-4 border-b border-base-200 ${className}`}>
       {children}
     </div>
+  );
+};
+
+type CardTitleProps = {
+  children: ReactNode;
+  className?: string;
+  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+};
+
+export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '', as: Component = 'h3' }) => {
+  return (
+    <Component className={`text-lg font-semibold leading-none tracking-tight ${className}`}>
+      {children}
+    </Component>
+  );
+};
+
+type CardDescriptionProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = '' }) => {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`}>
+      {children}
+    </p>
   );
 };
 

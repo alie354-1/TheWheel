@@ -5,14 +5,14 @@
  */
 
 import { useCallback } from 'react';
-import { getServiceRegistry } from '../services/registry';
-import { LogLevel } from '../services/logging/types';
+import { getLoggingService } from '../services/registry'; // Corrected import
+import { LogLevel } from '../services/logging/types'; // Assuming this path is correct
 
 /**
  * Hook that provides access to the logging service
  */
 export function useLogger() {
-  const loggingService = getServiceRegistry().loggingService;
+  const loggingService = getLoggingService(); // Correctly get the service
 
   const log = useCallback((level: LogLevel, message: string, context?: Record<string, any>) => {
     switch (level) {

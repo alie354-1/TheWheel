@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuthStore } from '../lib/store';
-import { supabase } from '../lib/supabase'; 
-import ErrorBoundary from '../components/ErrorBoundary';
+import { useAuth } from '../lib/contexts/AuthContext.tsx';
+import { supabase } from '../lib/supabase.ts'; 
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import {
   LayoutDashboard, 
   MessageSquare, 
@@ -22,15 +22,15 @@ import {
   Calendar,
   Plus
 } from 'lucide-react';
-import OnboardingProgressCard from '../components/OnboardingProgressCard';
-import StandupHistory from '../components/StandupHistory';
-import JoinCompanyDialog from '../components/JoinCompanyDialog';
+import OnboardingProgressCard from '../components/OnboardingProgressCard.tsx';
+import StandupHistory from '../components/StandupHistory.tsx';
+import JoinCompanyDialog from '../components/JoinCompanyDialog.tsx';
 
 // Import TaskManager with error handling
-const TaskManager = React.lazy(() => import('../components/tasks/TaskManager'));
+const TaskManager = React.lazy(() => import('../components/tasks/TaskManager.tsx'));
 
 export default function Dashboard() {
-  const { profile } = useAuthStore();
+  const { profile } = useAuth();
   const [hasCompany, setHasCompany] = useState(false);
   const [standupEntries, setStandupEntries] = useState<any[]>([]);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
@@ -38,14 +38,13 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [componentMounted, setComponentMounted] = useState(false);
 
-  // Enhanced debug logging
-  console.log("[Dashboard] Component rendering", {
-    profileExists: !!profile,
-    profileId: profile?.id,
-    componentMounted: componentMounted,
-    hasError: !!error,
-    isLoading
-  });
+  // Only log when there are issues
+  if (error) {
+    console.log("[Dashboard] Component rendering with error", {
+      hasError: !!error,
+      isLoading
+    });
+  }
 
   useEffect(() => {
     // Performance tracking
@@ -133,7 +132,7 @@ export default function Dashboard() {
       setError('');
 
       // Use the company access service to prevent infinite recursion
-      const { companyAccessService } = await import('../lib/services/company-access.service');
+      const { companyAccessService } = await import('../lib/services/company-access.service.ts');
       const result = await companyAccessService.checkUserCompanyAccess(profile.id);
       
       console.log("[Dashboard] Company access check result:", {

@@ -1,0 +1,478 @@
+/* === Deck Preview System - Rebuilt CSS === */
+
+/* --- Core Layout --- */
+.preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #f0f2f5; /* Neutral background for previewer chrome */
+  overflow: hidden;
+  position: relative; /* For potential absolute positioned elements like fullscreen controls overlay */
+}
+
+.preview-main-area { /* New wrapper for slide viewport and slide navigator */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: row; /* To accommodate slide navigator side-by-side */
+  overflow: hidden;
+  position: relative; 
+  box-sizing: border-box; /* Added */
+}
+
+.preview-slide-viewport {
+  flex-grow: 1;
+  display: flex;
+  align-items: center; /* Reverted to center */
+  justify-content: center;
+  overflow: auto; /* Changed from hidden to auto to enable scrolling */
+  position: relative; 
+  padding: 0; /* Removed default padding to maximize slide area */
+  background-color: #e0e0e0; 
+  box-sizing: border-box;
+}
+
+/* This is the direct parent of the slide content. It is scaled. */
+.preview-slide-wrapper {
+  position: relative;
+  /* Dimensions (width, height) are set via inline styles in DeckPreviewer.tsx to logical slide dimensions */
+  /* Transform (scale, transform-origin) is also set via inline styles in DeckPreviewer.tsx */
+  background-color: #ffffff; /* Default slide background, can be overridden by slide content bg */
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  overflow: visible; /* Allow scaled content to be visible for viewport scrolling */
+  /* Flex properties are kept to center the PreviewSlide content if it's smaller, though typically it won't be.
+     More importantly, the parent (.preview-slide-viewport) uses flex to center this wrapper. */
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+/* This class is applied to the root of PreviewSlide.tsx */
+/* Its dimensions, transform, and transform-origin will be set by inline styles. */
+/* It acts as the "logical" slide canvas that gets scaled. */
+.preview-slide-content {
+  position: relative; /* For absolute positioning of components within it */
+  background-color: transparent; /* Default, overridden by slide theme/style */
+  /* overflow: hidden; /* Content overflow handled by VisualComponentRenderer or individual components */
+  /* display: flex properties are now less relevant if it's a fixed-size scaled canvas */
+  /* but can be kept if section.slideStyle uses them for direct children not absolutely positioned */
+  display: flex; 
+  flex-direction: column; 
+  align-items: stretch; 
+  justify-content: stretch; 
+}
+
+/* --- Controls Bar --- */
+.preview-controls {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  position: relative; /* Ensure it's above other content if z-indexes are used elsewhere */
+  z-index: 10;
+}
+
+.preview-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.preview-control-button {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: #4b5563; /* gray-600 */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.preview-control-button:hover:not(:disabled) {
+  background-color: #f3f4f6; /* gray-100 */
+  color: #1f2937; /* gray-800 */
+}
+
+.preview-control-button:disabled {
+  color: #9ca3af; /* gray-400 */
+  cursor: not-allowed;
+}
+
+.preview-control-button.active {
+  background-color: #e0e7ff; /* indigo-100, or a suitable active color */
+  color: #3730a3; /* indigo-700 */
+}
+
+.preview-slide-number {
+  font-size: 0.875rem;
+  color: #4b5563;
+  min-width: 50px; /* Ensure consistent width */
+  text-align: center;
+}
+
+/* --- Fullscreen Mode --- */
+.preview-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  z-index: 1000;
+  background-color: #111827; /* Even darker for fullscreen (gray-900) */
+}
+
+.preview-container.fullscreen .preview-main-area {
+  /* Ensure main area also respects fullscreen */
+}
+
+.preview-container.fullscreen .preview-slide-viewport {
+  padding: 0; /* No padding in fullscreen */
+  background-color: transparent; /* Viewport bg is same as container in fullscreen */
+  width: 100vw; /* Use full viewport width */
+  height: 100vh; /* Use full viewport height */
+  display: flex;
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  position: relative; /* Ensure proper positioning context */
+}
+
+/* Direct fullscreen class on viewport (alternative styling approach) */
+.preview-slide-viewport.fullscreen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ensure that the wrapper has the same layout in both small preview and fullscreen */
+.preview-slide-viewport.fullscreen .preview-slide-wrapper {
+  /* Make sure it uses exact same positioning and scaling as small preview */
+  position: relative;
+  margin: auto;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  /* Ensure no override of transformOrigin */
+  transform-origin: center center !important;
+}
+
+.preview-container.fullscreen .preview-slide-wrapper {
+  /* width/height/max-width/max-height will ensure it fits while maintaining aspect ratio */
+  box-shadow: none; /* No shadow in fullscreen */
+}
+
+.preview-container.fullscreen .preview-controls {
+  position: absolute;
+  bottom: 10px; /* Give some space from edge */
+  left: 50%;
+  transform: translateX(-50%); /* Center the controls */
+  width: auto; /* Fit content */
+  max-width: 90%; /* Prevent overflow on small screens */
+  background-color: rgba(31, 41, 55, 0.85); /* semi-transparent dark (gray-800) */
+  border: 1px solid rgba(55, 65, 81, 0.5); /* gray-700 for subtle border */
+  border-radius: 0.5rem;
+  color: white;
+  z-index: 1001; /* Above slide content */
+  padding: 0.5rem 1rem; /* Slightly less padding for compact look */
+}
+
+.preview-container.fullscreen .preview-control-button {
+  color: #e5e7eb; /* light gray for text on dark bg */
+}
+.preview-container.fullscreen .preview-control-button:hover:not(:disabled) {
+  background-color: rgba(55, 65, 81, 0.9); /* slightly darker gray (gray-700) */
+  color: #ffffff;
+}
+.preview-container.fullscreen .preview-control-button:disabled {
+  color: #6b7280; /* darker gray for disabled (gray-600) */
+}
+.preview-container.fullscreen .preview-control-button.active {
+  background-color: rgba(79, 70, 229, 0.7); /* semi-transparent indigo-600 */
+  color: #ffffff;
+}
+.preview-container.fullscreen .preview-slide-number {
+  color: #e5e7eb;
+}
+
+/* --- Accessibility Toolbar (within PreviewControls) --- */
+.accessibility-toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* --- Screen Reader Announcer (Visually Hidden) --- */
+.sr-announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* --- Presenter Notes Panel --- */
+/* This panel will be a flex child of .preview-slide-viewport when active */
+.presenter-notes-panel {
+  width: 300px; /* Fixed width, adjust as needed */
+  max-width: 35%; /* Max percentage of viewport */
+  height: 100%;
+  background-color: #f8f9fa; /* Light background */
+  border-left: 1px solid #dee2e6; /* Separator line */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0; /* Prevent shrinking */
+  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth toggle */
+  z-index: 5; /* Below controls, above slide content if overlapping */
+}
+
+/* When presenter notes are active, the viewport becomes a row flex container */
+.preview-slide-viewport.with-presenter-notes {
+  /* padding-right: 0; If notes panel is inside viewport padding */
+}
+
+/* Adjust slide wrapper when presenter notes are visible */
+.preview-slide-viewport.with-presenter-notes .preview-slide-wrapper {
+  /* The viewport is display:flex, so the wrapper will naturally take remaining space
+     if it's flex-grow:1 and presenter-notes-panel has fixed width.
+     Max-width/max-height on wrapper will still respect aspect ratio.
+  */
+}
+
+.presenter-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #e9ecef; /* Header background */
+  flex-shrink: 0;
+}
+
+.presenter-notes-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #343a40;
+}
+
+.presenter-notes-title svg {
+  margin-right: 0.5rem;
+}
+
+.presenter-notes-close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #495057;
+  line-height: 1;
+}
+.presenter-notes-close-button:hover {
+  color: #000;
+}
+
+.presenter-notes-content {
+  flex-grow: 1;
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #212529;
+}
+
+.presenter-notes-content p.text-gray-400 { /* For "No notes" message */
+  color: #6c757d; /* Bootstrap's gray-600 */
+  font-style: italic;
+}
+
+/* --- Slide Navigator Panel (New) --- */
+.slide-navigator-panel {
+  width: 200px; /* Example width, adjust as needed */
+  max-width: 25%;
+  height: 100%; /* Full height of .preview-main-area */
+  background-color: #f8f9fa;
+  border-right: 1px solid #dee2e6; /* Or left if positioned on the right */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: width 0.3s ease-in-out;
+  z-index: 5;
+}
+
+.slide-navigator-header {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #e9ecef;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #343a40;
+  text-align: center;
+}
+
+.slide-navigator-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slide-thumbnail-item {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  /* background-color: #ccc; /* Placeholder removed */
+  border: 2px solid transparent;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  overflow: hidden; /* Clip thumbnail content */
+  transition: border-color 0.2s ease;
+  /* Flex properties removed to allow PreviewSlide to position correctly with transform-origin */
+  /* font-size: 0.75rem; /* Removed */
+  /* color: #555; /* Removed */
+  position: relative; /* Added to ensure PreviewSlide positions correctly within */
+}
+
+.slide-thumbnail-item:hover {
+  border-color: #a0a0a0; /* Highlight on hover */
+}
+
+.slide-thumbnail-item.active {
+  border-color: #007bff; /* Active slide highlight (Bootstrap primary) */
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.5);
+}
+
+.slide-thumbnail-item img,
+.slide-thumbnail-item .thumbnail-content-placeholder { /* For actual image or placeholder */
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Or contain, depending on desired look */
+}
+
+/* High Contrast Mode (Example - to be expanded in AccessibilityToolbar logic) */
+.preview-container.high-contrast {
+  background-color: #000000;
+  color: #ffffff;
+}
+.preview-container.high-contrast .preview-slide-viewport {
+  background-color: #111111;
+}
+.preview-container.high-contrast .preview-slide-wrapper {
+  background-color: #000000;
+  border: 2px solid #ffffff;
+}
+.preview-container.high-contrast .preview-controls {
+  background-color: #101010;
+  border-top-color: #ffffff;
+  color: #ffffff;
+}
+.preview-container.high-contrast .preview-control-button {
+  color: #ffffff;
+  border: 1px solid #555555;
+}
+.preview-container.high-contrast .preview-control-button:hover:not(:disabled) {
+  background-color: #333333;
+  border-color: #ffffff;
+}
+.preview-container.high-contrast .preview-control-button.active {
+  background-color: #0056b3; /* Darker blue for active */
+  border-color: #ffffff;
+}
+.preview-container.high-contrast .preview-slide-number {
+  color: #ffffff;
+}
+.preview-container.high-contrast .presenter-notes-panel,
+.preview-container.high-contrast .slide-navigator-panel {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  border-color: #555555;
+}
+.preview-container.high-contrast .presenter-notes-header,
+.preview-container.high-contrast .slide-navigator-header {
+  background-color: #1a1a1a;
+  border-bottom-color: #555555;
+  color: #ffffff;
+}
+.preview-container.high-contrast .presenter-notes-content,
+.preview-container.high-contrast .slide-navigator-list {
+  color: #eeeeee;
+}
+.preview-container.high-contrast .slide-thumbnail-item {
+  background-color: #222222;
+  border-color: #555555;
+}
+.preview-container.high-contrast .slide-thumbnail-item.active {
+  border-color: #00aaff; /* Bright blue for active in high contrast */
+  box-shadow: 0 0 0 2px rgba(0,170,255,0.7);
+}
+
+/* Ensure spans within common text containers behave as inline */
+/* This targets spans that are likely part of text flow generated by dangerouslySetInnerHTML */
+.preview-slide-content p span, /* Target any span within a p tag in preview */
+.preview-slide-content h1 span, /* Target any span within an h1 tag in preview */
+.preview-slide-content h2 span,
+.preview-slide-content h3 span,
+.preview-slide-content h4 span,
+.preview-slide-content h5 span,
+.preview-slide-content h6 span {
+  display: inline !important;
+  white-space: normal !important; 
+  vertical-align: baseline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  clear: none !important;
+  /* position: static !important; /* Avoid unless proven necessary */
+}
+
+/* === Resize Handles === */
+.resize-handle-wrapper {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.resize-handle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.9);
+  border: 2px solid white;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease-in-out, background-color 0.1s ease-in-out;
+}
+
+.resize-handle:hover {
+  transform: scale(1.2);
+  background-color: rgba(37, 99, 235, 1); /* Brighter blue on hover */
+}
+
+/* Ensure resize handles are visible on different backgrounds */
+.preview-container.high-contrast .resize-handle {
+  background-color: #00aaff;
+  border-color: #ffffff;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+}
