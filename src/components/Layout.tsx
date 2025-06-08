@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react'; // Import ReactNode and useRef
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { useAuthStore } from '../lib/store';
-import { useFeatureFlags } from '../lib/hooks/useFeatureFlags';
-import { useAuth } from '../lib/hooks/useAuth';
-import { trackEvent } from '../lib/services/analytics.service'; // Import trackEvent
+import { useAuthStore } from '../lib/store.ts';
+import { useFeatureFlags } from '../lib/hooks/useFeatureFlags.ts';
+import { useAuth } from '../lib/hooks/useAuth.ts';
+import { trackEvent } from '../lib/services/analytics.service.ts'; // Import trackEvent
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   LayoutDashboard,
@@ -34,7 +34,7 @@ import {
   Presentation // Import Presentation icon for deck builder
 } from 'lucide-react';
 
-import { companyService } from '../lib/services/company.service';
+import { companyService } from '../lib/services/company.service.ts';
 
 interface NavItem {
   name: string;
@@ -45,7 +45,7 @@ interface NavItem {
   children?: NavItem[];
 }
 
-import BusinessOpsSidebar from '../business-ops-hub/components/BusinessOpsSidebar';
+import BusinessOpsSidebar from '../business-ops-hub/components/BusinessOpsSidebar.tsx';
 
 // Container Component
 interface ContainerProps {

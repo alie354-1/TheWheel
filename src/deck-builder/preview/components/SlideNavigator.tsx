@@ -1,12 +1,11 @@
 import React from 'react';
-import { DeckSection } from '../../types'; // Adjust path as necessary
-import SlideThumbnail from './SlideThumbnail';
+import { DeckSection } from '../../types/index.ts';
+import SlideThumbnail from './SlideThumbnail.tsx';
 
 interface SlideNavigatorProps {
   slides: DeckSection[];
   currentSlideIndex: number;
   onNavigateToSlide: (index: number) => void;
-  theme?: any; // Optional theme for styling
   isVisible?: boolean; // To control visibility, e.g., if it's collapsible
 }
 
@@ -14,7 +13,6 @@ const SlideNavigator: React.FC<SlideNavigatorProps> = ({
   slides,
   currentSlideIndex,
   onNavigateToSlide,
-  theme,
   isVisible = true, // Default to visible
 }) => {
   if (!isVisible || !slides || slides.length === 0) {
@@ -34,8 +32,7 @@ const SlideNavigator: React.FC<SlideNavigatorProps> = ({
             slide={slide}
             index={index}
             isActive={index === currentSlideIndex}
-            onClick={onNavigateToSlide} // Ensure this prop is correctly named if SlideThumbnail expects onNavigate
-            theme={theme}
+            onClick={onNavigateToSlide}
           />
         ))}
       </div>

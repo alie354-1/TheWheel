@@ -109,8 +109,8 @@ const App: React.FC = () => {
           <Route path="/deck/shared/:shareToken" element={<SharedDeckViewerPage />} />
 
           {/* Deck Preview Host Page - outside main Layout for true full-screen */}
-          <Route element={<PrivateRoute />}> {/* Assuming preview requires auth */}
-            <Route path="deck-builder/preview/:deckId" element={<DeckPreviewHostPage />} />
+          <Route path="deck-builder/preview/:deckId" element={<PrivateRoute />}> {/* Assuming preview requires auth */}
+            <Route index element={<DeckPreviewHostPage />} />
           </Route>
 
           {/* Main Application */}
@@ -149,6 +149,7 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<CompanyDashboard />} />
                 <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
+
                 <Route path="journey" element={<JourneyHomePage companyId="default" />} />
                 <Route path="journey-new" element={<RefactoredJourneyPage />} />
                 <Route path="journey/steps" element={<JourneyStepsPage />} />
@@ -226,6 +227,7 @@ const App: React.FC = () => {
           } />
 
       {/* New Journey System */}
+
       <Route path="/journey" element={<JourneyHomePage companyId="default" />} />
           <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
           <Route path="/journey/map" element={<JourneyMapPage />} />
