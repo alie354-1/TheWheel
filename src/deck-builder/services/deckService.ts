@@ -250,6 +250,8 @@ export class DeckService {
             title: section.title,
             content: section.components,
             order_index: section.order,
+            width: section.width || null,
+            height: section.height || null,
             slide_style: slideStyleToSave || null,
             presenter_notes: section.presenter_notes !== undefined ? section.presenter_notes : null,
           };
@@ -313,7 +315,7 @@ export class DeckService {
 
       const { data: sectionsData, error: sectionsError } = await supabase
         .from('deck_sections')
-        .select('*')
+        .select('*, width, height')
         .eq('deck_id', id)
         .order('order_index');
 
@@ -325,6 +327,8 @@ export class DeckService {
         title: section.title || SECTION_DEFAULTS[section.type as SectionType]?.title || section.type,
         components: Array.isArray(section.content) ? section.content as VisualComponent[] : [],
         order: section.order_index,
+        width: section.width || undefined,
+        height: section.height || undefined,
         slideStyle: section.slide_style,
         presenter_notes: section.presenter_notes,
       }));

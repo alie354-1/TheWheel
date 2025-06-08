@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'; // Ensure useEffect is imported
 import { X, Palette, Type, Image, Download, Upload, RotateCcw } from 'lucide-react';
+import { FontSelection } from './FontSelection.tsx';
 
 export interface ThemeSettings {
   primaryColor: string;
@@ -347,22 +348,10 @@ export function ThemeCustomizationPanel({ deck, initialSettings, onThemeChange, 
 
         {activeTab === 'typography' && (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Font Family
-              </label>
-              <select
-                value={theme.fontFamily}
-                onChange={(e) => handleThemeUpdate({ fontFamily: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {fontOptions.map((font) => (
-                  <option key={font.value} value={font.value}>
-                    {font.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FontSelection
+              selectedFont={theme.fontFamily}
+              onFontChange={(font) => handleThemeUpdate({ fontFamily: font })}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

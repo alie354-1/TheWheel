@@ -3,9 +3,9 @@ import { supabase } from '../../../lib/supabase.ts';
 import { Deck, DeckSection, VisualComponent, DeckComment } from '../../types/index.ts'; // Added DeckComment
 import { AccessibilitySettings } from '../components/AccessibilityToolbar.tsx';
 
-// Default logical slide dimensions, can be overridden by hook params
-export const DEFAULT_LOGICAL_SLIDE_WIDTH = 1280;
-export const DEFAULT_LOGICAL_SLIDE_HEIGHT = 720;
+// Default logical slide dimensions (fallback values if no custom dimensions are set)
+export const DEFAULT_LOGICAL_SLIDE_WIDTH = 960;
+export const DEFAULT_LOGICAL_SLIDE_HEIGHT = 540;
 
 export interface PreviewState {
   deck: Deck | null;
@@ -37,9 +37,7 @@ export interface PreviewActions {
 export const usePreviewState = (
   deckId: string | undefined,
   slideViewportRef: RefObject<HTMLDivElement>,
-  initialDeck?: Deck,
-  canvasWidth: number = DEFAULT_LOGICAL_SLIDE_WIDTH, // New parameter with default
-  canvasHeight: number = DEFAULT_LOGICAL_SLIDE_HEIGHT // New parameter with default
+  initialDeck?: Deck
 ): [PreviewState, PreviewActions] => {
   const [deck, setDeck] = useState<Deck | null>(initialDeck || null); // Use initialDeck if provided
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -104,6 +102,8 @@ export const usePreviewState = (
             id: s.id,
             type: s.type as DeckSection['type'],
             title: s.title,
+            width: s.width, // Explicitly include width from database record
+            height: s.height, // Explicitly include height from database record
             components: components,
             order: s.order_index,
             slideStyle: s.slide_style || s.slideStyle || undefined,
@@ -214,11 +214,16 @@ export const usePreviewState = (
       if (slideViewportRef.current) {
         const viewportWidth = slideViewportRef.current.offsetWidth;
         const viewportHeight = slideViewportRef.current.offsetHeight;
+        const currentSlide = deck?.sections?.[currentSlideIndex];
+        
+        // Always use section dimensions when available
+        const logicalWidth = currentSlide?.width || DEFAULT_LOGICAL_SLIDE_WIDTH;
+        const logicalHeight = currentSlide?.height || DEFAULT_LOGICAL_SLIDE_HEIGHT;
 
         // Ensure dimensions are positive to avoid division by zero or negative scales
-        if (viewportWidth > 0 && viewportHeight > 0 && canvasWidth > 0 && canvasHeight > 0) {
-          const scaleX = viewportWidth / canvasWidth;
-          const scaleY = viewportHeight / canvasHeight;
+        if (viewportWidth > 0 && viewportHeight > 0 && logicalWidth > 0 && logicalHeight > 0) {
+          const scaleX = viewportWidth / logicalWidth;
+          const scaleY = viewportHeight / logicalHeight;
           // Use Math.max(0, ...) to ensure zoom is not negative if dimensions are unexpectedly small
           setZoomLevel(Math.max(0.1, Math.min(scaleX, scaleY))); // Ensure zoom is at least 0.1
         } else {
@@ -239,7 +244,7 @@ export const usePreviewState = (
     // For now, resize and dependency changes cover most cases.
 
     return () => window.removeEventListener('resize', calculateZoom);
-  }, [slideViewportRef, isFullscreen, isPresenterNotesVisible, isSlideNavigatorVisible, canvasWidth, canvasHeight]); // Added canvasWidth, canvasHeight to dependencies
+  }, [slideViewportRef, isFullscreen, isPresenterNotesVisible, isSlideNavigatorVisible, deck, currentSlideIndex]);
 
   const state: PreviewState = {
     deck,

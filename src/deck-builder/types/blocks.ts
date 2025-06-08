@@ -694,7 +694,7 @@ export type DeckBlock =
 export interface EditableProp {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'color' | 'checkbox' | 'json' | 'string_array' | 'object_array' | 'competitive_positioning' | 'market_segments' | 'skill_matrix' | 'competitor_features' | 'chart_data'; // Added chart_data
+  type: 'text' | 'textarea' | 'number' | 'select' | 'color' | 'checkbox' | 'json' | 'string_array' | 'object_array' | 'competitive_positioning' | 'market_segments' | 'skill_matrix' | 'competitor_features' | 'chart_data' | 'rich_text_array'; // Added chart_data
   options?: { value: string; label: string }[]; // For select type
   itemSchema?: EditableProp[]; // For type 'object_array', defines the schema of each object in the array
 }
@@ -1442,13 +1442,13 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockMeta> = {
     icon: "Star",
     category: "Content",
     description: "Card to highlight a specific feature or benefit.",
-    sampleData: { title: "Amazing Feature", description: "It does this and that." },
+    sampleData: { title: "Amazing Feature", description: "It does this and that.", features: [{ content: "<p>First feature</p>" }] },
     editableProps: [
       { name: 'title', label: 'Title', type: 'text' },
       { name: 'description', label: 'Description', type: 'textarea' },
       { name: 'imageUrl', label: 'Image URL (Optional)', type: 'text' },
       { name: 'icon', label: 'Icon (Lucide Name, Optional)', type: 'text' },
-      { name: 'features', label: 'Bullet Points (Optional)', type: 'string_array' },
+      { name: 'features', label: 'Bullet Points (Optional)', type: 'rich_text_array' },
       { name: 'layout', label: 'Layout', type: 'select', options: [
         {value: 'horizontal', label: 'Horizontal'}, {value: 'vertical', label: 'Vertical'}, {value: 'icon-top', label: 'Icon Top'}, {value: 'icon-left', label: 'Icon Left'}
       ]},

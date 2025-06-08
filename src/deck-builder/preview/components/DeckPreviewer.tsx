@@ -1,116 +1,117 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Deck, DeckTheme, DeckComment } from '../../types/index.ts'; // Added Deck, Combined DeckComment here
+import { Deck, DeckTheme, DeckComment } from '../../types/index.ts';
 import PreviewSlide from './PreviewSlide.tsx';
 import PreviewControls from './PreviewControls.tsx';
 import { AccessibilitySettings } from './AccessibilityToolbar.tsx';
 import ScreenReaderAnnouncer from './ScreenReaderAnnouncer.tsx';
-import PresenterNotesPanel from './PresenterNotesPanel.tsx'; // Ensure this is imported
-import SlideNavigator from './SlideNavigator.tsx'; // Import SlideNavigator
+import PresenterNotesPanel from './PresenterNotesPanel.tsx';
+import SlideNavigator from './SlideNavigator.tsx';
 import { usePreviewState } from '../hooks/usePreviewState.ts';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation.ts';
 import '../styles/preview.css';
-import { ClickToCommentLayer } from '../../components/feedback/ClickToCommentLayer.tsx'; // Added for commenting
-import { CommentBubble } from '../../components/feedback/CommentBubble.tsx'; // Added for displaying comment markers
-import { DeckService } from '../../services/deckService.ts'; // For submitting comments
-// DeckComment is now imported from '../../types/index.ts'
+import { ClickToCommentLayer } from '../../components/feedback/ClickToCommentLayer.tsx';
+import { CommentBubble } from '../../components/feedback/CommentBubble.tsx';
+import { DeckService } from '../../services/deckService.ts';
 
 interface DeckPreviewerProps {
   deckId?: string;
-  isPublicView?: boolean; // Added for public sharing context
-  enableCommenting?: boolean; // To enable commenting features
-  shareToken?: string; // Needed for comment submission in shared context
-  reviewerSessionId?: string; // Needed for comment submission
-  reviewerDisplayName?: string | null; // For comment author display
-  reviewerEmail?: string | null; // For additional context if needed
-  onLayerCommentAdded?: (comment: DeckComment) => void; // Callback for when a comment is added via the layer
-  disableActions?: boolean; // New prop to disable export, presenter notes, etc.
-  onClosePreview?: () => void; // Prop for closing the preview
-  initialDeckFromLibrary?: Deck; // For use in DeckLibraryPage flow
+  isPublicView?: boolean;
+  enableCommenting?: boolean;
+  shareToken?: string;
+  reviewerSessionId?: string;
+  reviewerDisplayName?: string | null;
+  reviewerEmail?: string | null;
+  onLayerCommentAdded?: (comment: DeckComment) => void;
+  disableActions?: boolean;
+  onClosePreview?: () => void;
+  initialDeckFromLibrary?: Deck;
 }
 
-// Define initial logical slide dimensions
-const INITIAL_LOGICAL_SLIDE_WIDTH = 1280; 
-const INITIAL_LOGICAL_SLIDE_HEIGHT = 720;
-
+const FALLBACK_LOGICAL_SLIDE_WIDTH = 960; 
+const FALLBACK_LOGICAL_SLIDE_HEIGHT = 540;
 
 const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
   deckId: propDeckId,
   isPublicView,
   enableCommenting,
-  shareToken, // Destructure new props
-  reviewerSessionId, // Destructure new props
-  reviewerDisplayName, // Destructure new prop
-  reviewerEmail, // Destructure new prop
-  onLayerCommentAdded, // Destructure new prop
-  disableActions = false, // Destructure new prop with default
-  onClosePreview, // Destructure the new prop
-  initialDeckFromLibrary, // Destructure new prop
+  shareToken,
+  reviewerSessionId,
+  reviewerDisplayName,
+  onLayerCommentAdded,
+  disableActions = false,
+  onClosePreview,
+  initialDeckFromLibrary,
 }) => {
   const params = useParams();
   const navigate = useNavigate();
-  // Use initialDeckFromLibrary's ID if available, otherwise fallback to prop or route param
   const deckIdToUse = initialDeckFromLibrary?.id || propDeckId || params.deckId;
 
-  const [canvasWidth, setCanvasWidth] = React.useState<number>(INITIAL_LOGICAL_SLIDE_WIDTH);
-  const [canvasHeight, setCanvasHeight] = React.useState<number>(INITIAL_LOGICAL_SLIDE_HEIGHT);
-
-  // State to override zoomLevel when in fullscreen mode
   const [overrideZoom, setOverrideZoom] = React.useState<number | null>(null);
-
-  const [selectedCommentId, setSelectedCommentId] = React.useState<string | null>(null); // State for selected comment bubble
-  const slideViewportRef = React.useRef<HTMLDivElement>(null); // Ensure React.useRef is used
+  const [selectedCommentId, setSelectedCommentId] = React.useState<string | null>(null);
+  const slideViewportRef = React.useRef<HTMLDivElement>(null);
 
   const [
     { deck, currentSlideIndex, isLoading, error, isFullscreen, accessibilitySettings, isPresenterNotesVisible, zoomLevel, isSlideNavigatorVisible, comments, isFullScreenEditMode },
     { goToNextSlide, goToPrevSlide, goToSlide, toggleFullscreen, updateAccessibilitySettings, retryFetch, togglePresenterNotes, toggleSlideNavigator, addCommentToState, toggleFullScreenEditMode }
-  ] = usePreviewState(deckIdToUse, slideViewportRef, initialDeckFromLibrary, canvasWidth, canvasHeight);
+  ] = usePreviewState(deckIdToUse, slideViewportRef, initialDeckFromLibrary);
   
-  React.useEffect(() => {
-    if (isFullscreen) {
-      // Use the actual window size instead of measuring the container
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      // Compute the scale so the 1280×720 "logical slide" fills as much as possible:
-      const newScale = Math.min(
-        viewportWidth / INITIAL_LOGICAL_SLIDE_WIDTH,
-        viewportHeight / INITIAL_LOGICAL_SLIDE_HEIGHT
-      );
-      setOverrideZoom(newScale);
-      console.log(
-        '[DeckPreviewer] Fullscreen scale:',
-        newScale,
-        'window:',
-        viewportWidth,
-        '×',
-        viewportHeight
-      );
-    } else {
-      setOverrideZoom(null);
-    }
+  const currentSlide = deck?.sections?.[currentSlideIndex];
+  
+  // Extract dimensions directly from the section to ensure they're always read from there
+  const sectionWidth = currentSlide?.width;
+  const sectionHeight = currentSlide?.height;
+  
+  // Only fall back if truly undefined
+  const logicalWidth = sectionWidth !== undefined ? sectionWidth : FALLBACK_LOGICAL_SLIDE_WIDTH;
+  const logicalHeight = sectionHeight !== undefined ? sectionHeight : FALLBACK_LOGICAL_SLIDE_HEIGHT;
+  
+  console.log('DeckPreviewer dimensions:', {
+    currentSlideIndex,
+    sectionId: currentSlide?.id,
+    directSectionWidth: sectionWidth,
+    directSectionHeight: sectionHeight,
+    finalLogicalWidth: logicalWidth,
+    finalLogicalHeight: logicalHeight,
+    fallbackWidth: FALLBACK_LOGICAL_SLIDE_WIDTH,
+    fallbackHeight: FALLBACK_LOGICAL_SLIDE_HEIGHT,
+    sectionData: currentSlide ? JSON.stringify({
+      id: currentSlide.id,
+      width: currentSlide.width,
+      height: currentSlide.height,
+      title: currentSlide.title
+    }) : 'No section data'
+  });
 
-    // Add window resize handler for fullscreen mode
+  useEffect(() => {
     const handleResize = () => {
       if (isFullscreen) {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
+        
+        // Use the values calculated above
+        const currentWidth = logicalWidth;
+        const currentHeight = logicalHeight;
+        
         const newScale = Math.min(
-          viewportWidth / INITIAL_LOGICAL_SLIDE_WIDTH,
-          viewportHeight / INITIAL_LOGICAL_SLIDE_HEIGHT
+          viewportWidth / currentWidth,
+          viewportHeight / currentHeight
         );
         setOverrideZoom(newScale);
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    if (isFullscreen) {
+      handleResize(); // Initial calculation
+      window.addEventListener('resize', handleResize);
+    } else {
+      setOverrideZoom(null);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [isFullscreen]);
-  
-
-
-  // Removed local handleClosePreview as it's now passed via props
+  }, [isFullscreen, logicalWidth, logicalHeight]);
 
   const handleCommentSubmitOnLayer = useCallback(async (
     text: string,
@@ -122,7 +123,6 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
   ) => {
     if (!deck || !shareToken || !reviewerSessionId) {
       console.error("Cannot submit comment: Missing deck, shareToken, or reviewerSessionId");
-      // Optionally, show an error to the user
       return;
     }
     try {
@@ -131,23 +131,21 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
         slideId,
         textContent: text,
         authorDisplayName: reviewerDisplayName || 'Anonymous Reviewer', 
-        commentType: 'General', // Or allow selection
+        commentType: 'General',
         status: 'Open',
         urgency: 'None',
-        coordinates, // Store coordinates
+        coordinates,
         elementId,
         voiceNoteUrl,
         markupData,
       };
       const newComment = await DeckService.addComment(deck.id, commentData, shareToken, reviewerSessionId);
-      addCommentToState(newComment); // Update local state if usePreviewState handles it
-      onLayerCommentAdded?.(newComment); // Propagate the new comment upwards
-      console.log('Comment submitted via layer:', newComment);
+      addCommentToState(newComment);
+      onLayerCommentAdded?.(newComment);
     } catch (error) {
       console.error('Failed to submit comment via layer:', error);
-      // Optionally, show an error to the user
     }
-  }, [deck, shareToken, reviewerSessionId, addCommentToState]);
+  }, [deck, shareToken, reviewerSessionId, addCommentToState, onLayerCommentAdded, reviewerDisplayName]);
 
   useKeyboardNavigation({
     onNext: goToNextSlide,
@@ -173,20 +171,7 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
     },
   };
   
-  const currentSlide = deck?.sections?.[currentSlideIndex];
-
-  // Log prerequisite values for debugging
-  console.log('[DeckPreviewer] Prerequisites for commenting layer:', {
-    enableCommentingProp: enableCommenting,
-    shareTokenProp: shareToken,
-    reviewerSessionIdProp: reviewerSessionId,
-    deckFromState: !!deck, // Log boolean to avoid large object in console
-  });
-
-  // Determine if all conditions are met for the ClickToCommentLayer to be truly interactive
   const actualCommentingEnabledForLayer = !!enableCommenting && !!shareToken && !!reviewerSessionId && !!deck;
-  console.log('[DeckPreviewer] actualCommentingEnabledForLayer:', actualCommentingEnabledForLayer);
-
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading presentation...</div>;
@@ -211,92 +196,96 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
     <div className={`preview-container ${isFullscreen ? 'fullscreen' : ''} ${accessibilitySettings.highContrast ? 'high-contrast' : ''}`}>
       <ScreenReaderAnnouncer message={currentSlide ? `Slide ${currentSlideIndex + 1} of ${deck.sections.length}: ${currentSlide.title || 'Untitled Slide'}` : 'Loading slide...'} />
       
-      {/* New preview-main-area to wrap viewport and navigator */}
       <div className="preview-main-area">
-        {/* Slide Navigator Panel - visible when not in fullscreen and deck is loaded */}
-        {/* Slide Navigator Panel - visible when not in fullscreen and deck is loaded */}
-        {/* Ensure isSlideNavigatorVisible from state is used here if it's meant to be togglable */}
         {!isFullscreen && isSlideNavigatorVisible && deck && deck.sections && deck.sections.length > 0 && (
           <SlideNavigator
             slides={deck.sections}
             currentSlideIndex={currentSlideIndex}
-            onNavigateToSlide={goToSlide} 
-            theme={currentTheme}
-            // No need for toggleSlideNavigator here, it's handled by PreviewControls if needed
+            onNavigateToSlide={goToSlide}
           />
         )}
 
         <div ref={slideViewportRef} className={`preview-slide-viewport ${isPresenterNotesVisible && !isFullscreen ? 'with-presenter-notes' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
-            <div
-            className="preview-slide-wrapper"
-            style={{
-              // Always use the logical slide dimensions
-              width: `${INITIAL_LOGICAL_SLIDE_WIDTH}px`,
-              height: `${INITIAL_LOGICAL_SLIDE_HEIGHT}px`,
-              // Use overrideZoom in fullscreen mode, otherwise use normal zoomLevel
-              transform: `scale(${overrideZoom !== null ? overrideZoom : zoomLevel || 1})`,
-              // Use consistent transform origin for both modes
-              transformOrigin: 'center center',
+          {isFullscreen ? (
+            <div className="fullscreen-slide-container" style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
               overflow: 'hidden',
-              position: 'relative',
-              // Ensure consistent rendering between small and fullscreen
-              boxSizing: 'border-box',
-              margin: '0 auto',
-              // Don't hardcode background color - allow slide styles to determine it
-            }}
-          >
-            <PreviewSlide
-              section={currentSlide}
-              theme={currentTheme as DeckTheme}
-              zoomLevel={1} // Set zoomLevel to 1 to avoid scaling inside PreviewSlide
-              logicalWidth={canvasWidth}
-              logicalHeight={canvasHeight}
-              previewMode={!isFullScreenEditMode || !!isPublicView} // Edit mode if not public and isFullScreenEditMode is true
-              onAddComponentRequested={(x, y) => {
-                // In a real implementation, this would call a function to update the deck state
-                // (e.g., from a context or a prop like `onUpdateDeck`)
-                // For now, we'll just log it.
-                console.log(`Request to add component at x: ${x}, y: ${y} on slide ${currentSlide?.id}`);
-                // Example: onUpdateDeck(deck.id, currentSlide.id, { type: 'TextBlock', content: 'New Text', layout: { x, y, width: 200, height: 50 } });
-              }}
-              // Apply CSS for direct scaling and proper layout without transform
+              background: currentTheme?.colors?.background || '#000',
+            }}>
+              <div style={{
+                width: `${logicalWidth}px`,
+                height: `${logicalHeight}px`,
+                transform: `scale(${overrideZoom || 1})`,
+                transformOrigin: 'center center',
+                position: 'relative'
+              }}>
+                <PreviewSlide
+                  section={currentSlide}
+                  theme={currentTheme as DeckTheme}
+                  zoomLevel={1}
+                  logicalWidth={logicalWidth}
+                  logicalHeight={logicalHeight}
+                  previewMode={!isFullScreenEditMode || !!isPublicView}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div
+              className="preview-slide-wrapper"
               style={{
-                width: '100%',
-                height: '100%',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                overflow: 'visible',
+                width: `${logicalWidth}px`,
+                height: `${logicalHeight}px`,
+                transform: `scale(${zoomLevel || 1})`,
+                transformOrigin: 'center center',
+                overflow: 'hidden',
+                position: 'relative',
+                boxSizing: 'border-box',
+                margin: '0 auto',
               }}
-            />
-            {enableCommenting && currentSlide && deck && !isFullScreenEditMode && ( // Disable click-to-comment layer in full screen edit mode
-              <ClickToCommentLayer
-                slideId={currentSlide.id}
-                onCommentSubmit={handleCommentSubmitOnLayer}
-                isCommentingEnabled={actualCommentingEnabledForLayer} // Use the refined condition here
-                slideDimensions={{ width: canvasWidth, height: canvasHeight }}
-                // currentUserDisplayName, currentUserAvatarUrl can be passed if available from reviewerSession
+            >
+              <PreviewSlide
+                section={currentSlide}
+                theme={currentTheme as DeckTheme}
+                zoomLevel={1}
+                logicalWidth={logicalWidth}
+                logicalHeight={logicalHeight}
+                previewMode={!isFullScreenEditMode || !!isPublicView}
+                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'visible' }}
               />
-            )}
-            {/* Render Comment Bubbles for the current slide */}
-            {enableCommenting && comments && comments.filter((c: DeckComment) => c.slideId === currentSlide.id).map((comment: DeckComment) => (
-              <CommentBubble
-                key={comment.id}
-                comment={comment}
-                onClick={() => setSelectedCommentId(comment.id === selectedCommentId ? null : comment.id)}
-                isSelected={comment.id === selectedCommentId}
-              />
-            ))}
-          </div>
-          {/* Presenter Notes Panel - Rendered inside viewport for better layout control with flex */}
-          {!disableActions && isPresenterNotesVisible && !isFullscreen && currentSlide && (
-            <PresenterNotesPanel 
-              notes={currentSlide.presenter_notes}
-              isVisible={true} // isVisible is true if this block is rendered
-              onClose={togglePresenterNotes}
+            </div>
+          )}
+          
+          {enableCommenting && currentSlide && deck && !isFullScreenEditMode && (
+            <ClickToCommentLayer
+              slideId={currentSlide.id}
+              onCommentSubmit={handleCommentSubmitOnLayer}
+              isCommentingEnabled={actualCommentingEnabledForLayer}
+              slideDimensions={{ width: logicalWidth, height: logicalHeight }}
             />
           )}
+          {enableCommenting && comments && comments.filter((c: DeckComment) => c.slideId === currentSlide.id).map((comment: DeckComment) => (
+            <CommentBubble
+              key={comment.id}
+              comment={comment}
+              onClick={() => setSelectedCommentId(comment.id === selectedCommentId ? null : comment.id)}
+              isSelected={comment.id === selectedCommentId}
+            />
+          ))}
         </div>
+        
+        {!disableActions && isPresenterNotesVisible && !isFullscreen && currentSlide && (
+          <PresenterNotesPanel 
+            notes={currentSlide.presenter_notes}
+            isVisible={true}
+            onClose={togglePresenterNotes}
+          />
+        )}
       </div>
 
       {!isFullscreen && (
@@ -317,10 +306,10 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
             isFullScreenEditMode={isFullScreenEditMode}
             onToggleFullScreenEditMode={toggleFullScreenEditMode}
             isPublicView={!!isPublicView}
-            canvasWidth={canvasWidth}
-            canvasHeight={canvasHeight}
-            onCanvasWidthChange={setCanvasWidth}
-            onCanvasHeightChange={setCanvasHeight}
+            canvasWidth={logicalWidth}
+            canvasHeight={logicalHeight}
+            onCanvasWidthChange={() => {}}
+            onCanvasHeightChange={() => {}}
         />
       )}
     </div>

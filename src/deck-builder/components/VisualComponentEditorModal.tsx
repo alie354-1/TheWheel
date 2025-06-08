@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Import Quill styles
+import { RichTextEditor } from './editors/RichTextEditor.tsx';
+import { RichFeatureListEditor } from './editors/RichFeatureListEditor.tsx';
 import { VisualComponent, VisualComponentLayout as Layout } from '../types/index.ts';
 import { BLOCK_REGISTRY, BlockType, EditableProp } from '../types/blocks.ts'; 
 import { X, Save, Trash2 } from 'lucide-react';
@@ -205,35 +205,23 @@ export const VisualComponentEditorModal: React.FC<VisualComponentEditorModalProp
           // Define fields that should use Rich Text Editor
           const richTextFields = ['text', 'description', 'quote', 'caption', 'headline', 'subheadline', 'problem', 'solution', 'html']; // Add more as needed
 
-          const quillModules = {
-            toolbar: [
-              [{ 'header': [1, 2, 3, false] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              [{'list': 'ordered'}, {'list': 'bullet'}],
-              ['link'],
-              ['clean']
-            ],
-          };
-
-          const quillFormats = [
-            'header',
-            'bold', 'italic', 'underline', 'strike',
-            'list', 'bullet',
-            'link'
-          ];
-
           if (type === 'textarea' || (type === 'text' && richTextFields.includes(fieldName))) {
             return (
               <div key={fieldName} className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-                <ReactQuill
-                  theme="snow"
-                  value={editData[fieldName] || ''}
+                <RichTextEditor
+                  content={editData[fieldName] || ''}
                   onChange={(content: string) => handleInputChange(fieldName, content)}
-                  modules={quillModules}
-                  formats={quillFormats}
-                  className="bg-white border border-gray-300 rounded-md" // Added border for better visibility
-                  style={{ minHeight: '100px' }} // Ensure editor has some height
+                />
+              </div>
+            );
+          } else if (propInfo.type === 'rich_text_array' && fieldName === 'features') {
+            return (
+              <div key={fieldName} className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                <RichFeatureListEditor
+                  items={editData[fieldName] || []}
+                  onChange={(items) => handleInputChange(fieldName, items)}
                 />
               </div>
             );
@@ -403,51 +391,10 @@ export const VisualComponentEditorModal: React.FC<VisualComponentEditorModalProp
         </div>
 
         {/* Main content area with flex layout */}
-        <div className="flex flex-grow overflow-hidden space-x-4">
-          {/* Left Pane: Editor Fields */}
-          <div className="w-1/2 flex-shrink-0 overflow-y-auto pr-2 space-y-4 border-r pr-4">
+        <div className="flex flex-grow overflow-hidden">
+          {/* Editor Fields */}
+          <div className="w-full overflow-y-auto pr-2 space-y-4">
             {renderEditorFields()}
-          </div>
-
-          {/* Right Pane: Live Preview */}
-          <div className="w-1/2 flex-shrink-0 flex flex-col items-center justify-start bg-gray-100 p-4 rounded-md relative"> {/* Removed overflow-hidden */}
-            <h4 className="text-sm font-medium text-gray-700 mb-3 self-start">Live Preview (Resizable)</h4>
-            <div 
-              className="relative w-full h-full border border-dashed border-gray-400 rounded bg-white overflow-auto" 
-              // Add a min-height to ensure the container is visible even if component is small
-              style={{ minHeight: '200px' }} 
-            >
-              {livePreviewComponent ? (
-                <div 
-                  className="relative" // This div will be the positioning context for EnhancedDraggableComponent
-                  style={{ 
-                    width: `${(livePreviewComponent.layout.width || 0) + 30}px`, // Increased padding for handles
-                    height: `${(livePreviewComponent.layout.height || 0) + 30}px`, // Increased padding for handles
-                    // Removed display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    // This allows EnhancedDraggableComponent to position itself at 0,0 of this container
-                  }}
-                > 
-                  {/* EnhancedDraggableComponent will be positioned absolutely within this div */}
-                  <EnhancedDraggableComponent
-                    component={{
-                      ...livePreviewComponent,
-                      layout: { // Position component at 0,0 relative to its new padded container
-                        ...livePreviewComponent.layout,
-                        x: 0, 
-                        y: 0,
-                      }
-                    }}
-                    isSelected={true} // Show handles in preview
-                    onSelect={() => {}} // No action on select in modal preview
-                    onUpdate={handlePreviewLayoutUpdate}
-                    onDelete={() => {}} // No delete from preview
-                    theme={currentTheme}
-                  />
-                </div>
-              ) : (
-                <p className="text-gray-400">No component to preview.</p>
-              )}
-            </div>
           </div>
         </div>
 
