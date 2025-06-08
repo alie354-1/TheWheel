@@ -1,31 +1,25 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+import DOMPurify from 'dompurify';
 
-const SafeTextRenderer: React.FC<{ content: any; className?: string }> = ({ content, className = '' }) => {
-  const cleanContent = useMemo(() => {
-    if (typeof content === 'string') {
-      return content
-        .replace(/<[^>]*>/g, '') // Remove HTML tags
-        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with regular spaces
-        .replace(/&/g, '&') 
-        .replace(/</g, '<')  
-        .replace(/>/g, '>')  
-        .replace(/[^\x20-\x7E\x0A\x0D]/g, '') // Remove non-printable characters
-        .trim();
-    }
-    if (typeof content === 'object' && content !== null) {
-      // For objects, pretty-print JSON, ensuring it's also "safe" by nature of JSON stringification
-      return JSON.stringify(content, null, 2);
-    }
-    // Ensure even numbers or other types are converted to string
-    return String(content || ''); 
-  }, [content]);
+interface SafeTextRendererProps {
+  html: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
 
-  // Render the cleaned content within a div.
-  // Using dangerouslySetInnerHTML is generally risky, but here `cleanContent` has been sanitized.
-  // However, for maximum safety with React, it's better to let React handle the string rendering.
-  // If cleanContent were to contain accidental JSX-like strings after cleaning (e.g. "{text}"),
-  // rendering directly would be safer than dangerouslySetInnerHTML.
-  return <div className={className}>{cleanContent}</div>;
+export const SafeTextRenderer: React.FC<SafeTextRendererProps> = ({ html, className, style }) => {
+  // Configure DOMPurify to allow list-related tags and attributes
+  const sanitizedHtml = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'a', 'img', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub', 'span', 'div'],
+    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'style', 'class'],
+    ALLOW_DATA_ATTR: false,
+  });
+
+  return (
+    <div
+      className={`safe-text-renderer prose max-w-none ${className || ''}`}
+      style={style}
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+    />
+  );
 };
-
-export default SafeTextRenderer;

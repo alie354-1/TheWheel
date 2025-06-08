@@ -1,0 +1,122 @@
+.ProseMirror {
+  padding: 1rem;
+  min-height: 150px;
+  border: 1px solid #d1d5db;
+  border-radius: 0 0 0.375rem 0.375rem;
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.ProseMirror:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: #3b82f6;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  line-height: 1.1;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding: 0 1rem;
+  margin: 1rem 0;
+}
+
+.ProseMirror ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  list-style-position: outside !important;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  list-style-position: outside !important;
+}
+
+.ProseMirror ul li,
+.ProseMirror ol li {
+  display: list-item !important;
+  margin: 0.25rem 0;
+  list-style: inherit !important;
+}
+
+.ProseMirror ul ul {
+  list-style-type: circle !important;
+}
+
+.ProseMirror ul ul ul {
+  list-style-type: square !important;
+}
+
+/* Override prose class resets */
+.prose ul,
+.prose ol {
+  list-style: revert !important;
+  padding-left: 1.5rem !important;
+}
+
+.prose ul li,
+.prose ol li {
+  display: list-item !important;
+}
+
+/* Ensure list markers are visible */
+.ProseMirror ul li::marker,
+.ProseMirror ol li::marker {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+/* Fix for nested lists */
+.ProseMirror li > ul,
+.ProseMirror li > ol {
+  margin: 0.5rem 0 !important;
+}
+
+.ProseMirror blockquote {
+  padding-left: 1rem;
+  border-left: 2px solid rgba(13, 13, 13, 0.1);
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid rgba(13, 13, 13, 0.1);
+  margin: 2rem 0;
+}
+
+.tiptap-bubble-menu {
+  display: flex;
+  background-color: #0D0D0D;
+  padding: 0.2rem;
+  border-radius: 0.5rem;
+}
+
+.tiptap-bubble-menu button {
+  border: none;
+  background: none;
+  color: #FFF;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0 0.2rem;
+  opacity: 0.6;
+}
+
+.tiptap-bubble-menu button:hover,
+.tiptap-bubble-menu button.is-active {
+  opacity: 1;
+}

@@ -12,7 +12,7 @@ import {
   Settings,
   X as IconX 
 } from 'lucide-react';
-import SafeTextRenderer from './SafeTextRenderer.tsx'; // Added .tsx
+import { SafeTextRenderer } from './SafeTextRenderer.tsx'; // Added .tsx
 import PreviewSlide from '../preview/components/PreviewSlide.tsx'; // Added .tsx
 
 interface DeckPreviewProps {
@@ -35,12 +35,46 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
   const sections = deck.sections || [];
   const totalSlides = sections.length;
   
-  // Define standard logical dimensions for slides (16:9 aspect ratio)
-  // Using the same constants as SlideThumbnail for consistency
-  const LOGICAL_SLIDE_WIDTH = 1280;
-  const LOGICAL_SLIDE_HEIGHT = 720;
+  // Use the current section's width/height if available, otherwise fallback to 960x540
+  const currentSection = sections[currentSlide];
+  const LOGICAL_SLIDE_WIDTH = currentSection?.width || 960;
+  const LOGICAL_SLIDE_HEIGHT = currentSection?.height || 540;
   const [previewScale, setPreviewScale] = useState(1);
 
+  // Add logging to debug slide dimensions
+  useEffect(() => {
+    if (currentSection) {
+      console.log('DeckPreview dimensions:', {
+        sectionId: currentSection.id,
+        width: currentSection.width,
+        height: currentSection.height,
+        effectiveWidth: LOGICAL_SLIDE_WIDTH,
+        effectiveHeight: LOGICAL_SLIDE_HEIGHT
+      });
+    }
+  }, [currentSection, LOGICAL_SLIDE_WIDTH, LOGICAL_SLIDE_HEIGHT]);
+
+  // Responsive scaling for preview area
+  useEffect(() => {
+    function updateScale() {
+      if (!presentationAreaRef.current) return;
+      const container = presentationAreaRef.current;
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+      
+      // In fullscreen mode with slide list, adjust for the space taken by the slide list
+      const availableWidth = isFullscreen ? containerWidth - 200 : containerWidth; // 200px for slide list
+      
+      const scale = Math.min(
+        availableWidth / LOGICAL_SLIDE_WIDTH,
+        containerHeight / LOGICAL_SLIDE_HEIGHT
+      );
+      setPreviewScale(scale);
+    }
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [isFullscreen]);
 
   // Auto-play functionality
   const startAutoplay = () => {
@@ -190,8 +224,6 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
     );
   }
 
-  const currentSection = sections[currentSlide];
-  
   // Always use the section's slideStyle for background if present
   const currentDeckThemeForPreview: DeckTheme = {
     id: deck.theme?.id || 'default-deck-preview-theme',
@@ -224,7 +256,7 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
     <div 
       ref={containerRef}
       className={`relative bg-gray-100 ${
-        isFullscreen ? 'fixed inset-0 z-[1000] flex flex-col items-center justify-center' : 'rounded-lg shadow-lg overflow-hidden'
+        isFullscreen ? 'fixed inset-0 z-[1000] flex' : 'rounded-lg shadow-lg overflow-hidden'
       }`}
       tabIndex={-1} 
     >
@@ -280,73 +312,143 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
       )}
       
       {isFullscreen && (
-         <div className="absolute top-0 left-0 right-0 h-12 bg-black bg-opacity-30 flex items-center justify-between px-4 z-30">
-           <h1 className="text-white text-md font-semibold truncate" title={deck.title}>{deck.title}</h1>
-           <div className="flex items-center space-x-3">
-            <span className="text-white text-xs">
-                {currentSlide + 1} / {totalSlides}
-            </span>
-            <button 
-                onClick={toggleFullscreenCb} 
-                className="text-white hover:text-gray-300 p-1.5 rounded-full focus:outline-none focus:ring-1 focus:ring-white"
-                aria-label="Exit fullscreen"
+        <>
+          {/* Slide list panel */}
+          <div className="w-48 bg-gray-900 overflow-y-auto flex-shrink-0">
+            <div className="p-4">
+              <h2 className="text-white text-sm font-semibold mb-4">Slides</h2>
+              <div className="space-y-2">
+                {sections.map((section: DeckSection, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-full p-2 rounded-lg transition-all ${
+                      currentSlide === index 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs opacity-60">{index + 1}</span>
+                      <span className="text-sm truncate flex-1 text-left">
+                        {section.title || `Slide ${index + 1}`}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Main content area */}
+          <div className="flex-1 flex flex-col bg-black">
+            {/* Top bar */}
+            <div className="h-12 bg-black bg-opacity-30 flex items-center justify-between px-4 z-30">
+              <h1 className="text-white text-md font-semibold truncate" title={deck.title}>{deck.title}</h1>
+              <div className="flex items-center space-x-3">
+                <span className="text-white text-xs">
+                  {currentSlide + 1} / {totalSlides}
+                </span>
+                <button 
+                  onClick={toggleFullscreenCb} 
+                  className="text-white hover:text-gray-300 p-1.5 rounded-full focus:outline-none focus:ring-1 focus:ring-white"
+                  aria-label="Exit fullscreen"
+                >
+                  <IconX className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Slide area */}
+            <div
+              ref={presentationAreaRef}
+              className="flex-1 relative overflow-hidden"
+              style={{
+                backgroundColor: 'black',
+              }}
             >
-                <IconX className="w-4 h-4" />
-            </button>
-           </div>
-         </div>
+              {currentSection && (
+                <PreviewSlide
+                  section={currentSection}
+                  theme={currentDeckThemeForPreview}
+                  zoomLevel={previewScale}
+                  logicalWidth={LOGICAL_SLIDE_WIDTH}
+                  logicalHeight={LOGICAL_SLIDE_HEIGHT}
+                  previewMode={true}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </>
       )}
 
-      <div
-        ref={presentationAreaRef}
-        className={`relative w-full flex-1 flex items-center justify-center ${isFullscreen ? 'overflow-hidden bg-gray-800' : 'h-96 md:h-[500px] p-4'}`}
-        style={{
-          minHeight: isFullscreen ? '100vh' : undefined,
-          minWidth: isFullscreen ? '100vw' : undefined,
-          alignItems: 'center',
-          justifyContent: 'center',
-          display: 'flex',
-        }}
-      >
-        {/* Completely rewritten preview area: fill all space, no transforms, no zoom, no aspect ratio */}
+      {!isFullscreen && (
         <div
+          ref={presentationAreaRef}
+          className="relative w-full flex-1 flex items-center justify-center h-96 md:h-[500px] p-4"
           style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'stretch',
-            justifyContent: 'stretch',
-            overflow: 'hidden',
-            // Simplified background for the wrapper, PreviewSlide handles its own complex background
             backgroundColor: typeof sections[currentSlide]?.slideStyle?.backgroundColor === 'string' 
               ? sections[currentSlide]?.slideStyle?.backgroundColor 
-              : (typeof deck.theme?.colors?.background === 'string' ? deck.theme.colors.background : '#F8FAFC'), // Fallback to theme bg or light gray
-            boxShadow: isFullscreen ? undefined : '0 0 10px rgba(0,0,0,0.1)',
-            position: 'relative',
-            boxSizing: 'border-box', // Added for consistency
+              : (typeof deck.theme?.colors?.background === 'string' ? deck.theme.colors.background : '#F8FAFC'),
           }}
         >
-          {currentSection && (
-            <PreviewSlide
-              section={currentSection}
-              theme={currentDeckThemeForPreview}
-              zoomLevel={previewScale}
-              logicalWidth={LOGICAL_SLIDE_WIDTH}
-              logicalHeight={LOGICAL_SLIDE_HEIGHT}
-              previewMode={true}
-              style={{
-                width: '100%',
-                height: '100%',
-                minWidth: 0,
-                minHeight: 0,
-                maxWidth: '100%',
-                maxHeight: '100%',
-                display: 'block',
-              }}
-            />
-          )}
+          {/* Responsive preview area: center and scale slide to fit */}
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {currentSection && (
+              <div
+                style={{
+                  width: LOGICAL_SLIDE_WIDTH,
+                  height: LOGICAL_SLIDE_HEIGHT,
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: 'center',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                  background: 'none',
+                  position: 'relative',
+                }}
+              >
+                <PreviewSlide
+                  section={currentSection}
+                  theme={currentDeckThemeForPreview}
+                  zoomLevel={previewScale}
+                  logicalWidth={LOGICAL_SLIDE_WIDTH}
+                  logicalHeight={LOGICAL_SLIDE_HEIGHT}
+                  previewMode={true}
+                  style={{
+                    width: LOGICAL_SLIDE_WIDTH,
+                    height: LOGICAL_SLIDE_HEIGHT,
+                    minWidth: 0,
+                    minHeight: 0,
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    display: 'block',
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
         
       <button
         onClick={prevSlide}

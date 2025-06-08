@@ -170,6 +170,18 @@ export function useDeck(
     }
   }, [deck, setDeck]);
 
+  const moveSection = useCallback((fromIndex: number, toIndex: number) => {
+    if (!deck) return;
+    try {
+      setError(null);
+      const updatedDeck = DeckService.reorderSections(deck, fromIndex, toIndex);
+      setDeck(updatedDeck);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reorder sections';
+      setError(errorMessage);
+    }
+  }, [deck, setDeck]);
+
   // Save deck
   const saveDeck = useCallback(async (userId: string) => {
     if (!deck) return false;
@@ -314,6 +326,7 @@ export function useDeck(
     // updateSectionContent, // Removed
     removeSection,
     reorderSections,
+    moveSection,
     // New component actions
     addComponentToSection,
     updateComponentInSection,

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { VisualComponent, VisualComponentLayout } from "../types/index.ts"; // Added .ts
 import { BlockType } from "../types/blocks.ts"; // Added .ts
 
@@ -15,6 +15,41 @@ export const ComponentEditingBar: React.FC<ComponentEditingBarProps> = ({
   onUpdateStyle,
   onUpdateData,
 }) => {
+  const [showBorderOptions, setShowBorderOptions] = useState(false);
+  const [showEffectOptions, setShowEffectOptions] = useState(false);
+  const [showArrangeOptions, setShowArrangeOptions] = useState(false);
+  
+  // Size handlers
+  const handleSizeChange = (dimension: 'width' | 'height', value: string) => {
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue > 0) {
+      onUpdateLayout({ [dimension]: numValue });
+    }
+  };
+
+  // Z-index handlers
+  const handleZIndexChange = (direction: 'front' | 'back' | 'forward' | 'backward') => {
+    const currentZ = component.layout.zIndex || 0;
+    let newZ = currentZ;
+    
+    switch (direction) {
+      case 'front':
+        newZ = 999;
+        break;
+      case 'back':
+        newZ = 0;
+        break;
+      case 'forward':
+        newZ = currentZ + 1;
+        break;
+      case 'backward':
+        newZ = Math.max(0, currentZ - 1);
+        break;
+    }
+    
+    onUpdateLayout({ zIndex: newZ });
+  };
+
   // Arrangement handlers
   const handleAlign = (type: "left" | "center" | "right" | "top" | "middle" | "bottom") => {
     if (!component) return;
@@ -56,6 +91,53 @@ export const ComponentEditingBar: React.FC<ComponentEditingBarProps> = ({
     onUpdateStyle(newStyle);
   };
 
+  // Border handlers
+  const handleBorderWidth = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStyle = { borderWidth: e.target.value };
+    console.log('[ComponentEditingBar] Updating border width:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
+  const handleBorderStyle = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStyle = { borderStyle: e.target.value };
+    console.log('[ComponentEditingBar] Updating border style:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
+  const handleBorderColor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStyle = { borderColor: e.target.value };
+    console.log('[ComponentEditingBar] Updating border color:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
+  const handleBorderRadius = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStyle = { borderRadius: e.target.value };
+    console.log('[ComponentEditingBar] Updating border radius:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
+  // Effect handlers
+  const handleShadow = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const shadows = {
+      none: 'none',
+      sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+    };
+    const newStyle = { boxShadow: shadows[e.target.value as keyof typeof shadows] };
+    console.log('[ComponentEditingBar] Updating shadow:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
+  const handleOpacity = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStyle = { opacity: parseFloat(e.target.value) / 100 };
+    console.log('[ComponentEditingBar] Updating opacity:', newStyle);
+    onUpdateStyle(newStyle);
+  };
+
   // Text-specific controls (data update)
   const handleTextDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (component.type === 'text') {
@@ -85,8 +167,8 @@ export const ComponentEditingBar: React.FC<ComponentEditingBarProps> = ({
       <span className="mx-1 border-l border-gray-300 h-5" />
       
       <span className="font-medium text-gray-600 mr-1">Style:</span>
-      <select 
-        onChange={handleFontSize} 
+      <select
+        onChange={handleFontSize}
         value={component.style?.fontSize || "16px"}
         className="text-xs p-0.5 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
         title="Font Size"
@@ -98,6 +180,11 @@ export const ComponentEditingBar: React.FC<ComponentEditingBarProps> = ({
         <option value="24px">24</option>
         <option value="32px">32</option>
         <option value="40px">40</option>
+        <option value="48px">48</option>
+        <option value="64px">64</option>
+        <option value="72px">72</option>
+        <option value="96px">96</option>
+        <option value="128px">128</option>
       </select>
       <input 
         type="color" 
@@ -129,6 +216,179 @@ export const ComponentEditingBar: React.FC<ComponentEditingBarProps> = ({
             className="text-xs p-1 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 w-32"
             placeholder="Edit text..."
           />
+        </>
+      )}
+      
+      <span className="mx-1 border-l border-gray-300 h-5" />
+      
+      <span className="font-medium text-gray-600 mr-1">Size & Arrange:</span>
+      <button 
+        onClick={() => setShowArrangeOptions(!showArrangeOptions)}
+        className={`p-1 hover:bg-gray-100 rounded ${showArrangeOptions ? 'bg-gray-100' : ''}`}
+        title="Size & Arrange Options"
+      >
+        S/A
+      </button>
+      
+      {showArrangeOptions && (
+        <>
+          <div className="flex items-center">
+            <span className="text-xs mr-1">W:</span>
+            <input
+              type="number"
+              value={component.layout.width}
+              onChange={(e) => handleSizeChange('width', e.target.value)}
+              className="text-xs w-12 p-0.5 border border-gray-300 rounded"
+              min="20"
+            />
+          </div>
+          <div className="flex items-center">
+            <span className="text-xs mr-1">H:</span>
+            <input
+              type="number"
+              value={component.layout.height}
+              onChange={(e) => handleSizeChange('height', e.target.value)}
+              className="text-xs w-12 p-0.5 border border-gray-300 rounded"
+              min="20"
+            />
+          </div>
+          <button
+            onClick={() => handleZIndexChange('forward')}
+            className="p-1 hover:bg-gray-100 rounded text-xs"
+            title="Bring Forward"
+          >
+            ↑
+          </button>
+          <button
+            onClick={() => handleZIndexChange('backward')}
+            className="p-1 hover:bg-gray-100 rounded text-xs"
+            title="Send Backward"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => handleZIndexChange('front')}
+            className="p-1 hover:bg-gray-100 rounded text-xs"
+            title="Bring to Front"
+          >
+            ⇈
+          </button>
+          <button
+            onClick={() => handleZIndexChange('back')}
+            className="p-1 hover:bg-gray-100 rounded text-xs"
+            title="Send to Back"
+          >
+            ⇊
+          </button>
+        </>
+      )}
+
+      <span className="mx-1 border-l border-gray-300 h-5" />
+      
+      <span className="font-medium text-gray-600 mr-1">Border:</span>
+      <button 
+        onClick={() => setShowBorderOptions(!showBorderOptions)}
+        className={`p-1 hover:bg-gray-100 rounded ${showBorderOptions ? 'bg-gray-100' : ''}`}
+        title="Border Options"
+      >
+        B
+      </button>
+      
+      {showBorderOptions && (
+        <>
+          <select
+            onChange={handleBorderWidth}
+            value={component.style?.borderWidth || "0px"}
+            className="text-xs p-0.5 border border-gray-300 rounded"
+            title="Border Width"
+          >
+            <option value="0px">0</option>
+            <option value="1px">1</option>
+            <option value="2px">2</option>
+            <option value="3px">3</option>
+            <option value="4px">4</option>
+          </select>
+          <select
+            onChange={handleBorderStyle}
+            value={component.style?.borderStyle || "solid"}
+            className="text-xs p-0.5 border border-gray-300 rounded"
+            title="Border Style"
+          >
+            <option value="solid">Solid</option>
+            <option value="dashed">Dashed</option>
+            <option value="dotted">Dotted</option>
+            <option value="double">Double</option>
+          </select>
+          <input
+            type="color"
+            onChange={handleBorderColor}
+            value={typeof component.style?.borderColor === 'string' ? component.style.borderColor : "#000000"}
+            title="Border Color"
+            className="w-5 h-5 p-0 border-none rounded cursor-pointer"
+          />
+          <select
+            onChange={handleBorderRadius}
+            value={component.style?.borderRadius || "0px"}
+            className="text-xs p-0.5 border border-gray-300 rounded"
+            title="Border Radius"
+          >
+            <option value="0px">0</option>
+            <option value="4px">4</option>
+            <option value="8px">8</option>
+            <option value="12px">12</option>
+            <option value="16px">16</option>
+            <option value="24px">24</option>
+            <option value="9999px">Full</option>
+          </select>
+        </>
+      )}
+
+      <span className="mx-1 border-l border-gray-300 h-5" />
+      
+      <span className="font-medium text-gray-600 mr-1">Effects:</span>
+      <button 
+        onClick={() => setShowEffectOptions(!showEffectOptions)}
+        className={`p-1 hover:bg-gray-100 rounded ${showEffectOptions ? 'bg-gray-100' : ''}`}
+        title="Effect Options"
+      >
+        E
+      </button>
+      
+      {showEffectOptions && (
+        <>
+          <select
+            onChange={handleShadow}
+            value={
+              component.style?.boxShadow === 'none' ? 'none' :
+              component.style?.boxShadow === '0 1px 3px rgba(0,0,0,0.12)' ? 'sm' :
+              component.style?.boxShadow === '0 4px 6px rgba(0,0,0,0.1)' ? 'md' :
+              component.style?.boxShadow === '0 10px 15px rgba(0,0,0,0.1)' ? 'lg' :
+              component.style?.boxShadow === '0 20px 25px rgba(0,0,0,0.1)' ? 'xl' : 'none'
+            }
+            className="text-xs p-0.5 border border-gray-300 rounded"
+            title="Shadow"
+          >
+            <option value="none">None</option>
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+            <option value="xl">X-Large</option>
+            <option value="2xl">2X-Large</option>
+            <option value="inner">Inner</option>
+          </select>
+          <div className="flex items-center">
+            <span className="text-xs mr-1">Opacity:</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={((component.style?.opacity as number) || 1) * 100}
+              onChange={handleOpacity}
+              className="w-16"
+              title="Opacity"
+            />
+            <span className="text-xs ml-1">{Math.round(((component.style?.opacity as number) || 1) * 100)}%</span>
+          </div>
         </>
       )}
     </div>

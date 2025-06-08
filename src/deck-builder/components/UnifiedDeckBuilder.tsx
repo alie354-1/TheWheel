@@ -8,13 +8,14 @@ import { ThemeCustomizationPanel, ThemeSettings } from './ThemeCustomizationPane
 import { VisualComponentEditorModal } from './VisualComponentEditorModal.tsx';
 import { ColorTheme as EditorColorTheme } from './EnhancedVisualDeckBuilderHelpers.tsx';
 import { supabase } from '../../lib/supabase.ts';
-import SafeTextRenderer from './SafeTextRenderer.tsx';
+import { SafeTextRenderer } from './SafeTextRenderer.tsx';
 import { FeedbackPanel } from './feedback/FeedbackPanel.tsx';
 import { AIProposalsPanel } from './ai/AIProposalsPanel.tsx';
 import { DeckComment } from '../types/index.ts';
 import { ComponentEditingBar } from './ComponentEditingBar.tsx';
 import { DeckService } from '../services/deckService.ts';
 import PreviewSlide from '../preview/components/PreviewSlide.tsx';
+import { FontSelection } from './FontSelection.tsx';
 import { 
   Eye, 
   Edit, 
@@ -29,10 +30,15 @@ import {
   ChevronRight,
   MessageSquare,
   FileText, 
-  Maximize
+  Maximize,
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter.ts';
 import { useNavigate } from 'react-router-dom';
+import { MultiSelectToolbar } from './MultiSelectToolbar.tsx';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 type ViewMode = 'vertical' | 'split';
 type PanelMode = 'components' | 'themes' | 'settings' | 'feedback' | null;
@@ -97,9 +103,10 @@ const CollapsibleSlideNavigator: React.FC<{
   selectedSectionId: string | null;
   onSectionSelect: (sectionId: string) => void;
   onAddSection: (sectionType: SectionType) => void;
+  onMoveSection: (fromIndex: number, toIndex: number) => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
-}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, isCollapsed, onToggleCollapsed }) => {
+}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, onMoveSection, isCollapsed, onToggleCollapsed }) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [hoveredSlide, setHoveredSlide] = useState<string | null>(null);
 
@@ -149,54 +156,66 @@ const CollapsibleSlideNavigator: React.FC<{
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        {sections.map((section, index) => {
-          const isSelected = selectedSectionId === section.id;
-          const slideTitle = section.title || 'Untitled Slide';
-          if (isCollapsed) {
-            return (
-              <Tooltip key={section.id} content={`${index + 1}. ${slideTitle}`} show={hoveredSlide === section.id}>
-                <div
-                  onClick={() => onSectionSelect(section.id)}
-                  onMouseEnter={() => setHoveredSlide(section.id)}
-                  onMouseLeave={() => setHoveredSlide(null)}
-                  className={`p-2 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-center ${
-                    isSelected ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
-                  }`}
-                >
-                  <div className="w-6 h-4 bg-gray-200 rounded text-xs flex items-center justify-center font-medium text-gray-600">
-                    {index + 1}
+      <Droppable droppableId="slides">
+        {(provided) => (
+          <div {...provided.droppableProps} ref={provided.innerRef} className="flex-1 overflow-y-auto">
+            {sections.map((section, index) => (
+              <Draggable key={section.id} draggableId={section.id} index={index}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    onClick={() => onSectionSelect(section.id)}
+                    className={`flex items-center p-2 border-b border-gray-100 cursor-pointer transition-colors ${
+                      selectedSectionId === section.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'
+                    } ${snapshot.isDragging ? 'bg-blue-100 shadow-lg' : ''}`}
+                  >
+                    <div {...provided.dragHandleProps} className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
+                      <GripVertical size={18} />
+                    </div>
+                    <div className="flex-shrink-0 w-8 h-6 bg-gray-200 rounded text-xs flex items-center justify-center font-medium text-gray-600 mx-2">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        <SafeTextRenderer html={section.title || 'Untitled Slide'} />
+                      </div>
+                      <p className="text-xs text-gray-500 truncate">
+                        {section.type.replace('-', ' ')}
+                      </p>
+                    </div>
+                    <div className="flex flex-col ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMoveSection(index, index - 1);
+                        }}
+                        disabled={index === 0}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMoveSection(index, index + 1);
+                        }}
+                        disabled={index === sections.length - 1}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Tooltip>
-            );
-          }
-          return (
-            <div
-              key={section.id}
-              onClick={() => onSectionSelect(section.id)}
-              className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                isSelected ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 w-8 h-6 bg-gray-200 rounded text-xs flex items-center justify-center font-medium text-gray-600">
-                  {index + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate"> 
-                    <SafeTextRenderer content={slideTitle} />
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {section.type.replace('-', ' ')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {isCollapsed && (
-          <Tooltip content="Add slide" show={hoveredSlide === 'add'}>
+                )}
+              </Draggable>
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+      {isCollapsed && (
+        <Tooltip content="Add slide" show={hoveredSlide === 'add'}>
             <div
               onMouseEnter={() => setHoveredSlide('add')}
               onMouseLeave={() => setHoveredSlide(null)}
@@ -207,7 +226,6 @@ const CollapsibleSlideNavigator: React.FC<{
             </div>
           </Tooltip>
         )}
-      </div>
     </div>
   );
 };
@@ -219,7 +237,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [currentUserDisplayNameState, setCurrentUserDisplayNameState] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('vertical');
   const [activePanel, setActivePanel] = useState<PanelMode>('components');
-  const [previewMode, setPreviewMode] = useState(false); 
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [comments, setComments] = useState<DeckComment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
@@ -231,6 +250,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [zoomLevel, setZoomLevel] = useState(1);
   
   const slideViewportRef = useRef<HTMLDivElement>(null);
+  const previewContentViewportRef = useRef<HTMLDivElement>(null);
   const slideCanvasContainerRef = useRef<HTMLDivElement>(null);
   const slideCanvasContainerSplitRef = useRef<HTMLDivElement>(null);
 
@@ -244,14 +264,18 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     addSection, 
     updateSection, 
     removeSection,
-    replaceSections, 
+    replaceSections,
+    moveSection,
     saveDeck,
     // updateDeck, // This was incorrect, useDeck exports setDeck
     setDeck, // Correct function from useDeck
   } = useDeck(initialDeck || undefined, onDeckUpdate);
 
-  const [selectedComponentId, setSelectedComponentId] = useState<string | undefined>(undefined);
+  const [selectedComponentIds, setSelectedComponentIds] = useState<Set<string>>(new Set());
   const [editingComponent, setEditingComponent] = useState<VisualComponent | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ startX: number, startY: number, endX: number, endY: number } | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const slideContainerRef = useRef<HTMLDivElement>(null);
   
   const currentSection = useMemo(() => {
     if (!deck || !selectedSectionId) return undefined;
@@ -266,27 +290,23 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
 
   // Find the selected component object
   const selectedComponent = useMemo(() => {
-    if (!selectedComponentId || !currentSection) return null;
-    return (currentSection.components || []).find(c => c.id === selectedComponentId) || null;
-  }, [selectedComponentId, currentSection]);
+    if (selectedComponentIds.size !== 1 || !currentSection) return null;
+    const firstId = selectedComponentIds.values().next().value;
+    return (currentSection.components || []).find(c => c.id === firstId) || null;
+  }, [selectedComponentIds, currentSection]);
 
   // Handler to update style
   const handleUpdateComponentStyle = useCallback((style: Partial<React.CSSProperties>) => {
-    console.log('[UnifiedDeckBuilder] handleUpdateComponentStyle called with:', style);
-    if (!selectedComponent || !currentSection || !updateSection) {
-      console.warn('[UnifiedDeckBuilder] handleUpdateComponentStyle: missing selectedComponent, currentSection, or updateSection');
-      return;
-    }
-    console.log('[UnifiedDeckBuilder] Current selectedComponent:', selectedComponent);
-    console.log('[UnifiedDeckBuilder] Current currentSection before update:', currentSection);
-    const updatedComponents = (currentSection.components || []).map(c =>
-      c.id === selectedComponent.id
-        ? { ...c, style: { ...c.style, ...style } }
-        : c
-    );
-    console.log('[UnifiedDeckBuilder] updatedComponents for style change:', updatedComponents);
+    if (selectedComponentIds.size === 0 || !currentSection || !updateSection) return;
+
+    const updatedComponents = (currentSection.components || []).map(c => {
+      if (selectedComponentIds.has(c.id)) {
+        return { ...c, style: { ...c.style, ...style } };
+      }
+      return c;
+    });
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
-  }, [selectedComponent, currentSection, updateSection]);
+  }, [selectedComponentIds, currentSection, updateSection]);
   
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
     fontFamily: 'Inter, system-ui, sans-serif',
@@ -302,57 +322,97 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   
   const navigate = useNavigate();
 
+  // Debounce utility
+  const debounce = (func: (...args: any[]) => void, wait: number) => {
+    let timeout: ReturnType<typeof setTimeout>;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
   const calculateZoom = useCallback(() => {
-    const viewport = viewMode === 'vertical' 
-      ? slideViewportRef.current 
-      : (document.getElementById('slide-preview-area-split') || slideViewportRef.current);
+    // In preview mode, calculate zoom for the slide canvas container
+    if (previewMode) {
+      const container = slideCanvasContainerRef.current;
+      if (container && currentSection) {
+        const containerRect = container.getBoundingClientRect();
+        const logicalWidth = currentSection.width || 960;
+        const logicalHeight = currentSection.height || 540;
+        
+        if (containerRect.width > 0 && containerRect.height > 0 && logicalWidth > 0 && logicalHeight > 0) {
+          const scaleX = containerRect.width / logicalWidth;
+          const scaleY = containerRect.height / logicalHeight;
+          // Use full scale in preview mode to fill the container
+          const newZoom = Math.min(scaleX, scaleY);
+          setZoomLevel(newZoom);
+        } else {
+          setZoomLevel(1);
+        }
+      } else {
+        setZoomLevel(1);
+      }
+      return;
+    }
+
+    // Normal edit mode zoom calculation
+    const viewport = viewMode === 'vertical'
+      ? previewContentViewportRef.current
+      : (document.getElementById('slide-preview-area-split'));
 
     if (viewport && currentSection) {
-      const viewportWidth = viewport.offsetWidth;
-      const viewportHeight = viewport.offsetHeight;
+      const rect = viewport.getBoundingClientRect();
+      const padding = 32;
+      const availableWidth = rect.width - padding;
+      const availableHeight = rect.height - padding;
       const logicalWidth = currentSection.width || 960;
       const logicalHeight = currentSection.height || 540;
 
-      if (viewportWidth > 0 && viewportHeight > 0 && logicalWidth > 0 && logicalHeight > 0) {
-        const scaleX = viewportWidth / logicalWidth;
-        const scaleY = viewportHeight / logicalHeight;
-        const newZoom = Math.max(0.1, Math.min(scaleX, scaleY) * 0.90);
-        
-        console.log('Zoom calculation:', {
-          viewportWidth,
-          viewportHeight,
-          logicalWidth,
-          logicalHeight,
-          scaleX,
-          scaleY,
-          newZoom,
-          currentZoom: zoomLevel
-        });
-        
+      if (availableWidth > 0 && availableHeight > 0 && logicalWidth > 0 && logicalHeight > 0) {
+        const scaleX = availableWidth / logicalWidth;
+        const scaleY = availableHeight / logicalHeight;
+        const newZoom = Math.max(0.1, Math.min(scaleX, scaleY) * 0.95);
         setZoomLevel(newZoom);
       } else {
-        console.warn('Invalid viewport or section dimensions, defaulting zoom to 0.5');
         setZoomLevel(0.5);
       }
     } else {
-      console.warn('No viewport or section, defaulting zoom to 0.5');
       setZoomLevel(0.5);
     }
-  }, [currentSection, viewMode, isNavigatorCollapsed, activePanel, zoomLevel]);
+  }, [currentSection, viewMode, previewMode]);
 
   useEffect(() => {
+    // Log slide dimensions whenever the current section changes
+    if (currentSection) {
+      console.log('UnifiedDeckBuilder - Current section dimensions:', {
+        sectionId: currentSection.id,
+        width: currentSection.width,
+        height: currentSection.height,
+        defaultWidth: 960,
+        defaultHeight: 540,
+        effectiveWidth: currentSection.width || 960,
+        effectiveHeight: currentSection.height || 540,
+      });
+    }
+    
     calculateZoom();
-    let resizeTimeout: number | undefined;
-    const debouncedCalculateZoom = () => {
-      if (resizeTimeout) window.clearTimeout(resizeTimeout);
-      resizeTimeout = window.setTimeout(calculateZoom, 150);
-    };
-    window.addEventListener('resize', debouncedCalculateZoom);
+    const handleResize = debounce(() => calculateZoom(), 150);
+
+    window.addEventListener('resize', handleResize);
+
+    let observer: ResizeObserver | null = null;
+    if (slideViewportRef.current) {
+      observer = new ResizeObserver(handleResize);
+      observer.observe(slideViewportRef.current);
+    }
+
     return () => {
-      if (resizeTimeout) window.clearTimeout(resizeTimeout);
-      window.removeEventListener('resize', debouncedCalculateZoom);
+      window.removeEventListener('resize', handleResize);
+      if (observer && slideViewportRef.current) {
+        observer.disconnect();
+      }
     };
-  }, [calculateZoom]);
+  }, [calculateZoom, viewMode, previewMode, currentSection]);
 
 
   const handleHtmlImport = () => {
@@ -607,7 +667,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
 
   const handleSectionSelect = (sectionId: string) => {
     setSelectedSectionId(sectionId);
-    setSelectedComponentId(undefined);
+    setSelectedComponentIds(new Set());
   };
 
   const handleAddComponent = (componentType: BlockType) => {
@@ -627,7 +687,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     
     const updatedComponents = [...(currentSection.components || []), newComponent];
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
-    setSelectedComponentId(newComponent.id);
+    setSelectedComponentIds(new Set([newComponent.id]));
   };
   
   const handleComponentUpdate = (componentId: string, newData: any) => {
@@ -638,18 +698,40 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
   };
 
-  const handleSelectComponent = (componentId: string | null): void => { 
-    console.log('Selecting component:', componentId);
-    setSelectedComponentId(componentId || undefined); 
+  const handleSelectComponent = (componentId: string | null, multiSelect = false): void => {
+    if (componentId === null) {
+      setSelectedComponentIds(new Set());
+      return;
+    }
+  
+    setSelectedComponentIds(prevIds => {
+      if (multiSelect) {
+        const newIds = new Set(prevIds);
+        if (newIds.has(componentId)) {
+          newIds.delete(componentId);
+        } else {
+          newIds.add(componentId);
+        }
+        return newIds;
+      } else {
+        // If not multi-selecting, and the component is already the only one selected, do nothing.
+        if (prevIds.size === 1 && prevIds.has(componentId)) {
+          return prevIds;
+        }
+        return new Set([componentId]);
+      }
+    });
   };
 
   const handleComponentDelete = (componentId: string) => {
     if (!currentSection) return;
     const updatedComponents = (currentSection.components || []).filter(c => c.id !== componentId);
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
-    if (selectedComponentId === componentId) {
-      setSelectedComponentId(undefined);
-    }
+    setSelectedComponentIds(prevIds => {
+      const newIds = new Set(prevIds);
+      newIds.delete(componentId);
+      return newIds;
+    });
   };
 
   const handleThemeChange = (newThemeSettings: Partial<ThemeSettings>) => {
@@ -796,6 +878,176 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     });
   };
 
+  const handleAlign = (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (!currentSection || selectedComponentIds.size < 2) return;
+
+    const componentsToUpdate = (currentSection.components || []).filter(c => selectedComponentIds.has(c.id));
+    if (componentsToUpdate.length < 2) return;
+
+    const layouts = componentsToUpdate.map(c => c.layout);
+
+    let targetX: number | undefined;
+    let targetY: number | undefined;
+
+    switch (alignment) {
+      case 'left':
+        targetX = Math.min(...layouts.map(l => l.x));
+        break;
+      case 'center':
+        const minX = Math.min(...layouts.map(l => l.x));
+        const maxX = Math.max(...layouts.map(l => l.x + l.width));
+        const centerX = (minX + maxX) / 2;
+        targetX = centerX;
+        break;
+      case 'right':
+        targetX = Math.max(...layouts.map(l => l.x + l.width));
+        break;
+      case 'top':
+        targetY = Math.min(...layouts.map(l => l.y));
+        break;
+      case 'middle':
+        const minY = Math.min(...layouts.map(l => l.y));
+        const maxY = Math.max(...layouts.map(l => l.y + l.height));
+        const centerY = (minY + maxY) / 2;
+        targetY = centerY;
+        break;
+      case 'bottom':
+        targetY = Math.max(...layouts.map(l => l.y + l.height));
+        break;
+    }
+
+    const updatedComponents = (currentSection.components || []).map(c => {
+      if (selectedComponentIds.has(c.id)) {
+        const newLayout = { ...c.layout };
+        if (targetX !== undefined) {
+          if (alignment === 'center') {
+            newLayout.x = targetX - c.layout.width / 2;
+          } else if (alignment === 'right') {
+            newLayout.x = targetX - c.layout.width;
+          } else {
+            newLayout.x = targetX;
+          }
+        }
+        if (targetY !== undefined) {
+          if (alignment === 'middle') {
+            newLayout.y = targetY - c.layout.height / 2;
+          } else if (alignment === 'bottom') {
+            newLayout.y = targetY - c.layout.height;
+          } else {
+            newLayout.y = targetY;
+          }
+        }
+        return { ...c, layout: newLayout };
+      }
+      return c;
+    });
+
+    updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
+  };
+
+  const handleDistribute = (distribution: 'horizontal' | 'vertical') => {
+    if (!currentSection || selectedComponentIds.size < 3) return;
+
+    const componentsToUpdate = (currentSection.components || [])
+      .filter(c => selectedComponentIds.has(c.id))
+      .sort((a, b) => distribution === 'horizontal' ? a.layout.x - b.layout.x : a.layout.y - b.layout.y);
+
+    if (componentsToUpdate.length < 3) return;
+
+    if (distribution === 'horizontal') {
+      const minX = componentsToUpdate[0].layout.x;
+      const maxX = componentsToUpdate[componentsToUpdate.length - 1].layout.x;
+      const totalWidth = componentsToUpdate.reduce((sum, c) => sum + c.layout.width, 0);
+      const spacing = (maxX - minX - totalWidth) / (componentsToUpdate.length - 1);
+      
+      let currentX = minX + componentsToUpdate[0].layout.width + spacing;
+      for (let i = 1; i < componentsToUpdate.length - 1; i++) {
+        componentsToUpdate[i].layout.x = currentX;
+        currentX += componentsToUpdate[i].layout.width + spacing;
+      }
+    } else {
+      const minY = componentsToUpdate[0].layout.y;
+      const maxY = componentsToUpdate[componentsToUpdate.length - 1].layout.y;
+      const totalHeight = componentsToUpdate.reduce((sum, c) => sum + c.layout.height, 0);
+      const spacing = (maxY - minY - totalHeight) / (componentsToUpdate.length - 1);
+
+      let currentY = minY + componentsToUpdate[0].layout.height + spacing;
+      for (let i = 1; i < componentsToUpdate.length - 1; i++) {
+        componentsToUpdate[i].layout.y = currentY;
+        currentY += componentsToUpdate[i].layout.height + spacing;
+      }
+    }
+
+    const updatedComponents = (currentSection.components || []).map(c => {
+      const updated = componentsToUpdate.find(uc => uc.id === c.id);
+      return updated || c;
+    });
+
+    updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
+  };
+
+  const handleMatchSize = (dimension: 'width' | 'height' | 'both') => {
+    if (!currentSection || selectedComponentIds.size < 2) return;
+
+    const componentsToUpdate = (currentSection.components || []).filter(c => selectedComponentIds.has(c.id));
+    if (componentsToUpdate.length < 2) return;
+
+    const firstComponentLayout = componentsToUpdate[0].layout;
+
+    const updatedComponents = (currentSection.components || []).map(c => {
+      if (selectedComponentIds.has(c.id)) {
+        const newLayout = { ...c.layout };
+        if (dimension === 'width' || dimension === 'both') {
+          newLayout.width = firstComponentLayout.width;
+        }
+        if (dimension === 'height' || dimension === 'both') {
+          newLayout.height = firstComponentLayout.height;
+        }
+        return { ...c, layout: newLayout };
+      }
+      return c;
+    });
+
+    updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
+  };
+
+  const handleGroup = () => {
+    // Grouping logic here
+  };
+
+  const handleUngroup = () => {
+    // Ungrouping logic here
+  };
+
+  const handleBringToFront = () => {
+    // Bring to front logic here
+  };
+
+  const handleSendToBack = () => {
+    // Send to back logic here
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination } = result;
+    if (!destination) return;
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+    if (source.droppableId === 'slides') {
+      moveSection(source.index, destination.index);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (!currentSection) return;
+    const updatedComponents = (currentSection.components || []).filter(c => !selectedComponentIds.has(c.id));
+    updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
+    setSelectedComponentIds(new Set());
+  };
+
   if (showTemplateSelector || !deck) {
     return (
       <div className="fixed inset-0 w-screen h-screen bg-gray-50 z-50 flex items-center justify-center">
@@ -827,6 +1079,77 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       </div>
 
       {/* Slide Specific Background Controls */}
+      {/* Canvas Size Controls */}
+      <div className="mt-4 space-y-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Canvas Size</label>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Width</label>
+            <input
+              type="number"
+              value={currentSection?.width || 960}
+              onChange={(e) => {
+                const width = parseInt(e.target.value) || 960;
+                if (currentSection && updateSection && width > 0) {
+                  updateSection(currentSection.id, { ...currentSection, width });
+                }
+              }}
+              min="320"
+              max="1920"
+              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Height</label>
+            <input
+              type="number"
+              value={currentSection?.height || 540}
+              onChange={(e) => {
+                const height = parseInt(e.target.value) || 540;
+                if (currentSection && updateSection && height > 0) {
+                  updateSection(currentSection.id, { ...currentSection, height });
+                }
+              }}
+              min="180"
+              max="1080"
+              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-2">
+          <button
+            onClick={() => {
+              if (currentSection && updateSection) {
+                updateSection(currentSection.id, { ...currentSection, width: 1920, height: 1080 });
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            1920×1080
+          </button>
+          <button
+            onClick={() => {
+              if (currentSection && updateSection) {
+                updateSection(currentSection.id, { ...currentSection, width: 1280, height: 720 });
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            1280×720
+          </button>
+          <button
+            onClick={() => {
+              if (currentSection && updateSection) {
+                updateSection(currentSection.id, { ...currentSection, width: 960, height: 540 });
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            960×540
+          </button>
+        </div>
+      </div>
+
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">Slide Background (Gradient/Image URL)</label>
         <input
@@ -887,6 +1210,17 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           </button>
         </div>
       </div>
+      <div className="mt-4">
+        <FontSelection
+          selectedFont={currentSection?.slideStyle?.fontFamily || deck.theme?.fonts?.body || 'Inter, system-ui, sans-serif'}
+          onFontChange={(font) => {
+            if (currentSection && updateSection) {
+              const newSlideStyle = { ...currentSection.slideStyle, fontFamily: font };
+              updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
+            }
+          }}
+        />
+      </div>
       {/* End Slide Specific Background Controls */}
 
       <button
@@ -940,7 +1274,13 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     </div>
   ) : <p className="text-gray-500 p-4">Select a slide to edit.</p>;
 
-  const currentDeckThemeForPreview: DeckTheme = deck?.theme ? deck.theme : {
+  const currentDeckThemeForPreview: DeckTheme = deck?.theme ? {
+    ...deck.theme,
+    fonts: {
+      ...deck.theme.fonts,
+      body: currentSection?.slideStyle?.fontFamily || deck.theme.fonts.body,
+    }
+  } : {
     id: 'default-inline-theme',
     name: 'Default Inline Theme',
     colors: {
@@ -952,17 +1292,18 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       slideBackground: themeSettings.background || themeSettings.backgroundColor || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     },
     fonts: {
-      body: themeSettings.fontFamily || 'Inter, system-ui, sans-serif',
-      heading: themeSettings.fontFamily || 'Inter, system-ui, sans-serif',
+      body: currentSection?.slideStyle?.fontFamily || themeSettings.fontFamily || 'Inter, system-ui, sans-serif',
+      heading: currentSection?.slideStyle?.fontFamily || themeSettings.fontFamily || 'Inter, system-ui, sans-serif',
     }
   };
 
   return (
-    <div className="w-full h-full bg-gray-100 flex flex-col overflow-hidden">
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between flex-shrink-0">
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="w-full h-full bg-gray-100 flex flex-col overflow-hidden">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           <h1 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">
-            <SafeTextRenderer content={deck.title || 'Untitled Deck'} />
+            <SafeTextRenderer html={deck.title || 'Untitled Deck'} />
           </h1>
           <span className="text-xs sm:text-sm text-gray-500 hidden md:inline">
             {deck.sections.length} slides
@@ -1093,6 +1434,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           selectedSectionId={selectedSectionId}
           onSectionSelect={handleSectionSelect}
           onAddSection={handleAddSection}
+          onMoveSection={(from, to) => moveSection(from, to)}
           isCollapsed={isNavigatorCollapsed}
           onToggleCollapsed={toggleNavigatorCollapsed}
         />
@@ -1109,12 +1451,12 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         )}
           <div 
             ref={slideViewportRef} 
-            className="flex-1 overflow-auto p-4 space-y-4"
+            className="flex-1 flex flex-col overflow-auto p-4 space-y-4"
             id={viewMode === 'vertical' ? "slide-preview-area-vertical" : undefined}
           >
             {viewMode === 'vertical' ? (
               <>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex-shrink-0">
                   <h2 className="text-md sm:text-lg font-semibold mb-3 text-gray-800 flex items-center">
                     <Edit size={20} className="mr-2 text-blue-600" />
                     Edit Slide
@@ -1122,13 +1464,29 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                   {editorPaneContent}
                 </div>
                 
-                <div className="bg-white rounded-lg shadow">
-                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+                <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
                     <h2 className="text-md sm:text-lg font-semibold text-gray-800 flex items-center">
                       <Eye size={20} className="mr-2 text-blue-600" />
                       Preview
                     </h2>
                     <div className="flex items-center space-x-2">
+                      {previewMode && (
+                        <div className="flex items-center space-x-2">
+                          <label htmlFor="preview-zoom" className="text-xs text-gray-600">Zoom:</label>
+                          <input
+                            id="preview-zoom"
+                            type="range"
+                            min="0.1"
+                            max="2"
+                            step="0.05"
+                            value={previewZoom}
+                            onChange={(e) => setPreviewZoom(parseFloat(e.target.value))}
+                            className="w-24"
+                          />
+                          <span className="text-xs text-gray-600">{Math.round(previewZoom * 100)}%</span>
+                        </div>
+                      )}
                       {deck && deck.id && (
                         <button
                           onClick={handleSaveDeck}
@@ -1151,51 +1509,107 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                     </div>
                   </div>
                   <div 
-                    className="overflow-visible p-4 bg-gray-100 flex justify-center items-center" 
-                    style={{ width: '100%', minHeight: '500px' }} 
+                    ref={previewContentViewportRef}
+                    className={`overflow-hidden flex-1 flex justify-center items-center ${
+                      previewMode ? '' : 'p-4 bg-gray-100'
+                    }`}
+                    style={{ 
+                      width: '100%',
+                      height: '100%'
+                    }} 
                   >
-                    {currentSection ? (
-                      <div 
-                        ref={slideCanvasContainerRef} 
-                        id="slide-canvas-container" 
-                        className="relative bg-white" 
-                        style={{ 
-                          width: `${currentSection?.width || 960}px`, 
-                          height: `${currentSection?.height || 540}px`,
-                          minWidth: '960px', 
-                          minHeight: '540px',
-                          boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                          transform: `scale(${zoomLevel})`,
-                          transformOrigin: 'top left',
-                        }}
-                      >
-                        <PreviewSlide
-                          key={currentSection.id}
-                          section={currentSection}
-                          theme={currentDeckThemeForPreview}
-                          zoomLevel={zoomLevel} 
-                          logicalWidth={currentSection?.width || 960} 
-                          logicalHeight={currentSection?.height || 540} 
-                          previewMode={previewMode}
-                          onSelect={!previewMode ? handleSelectComponent : undefined}
-                          onUpdateLayout={!previewMode ? handleUpdateComponentLayout : undefined}
-                          onOpenEditor={!previewMode ? (id: string) => {
-                            const component = currentSection.components?.find(c => c.id === id);
-                            if (component) handleOpenComponentEditor(component);
-                          } : undefined}
-                          onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
-                          selectedComponentId={!previewMode ? selectedComponentId : undefined}
-                        />
-                        {!previewMode && (
-                          <div 
-                            className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 opacity-70 hover:opacity-100 cursor-se-resize z-20"
-                            style={{ borderTopLeftRadius: '4px' }}
-                            onMouseDown={handleResizeCanvasStart}
-                            title="Resize Slide Canvas"
-                          />
-                        )}
-                      </div>
-                    ) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
+{currentSection ? (
+  previewMode ? (
+    <div
+      ref={slideCanvasContainerRef}
+      id="slide-canvas-container"
+      className="relative w-full h-full overflow-hidden"
+      style={{
+        // Let the slide background show through - no black background
+      }}
+    >
+                    <PreviewSlide
+                      key={currentSection.id}
+                      section={currentSection}
+                      theme={currentDeckThemeForPreview}
+                      zoomLevel={previewZoom}
+                      logicalWidth={currentSection.width || 960}
+                      logicalHeight={currentSection.height || 540}
+                      previewMode={true}
+                      onSelect={undefined}
+                      onUpdateLayout={undefined}
+                      onOpenEditor={undefined}
+                      onDeleteComponent={undefined}
+                      selectedComponentIds={undefined}
+                      onAddComponentRequested={undefined}
+                    />
+                  </div>
+  ) : (
+    <div 
+      ref={slideCanvasContainerRef} 
+      id="slide-canvas-container" 
+      className="relative bg-white" 
+      style={{ 
+        width: `${currentSection?.width || 960}px`, 
+        height: `${currentSection?.height || 540}px`,
+        minWidth: '960px', 
+        minHeight: '540px',
+        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+        transform: `scale(${zoomLevel})`,
+        transformOrigin: 'top left',
+      }}
+    >
+      <PreviewSlide
+        key={currentSection.id}
+        section={currentSection}
+        theme={currentDeckThemeForPreview}
+        zoomLevel={zoomLevel} 
+        logicalWidth={currentSection?.width || 960} 
+        logicalHeight={currentSection?.height || 540} 
+        previewMode={false}
+        onSelect={handleSelectComponent}
+        onUpdateLayout={handleUpdateComponentLayout}
+        onOpenEditor={(id: string) => {
+          const component = currentSection.components?.find(c => c.id === id);
+          if (component) handleOpenComponentEditor(component);
+        }}
+        onDeleteComponent={(id: string) => handleComponentDelete(id)}
+        selectedComponentIds={selectedComponentIds}
+      />
+      <div
+        ref={slideCanvasContainerRef}
+        className="resize-handle-wrapper"
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: '24px',
+          height: '24px',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          className="resize-handle"
+          style={{
+            width: '6px',
+            height: '6px',
+            backgroundColor: 'rgba(59, 130, 246, 0.9)',
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 0 3px rgba(0,0,0,0.5)',
+            cursor: 'nwse-resize',
+            zIndex: 1000,
+          }}
+          onMouseDown={handleResizeCanvasStart}
+          title="Resize Slide Canvas"
+        />
+      </div>
+    </div>
+  )
+) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
                   </div>
                 </div>
               </>
@@ -1243,16 +1657,40 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                           const component = currentSection.components?.find(c => c.id === id);
                           if (component) handleOpenComponentEditor(component);
                         } : undefined}
-                        onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
-                        selectedComponentId={!previewMode ? selectedComponentId : undefined}
-                      />
-                      {!previewMode && (
-                        <div 
-                          className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 opacity-70 hover:opacity-100 cursor-se-resize z-20"
-                          style={{ borderTopLeftRadius: '4px' }}
-                          onMouseDown={handleResizeCanvasStart}
-                          title="Resize Slide Canvas"
-                        />
+        onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
+        selectedComponentIds={!previewMode ? selectedComponentIds : undefined}
+      />
+      {!previewMode && (
+        <div
+                          className="resize-handle-wrapper"
+                          style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            width: '24px',
+                            height: '24px',
+                            zIndex: 1000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <div
+                            className="resize-handle"
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              backgroundColor: 'rgba(59, 130, 246, 0.9)',
+                              borderRadius: '50%',
+                              border: '2px solid white',
+                              boxShadow: '0 0 3px rgba(0,0,0,0.5)',
+                              cursor: 'nwse-resize',
+                              zIndex: 1000,
+                            }}
+                            onMouseDown={handleResizeCanvasStart}
+                            title="Resize Slide Canvas"
+                          />
+                        </div>
                       )}
                     </div>
                   ) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
@@ -1360,6 +1798,19 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         }}
         currentTheme={mapThemeSettingsToEditorColorTheme(themeSettings)} 
       />
+      {selectedComponentIds.size > 1 && (
+        <MultiSelectToolbar
+          onAlign={handleAlign}
+          onDistribute={handleDistribute}
+          onMatchSize={handleMatchSize}
+          onGroup={handleGroup}
+          onUngroup={handleUngroup}
+          onBringToFront={handleBringToFront}
+          onSendToBack={handleSendToBack}
+          onDelete={handleDeleteSelected}
+        />
+      )}
     </div>
+    </DragDropContext>
   );
 }
