@@ -407,6 +407,15 @@ export default function Layout() { // Remove children prop
                       <User className="h-4 w-4 mr-2" />
                       Your Profile
                     </Link>
+                    <Link 
+                      to="/account-settings" 
+                      className="flex items-center px-4 py-2 text-sm text-base-content hover:bg-base-200 hover:text-primary transition-colors" 
+                      role="menuitem"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Account Settings
+                    </Link>
                     <button 
                       onClick={() => {
                         setIsProfileMenuOpen(false);

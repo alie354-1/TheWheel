@@ -9,6 +9,9 @@ import LearningProfileDisplay from '../components/profile/LearningProfileDisplay
 import LearningProfileEditor from '../components/profile/LearningProfileEditor'; // Import the editor component
 import CredentialManager from '../components/profile/CredentialManager';
 import { listIntegrations, ExternalLMSIntegration } from '../lib/services/externalTrainingIntegration.service';
+import EditExpertProfileButton from '../components/community/EditExpertProfileButton';
+import ViewExpertProfileButton from '../components/community/ViewExpertProfileButton';
+import { expertService } from '../lib/services/expert.service';
 
 export default function Profile() {
   const { user, profile, setProfile } = useAuthStore();
@@ -18,9 +21,10 @@ export default function Profile() {
   const [isEditingLearningProfile, setIsEditingLearningProfile] = useState(false); // State for editing learning profile
   const [isLoading, setIsLoading] = useState(false);
   const [enhancedProfile, setEnhancedProfile] = useState<any>(null);
+  const [isExpert, setIsExpert] = useState(false);
   
   // Calculate companyId after enhancedProfile is declared
-  const companyId = enhancedProfile?.company_id || profile?.company_id || ""; // Try to get companyId
+  const companyId = enhancedProfile?.company_id || (profile as any)?.company_id || ""; // Try to get companyId
 
   useEffect(() => {
     if (!companyId) return;
@@ -54,6 +58,23 @@ export default function Profile() {
     service_categories: [] as string[]
   });
   
+  // Check if user is an expert
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkExpertStatus = async () => {
+      try {
+        const expertProfile = await expertService.getExpertProfile(user.id);
+        setIsExpert(!!expertProfile);
+      } catch (err) {
+        console.error('Error checking expert status:', err);
+        setIsExpert(false);
+      }
+    };
+    
+    checkExpertStatus();
+  }, [user]);
+
   // Fetch enhanced profile data if available
   useEffect(() => {
     if (!user) return;
@@ -623,6 +644,46 @@ export default function Profile() {
                     </div>
                   )}
                   {/* End External Credentials Section */}
+                  
+                  {/* Expert Profile Section */}
+                  {user && (
+                    <div className="md:col-span-2 mt-8">
+                      <div className="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 className="text-lg font-medium text-gray-900">Expert Profile</h2>
+                      </div>
+                      
+                      {isExpert ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                          <div className="flex justify-between items-center mb-4">
+                            <div>
+                              <h3 className="text-lg font-semibold text-blue-800 mb-1">You're a Community Expert!</h3>
+                              <p className="text-blue-700">
+                                You can view or edit your expert profile anytime.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-4">
+                            <ViewExpertProfileButton variant="button" />
+                            <EditExpertProfileButton variant="button" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-1">Become a Community Expert</h3>
+                          <p className="text-gray-600 mb-4">
+                            Share your expertise with the community and help others succeed in their journey.
+                          </p>
+                          <Link 
+                            to="/community/experts" 
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            Join as Expert
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* End Expert Profile Section */}
 
                   <div className="md:col-span-2 flex justify-end">
                     <button
