@@ -17,22 +17,24 @@ import CommunityStepsModal from "../components/step/CommunityStepsModal.tsx";
 import { StepDetailWireframe } from "../components/step/StepDetailWireframe.tsx";
 import StepRelationshipManager from "../components/step/StepRelationshipManager.tsx";
 import { supabase } from "../../../../lib/supabase.ts";
+import { useCompany } from "../../../../lib/hooks/useCompany.ts";
+import { AiRecommendationPanel } from "../../../journey/AiRecommendationPanel.tsx";
+import JourneyAnalyticsDashboard from "../../../journey/JourneyAnalyticsDashboard.tsx";
+import CompanyMembersPage from "../../../../pages/company/CompanyMembersPage.tsx";
 
 // Placeholder for companyMetadata (replace with real context/provider as needed)
 const companyMetadata = {
   priorities: ["Product Development"]
 };
 
-interface JourneyHomePageProps {
-  companyId: string;
-}
-const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCompanyId }) => {
-  // Fallback: If prop is undefined, try to get from localStorage (for hard reloads)
-  let companyId = initialCompanyId;
-  if (!companyId) {
-    companyId = localStorage.getItem("companyId") || localStorage.getItem("forceJourneyCompanyId") || "";
-  }
-  console.log("JourneyHomePage: companyId prop at render", companyId);
+const JourneyHomePage: React.FC = () => {
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.id;
+  
+  // Add debug logging
+  useEffect(() => {
+    console.log("JourneyHomePage: companyId from useCompany hook", companyId);
+  }, [companyId]);
   const [domains, setDomains] = useState<any[]>([]);
   const [phases, setPhases] = useState<any[]>([]);
 
@@ -113,8 +115,8 @@ const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCom
   const [modalPeerRate, setModalPeerRate] = useState<number | undefined>(undefined);
   const [modalPeerInsights, setModalPeerInsights] = useState<string[] | undefined>(undefined);
 
-  // View mode: "dashboard" | "step-detail"
-  const [viewMode, setViewMode] = useState<"dashboard" | "step-detail">("dashboard");
+  // View mode: "dashboard" | "step-detail" | "team"
+  const [viewMode, setViewMode] = useState<"dashboard" | "step-detail" | "team">("dashboard");
   const [stepDetailStep, setStepDetailStep] = useState<Step | null>(null);
   const [stepDetailTools, setStepDetailTools] = useState<any[]>([]);
   const [stepDetailNextSteps, setStepDetailNextSteps] = useState<any[]>([]);
@@ -192,7 +194,8 @@ const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCom
 
       await Promise.all(
         steps.map(async (step) => {
-          const tasks = await taskService.getTasks({ stepId: step.id });
+          // Adjust the parameter to match what taskService.getTasks accepts
+          const tasks = await taskService.getTasks({ category: step.id });
           const total = tasks.length;
           const completed = tasks.filter((t: Task) => t.status === "completed").length;
           newStepTasks[step.id] = { total, completed };
@@ -260,9 +263,9 @@ const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCom
 
   return (
     <AIProvider>
-    <div className="min-h-screen bg-gray-50 flex flex-row">
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* Sidebar */}
-      <div className="flex-shrink-0 mr-8">
+      <div className="flex-shrink-0 lg:mr-8">
         <CompanyStepsSidebar
           stepsWithStatus={stepsWithStatus}
           domains={domains}
@@ -285,16 +288,26 @@ const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCom
           onDeleteStep={stepId => {
             setSteps(prev => prev.filter(s => s.id !== stepId));
           }}
-          onOpenStep={undefined}
+          onOpenStep={(stepId) => {
+            const step = steps.find(s => s.id === stepId) || null;
+            setStepDetailStep(step);
+            setViewMode("step-detail");
+          }}
         />
       </div>
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-8">
-        {viewMode === "dashboard" ? (
+      <div className="flex-1 flex flex-col px-4 sm:px-8">
+        {viewMode === "dashboard" || viewMode === "team" ? (
           <>
-            <div className="flex justify-between items-center w-full mb-8 mt-10 px-0">
-              <h1 className="text-3xl font-bold text-center">Journey</h1>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center w-full mb-8 mt-10 px-0">
+              <h1 className="text-3xl font-bold text-center mb-4 sm:mb-0">Journey</h1>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
+                  onClick={() => window.location.assign("/company/members")}
+                >
+                  Team Members
+                </button>
                 <button
                   className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
                   onClick={() => window.location.assign("/journey/map")}
@@ -307,98 +320,119 @@ const JourneyHomePage: React.FC<JourneyHomePageProps> = ({ companyId: initialCom
                 >
                   Browse Community Steps
                 </button>
+                <button
+                  className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700"
+                  onClick={() => window.location.assign("/company/journey/submit-step")}
+                >
+                  Submit a Step
+                </button>
+                <button
+                  className="px-4 py-2 bg-yellow-600 text-white rounded shadow hover:bg-yellow-700"
+                  onClick={() => window.location.assign("/company/journey/community-steps")}
+                >
+                  View Community Steps
+                </button>
               </div>
             </div>
+            
+            {/* AI Recommendation Panel */}
+            <div className="w-full mb-8 px-0">
+              <AiRecommendationPanel />
+            </div>
+
+            {/* Journey Analytics Dashboard */}
+            <div className="w-full mb-8 px-0">
+              <JourneyAnalyticsDashboard />
+            </div>
+
             {/* Recommended Next Steps */}
             <div className="w-full mb-8 px-0">
-              <AIProvider>
-                <RecommendedStepsPanel
-                  recommendations={
-                    dashboardRecommendations.filter(rec => {
-                      // Find the corresponding step
-                      const step = steps.find(
-                        s => s.name.toLowerCase() === rec.title.toLowerCase()
-                      );
-                      if (!step) return false;
-                      // Find the status for this step
-                      const statusObj = stepsWithStatus.find(s => s.step.id === step.id);
-                      // Exclude if started (completion > 0 or status !== "ready")
-                      if (!statusObj) return true;
-                      if (statusObj.completion && statusObj.completion > 0) return false;
-                      if (statusObj.status !== "ready") return false;
-                      return true;
-                    })
-                  }
-                  steps={steps}
-                  onViewDetails={(step) => {
-                    const s = stepsWithStatus.find(x => x.step.id === step.id);
-                    setSelectedStep(step);
-                    setModalPeerRate(s?.recommended ? 73 : undefined);
-                    setModalPeerInsights(
-                      s?.recommended
-                        ? [
-                            "67% of SaaS startups are focusing on customer interviews this month.",
-                            "Most companies spend 2-4 weeks on market validation before building."
-                          ]
-                        : undefined
+              <RecommendedStepsPanel
+                recommendations={
+                  dashboardRecommendations.filter(rec => {
+                    // Find the corresponding step
+                    const step = steps.find(
+                      s => s.name.toLowerCase() === rec.title.toLowerCase()
                     );
-                    setModalOpen(true);
-                  }}
-                  onViewAll={() => setAllStepsModalOpen(true)}
-                />
-                <AllStepsModal
-                  open={allStepsModalOpen}
-steps={
-  (() => {
-    return allSteps.filter(
-      s => !steps.some(cs => cs.id === s.id)
-    );
-  })()
-}
-                  stepsWithStatus={stepsWithStatus}
-                  domains={domains}
-                  phases={phases}
-                  onClose={() => setAllStepsModalOpen(false)}
-                  onViewDetails={step => {
-                    setSelectedStep(step);
-                    setModalPeerRate(undefined);
-                    setModalPeerInsights(undefined);
-                    setModalOpen(true);
-                  }}
-                  onStartStep={async (step) => {
-                    // Insert into company_journey_steps
-                    console.log("onStartStep: companyId", companyId);
-                    if (!companyId) {
-                      alert("Company ID not set.");
-                      return;
-                    }
-                    const { data, error } = await supabase
-                      .from("company_journey_steps")
-                      .insert([
-                        {
-                          company_id: companyId,
-                          step_id: step.id,
-                          status: "not_started",
-                          created_at: new Date().toISOString(),
-                        },
-                      ]);
-                    if (error) {
-                      alert("Failed to add step: " + error.message);
-                      return;
-                    }
-                    // Refresh company steps
-                    await fetchCompanySteps();
-                    setAllStepsModalOpen(false);
-                  }}
-                />
-                <CreateStepModal
-                  open={createStepModalOpen}
-                  onClose={() => setCreateStepModalOpen(false)}
-                  onCreate={handleCreateStep}
-                  domains={domains}
-                  phases={phases}
-                />
-              </AIProvider>
+                    if (!step) return false;
+                    // Find the status for this step
+                    const statusObj = stepsWithStatus.find(s => s.step.id === step.id);
+                    // Exclude if started (completion > 0 or status !== "ready")
+                    if (!statusObj) return true;
+                    if (statusObj.completion && statusObj.completion > 0) return false;
+                    if (statusObj.status !== "ready") return false;
+                    return true;
+                  })
+                }
+                steps={steps}
+                onViewDetails={(step) => {
+                  const s = stepsWithStatus.find(x => x.step.id === step.id);
+                  setSelectedStep(step);
+                  setModalPeerRate(s?.recommended ? 73 : undefined);
+                  setModalPeerInsights(
+                    s?.recommended
+                      ? [
+                          "67% of SaaS startups are focusing on customer interviews this month.",
+                          "Most companies spend 2-4 weeks on market validation before building."
+                        ]
+                      : undefined
+                  );
+                  setModalOpen(true);
+                }}
+                onViewAll={() => setAllStepsModalOpen(true)}
+              />
+              <AllStepsModal
+                open={allStepsModalOpen}
+                steps={
+                  (() => {
+                    return allSteps.filter(
+                      s => !steps.some(cs => cs.id === s.id)
+                    );
+                  })()
+                }
+                stepsWithStatus={stepsWithStatus}
+                domains={domains}
+                phases={phases}
+                onClose={() => setAllStepsModalOpen(false)}
+                onViewDetails={step => {
+                  setSelectedStep(step);
+                  setModalPeerRate(undefined);
+                  setModalPeerInsights(undefined);
+                  setModalOpen(true);
+                }}
+                onStartStep={async (step) => {
+                  // Insert into company_journey_steps
+                  console.log("onStartStep: companyId", companyId);
+                  if (!companyId) {
+                    alert("Company ID not set.");
+                    return;
+                  }
+                  const { data, error } = await supabase
+                    .from("company_journey_steps")
+                    .insert([
+                      {
+                        company_id: companyId,
+                        step_id: step.id,
+                        status: "not_started",
+                        created_at: new Date().toISOString(),
+                      },
+                    ]);
+                  if (error) {
+                    alert("Failed to add step: " + error.message);
+                    return;
+                  }
+                  // Refresh company steps
+                  await fetchCompanySteps();
+                  setAllStepsModalOpen(false);
+                }}
+              />
+              <CreateStepModal
+                open={createStepModalOpen}
+                onClose={() => setCreateStepModalOpen(false)}
+                onCreate={handleCreateStep}
+                domains={domains}
+                phases={phases}
+              />
             </div>
             {/* Peer Insights and Progress */}
             <div className="w-full mb-8 px-0">

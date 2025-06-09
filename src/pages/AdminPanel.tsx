@@ -10,11 +10,13 @@ import BulkDomainStepMapper from '../components/admin/BulkDomainStepMapper';
 import { useAuthStore } from '../lib/store';
 
 import StepToDomainAIMapping from '../components/admin/StepToDomainAIMapping';
+import CommunitySubmissionsPage from './admin/CommunitySubmissionsPage';
 
 const TABS = [
   { key: "users", label: "User Management" },
   { key: "domains", label: "Domain & Step Mapping" },
   { key: "stepToDomainAI", label: "Step-to-Domain AI Mapping" },
+  { key: "community", label: "Community Submissions" },
   { key: "flags", label: "Feature Flags" },
   { key: "terminology", label: "Terminology" },
   { key: "models", label: "Model Management" },
@@ -83,6 +85,7 @@ const AdminPanel: React.FC = () => {
           </div>
         )}
         {activeTab === "stepToDomainAI" && <StepToDomainAIMapping />}
+        {activeTab === "community" && <CommunitySubmissionsPage />}
         {activeTab === "flags" && <EnhancedFeatureFlagsSettings />}
         {activeTab === "terminology" && <TerminologyManagement />}
         {activeTab === "models" && <ModelManagementPanel />}

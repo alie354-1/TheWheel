@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Option 3: Journey Timeline with Contextual Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+  <div class="flex">
+    <!-- Company Steps Sidebar -->
+    <div class="w-1/4 p-4 bg-white rounded-lg shadow-md">
+      <h3 class="text-lg font-bold mb-4">Company Steps</h3>
+      <ul>
+        <li class="mb-2"><a href="#" class="text-blue-600">Define Problem Statement</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600">Map Customer Journey</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600">Interview 5 users</a></li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="w-3/4 ml-8 flex">
+      <!-- Timeline -->
+      <div class="w-1/2 p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Journey Timeline</h2>
+        <div class="relative">
+          <div class="border-l-2 border-blue-600 absolute h-full left-4"></div>
+          <div class="mb-8 flex items-center w-full">
+            <div class="bg-blue-600 rounded-full h-8 w-8 z-10"></div>
+            <div class="ml-4"><a href="#" class="font-bold text-blue-600">Define Problem Statement</a></div>
+          </div>
+          <div class="mb-8 flex items-center w-full">
+            <div class="bg-blue-600 rounded-full h-8 w-8 z-10"></div>
+            <div class="ml-4"><a href="#" class="font-bold text-blue-600">Map Customer Journey</a></div>
+          </div>
+          <div class="mb-8 flex items-center w-full">
+            <div class="bg-white border-2 border-blue-600 rounded-full h-8 w-8 z-10"></div>
+            <div class="ml-4"><a href="#" class="font-bold">Interview 5 users</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contextual Panel -->
+      <div class="w-1/2 ml-8 p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4">Step: Interview 5 users</h2>
+        <div class="mb-4">
+          <h4 class="font-semibold">Tasks:</h4>
+          <ul class="list-disc list-inside">
+            <li><input type="checkbox" class="mr-2">Schedule interviews</li>
+            <li><input type="checkbox" class="mr-2">Record findings</li>
+          </ul>
+        </div>
+        <div class="mb-4">
+          <h4 class="font-semibold">Tools/Templates:</h4>
+          <ul class="list-disc list-inside">
+            <li><a href="#" class="text-blue-600">Interview Script Template</a></li>
+          </ul>
+        </div>
+        <div class="mb-4">
+          <h4 class="font-semibold">Community Examples:</h4>
+          <ul class="list-disc list-inside">
+            <li><a href="#" class="text-blue-600">How a SaaS startup conducted user interviews</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold">Expert Help:</h4>
+          <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700">Ask an Expert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -8,6 +8,7 @@ import { MultiTieredAIService } from '../../components/idea-playground/enhanced/
 export interface QueryContext {
   userId: string;
   companyId?: string;
+  feature?: string;
   useCompanyModel?: boolean;
   useAbstraction?: boolean;
   useExistingModels?: boolean;

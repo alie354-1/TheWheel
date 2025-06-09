@@ -69,8 +69,11 @@ const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPa
 const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage.tsx'));
 const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage.tsx'));
 const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage.tsx')); // Added for Deck Admin
+const CommunitySubmissionsPage = lazy(() => import('./pages/admin/CommunitySubmissionsPage.tsx'));
 const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage.tsx'));
 const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard.tsx'));
+const SubmitStepPage = lazy(() => import('./pages/journey/SubmitStepPage.tsx'));
+const CommunityStepsPage = lazy(() => import('./pages/journey/CommunityStepsPage.tsx'));
 
 // Idea Hub pages
 const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration.tsx'));
@@ -150,12 +153,14 @@ const App: React.FC = () => {
                 <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
 
-                <Route path="journey" element={<JourneyHomePage companyId="default" />} />
+                <Route path="journey" element={<JourneyHomePage />} />
                 <Route path="journey-new" element={<RefactoredJourneyPage />} />
                 <Route path="journey/steps" element={<JourneyStepsPage />} />
                 <Route path="journey/steps/:stepId" element={<JourneyStepPage />} />
                 <Route path="journey/map" element={<JourneyMapPage />} />
                 <Route path="journey/overview" element={<JourneyOverviewPage />} />
+                <Route path="journey/submit-step" element={<SubmitStepPage />} />
+                <Route path="journey/community-steps" element={<CommunityStepsPage />} />
                 <Route path="tools" element={<CompanyToolsPage />} />
                 <Route path="tools/evaluation/:toolId" element={<CompanyToolEvaluationPage />} />
                 <Route path="budget" element={<CompanyBudgetPage />} />
@@ -201,6 +206,7 @@ const App: React.FC = () => {
                 <Route path="journey-content" element={<AdminJourneyContentPage />} />
                 <Route path="ask-wheel-requests" element={<AskWheelRequestsPage />} />
                 <Route path="deck-insights" element={<DeckAdminDashboardPage />} /> {/* Added Deck Admin Route */}
+                <Route path="community-submissions" element={<CommunitySubmissionsPage />} />
               </Route>
               
               {/* Demo & Development */}
@@ -228,7 +234,7 @@ const App: React.FC = () => {
 
       {/* New Journey System */}
 
-      <Route path="/journey" element={<JourneyHomePage companyId="default" />} />
+      <Route path="/journey" element={<JourneyHomePage />} />
           <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
           <Route path="/journey/map" element={<JourneyMapPage />} />
           

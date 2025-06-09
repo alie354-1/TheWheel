@@ -1,24 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { JourneyService } from "../services/journey.service";
-import { StepsList } from "../components/step/StepsList";
-import SmartJourneyDashboard from "../components/SmartJourneyDashboard";
-import StepDetailsModal from "../components/step/StepDetailsModal";
-import StepsFilterPanel from "../components/step/StepsFilterPanel";
-import CompanyStepsSection from "../components/step/CompanyStepsSection";
-import CompanyStepsSidebar from "../components/step/CompanyStepsSidebar";
-import RecommendedStepsPanel from "../components/step/RecommendedStepsPanel";
-import AllStepsModal from "../components/step/AllStepsModal";
-import CreateStepModal from "../components/step/CreateStepModal";
-import { Step } from "../types/journey.types";
-import { Task } from "../../lib/types/task.types";
-import { taskService } from "../../lib/services/task.service";
-import { AIProvider } from "../../lib/services/ai/ai-context.provider";
-import CommunityStepsModal from "../components/step/CommunityStepsModal";
-import { StepDetailWireframe } from "../components/step/StepDetailWireframe";
-import StepRelationshipManager from "../components/step/StepRelationshipManager";
-import { supabase } from "../../lib/supabase";
-import { useCompany } from "../../lib/hooks/useCompany";
-import { toast } from "../../lib/utils/toast";
+import { JourneyService } from "../services/journey.service.ts";
+import { StepsList } from "../components/step/StepsList.tsx";
+import SmartJourneyDashboard from "../components/SmartJourneyDashboard.tsx";
+import StepDetailsModal from "../components/step/StepDetailsModal.tsx";
+import StepsFilterPanel from "../components/step/StepsFilterPanel.tsx";
+import CompanyStepsSection from "../components/step/CompanyStepsSection.tsx";
+import CompanyStepsSidebar from "../components/step/CompanyStepsSidebar.tsx";
+import RecommendedStepsPanel from "../components/step/RecommendedStepsPanel.tsx";
+import AllStepsModal from "../components/step/AllStepsModal.tsx";
+import CreateStepModal from "../components/step/CreateStepModal.tsx";
+import { Step } from "../types/journey.types.ts";
+import { Task } from "../../../../lib/types/task.types.ts";
+import { taskService } from "../../../../lib/services/task.service.ts";
+import { AIProvider } from "../../../../lib/services/ai/ai-context.provider.tsx";
+import CommunityStepsModal from "../components/step/CommunityStepsModal.tsx";
+import { StepDetailWireframe } from "../components/step/StepDetailWireframe.tsx";
+import StepRelationshipManager from "../components/step/StepRelationshipManager.tsx";
+import { supabase } from "../../../../lib/supabase.ts";
+import { useCompany } from "../../../../lib/hooks/useCompany.ts";
+
+// Import the new journey integration service and recommendation panels
+import { journeyIntegrationService } from "../../../../lib/services/journey-integration/index.real.ts";
+import { ExpertRecommendationPanel } from "../../../../components/journey/ExpertRecommendationPanel.tsx";
+import { TemplateRecommendationPanel } from "../../../../components/journey/TemplateRecommendationPanel.tsx";
+import { PeerInsightsPanel } from "../../../../components/journey/PeerInsightsPanel.tsx";
 
 // Placeholder for companyMetadata (replace with real context/provider as needed)
 const companyMetadata = {
@@ -26,7 +31,13 @@ const companyMetadata = {
 };
 
 const JourneyHomePage: React.FC = () => {
-  const { currentCompany, loading: companyLoading } = useCompany();
+  const { currentCompany } = useCompany();
+  const companyId = currentCompany?.id;
+  
+  // Add debug logging
+  useEffect(() => {
+    console.log("JourneyHomePage: companyId from useCompany hook", companyId);
+  }, [companyId]);
   const [domains, setDomains] = useState<any[]>([]);
   const [phases, setPhases] = useState<any[]>([]);
 
@@ -51,32 +62,16 @@ const JourneyHomePage: React.FC = () => {
   const [steps, setSteps] = useState<any[]>([]);
   const [allSteps, setAllSteps] = useState<any[]>([]);
 
-  // Get company ID from the company context
-  const companyId = currentCompany?.id;
-  
-  // Add debug logging
-  useEffect(() => {
-    console.log("JourneyHomePage: companyId prop at render", companyId);
-  }, [companyId]);
-  
-  // Helper function to check if a string is a valid UUID
-  const isValidUUID = (uuid: string) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-  };
+  // Company ID is now passed as a prop
 
   // Fetch only company steps from DB
   const fetchCompanySteps = async () => {
-    if (!companyId || !isValidUUID(companyId)) {
-      console.log("Skipping fetchCompanySteps: Invalid or missing company ID");
-      setSteps([]);
-      return;
-    }
+    if (!companyId) return;
+    // Fetch all company steps for this company, regardless of status
     const { data: cjs, error: cjsError } = await supabase
       .from("company_journey_steps")
       .select("step_id")
-      .eq("company_id", companyId)
-      .not("status", "eq", "not_started");
+      .eq("company_id", companyId);
     if (cjsError) {
       console.error("Failed to fetch company_journey_steps:", cjsError);
       setSteps([]);
@@ -100,12 +95,7 @@ const JourneyHomePage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (companyId && isValidUUID(companyId)) {
-      fetchCompanySteps();
-    } else {
-      console.log("Skipping fetchCompanySteps in useEffect: Invalid or missing company ID");
-      setSteps([]);
-    }
+    fetchCompanySteps();
   }, [companyId]);
 
   // Fetch all steps for the "View All Steps" modal
@@ -138,10 +128,7 @@ const JourneyHomePage: React.FC = () => {
   // Fetch tools, nextSteps, prereqSteps for step-detail view
   useEffect(() => {
     async function fetchStepDetailData() {
-      if (!stepDetailStep || !stepDetailStep.id || !isValidUUID(stepDetailStep.id)) {
-        console.log("Skipping fetchStepDetailData: Invalid or missing step ID");
-        return;
-      }
+      if (!stepDetailStep) return;
       setStepDetailTools(JourneyService.getToolsForStep(stepDetailStep.id));
       // Next steps
       const { data: nextData, error: nextError } = await supabase
@@ -210,7 +197,8 @@ const JourneyHomePage: React.FC = () => {
 
       await Promise.all(
         steps.map(async (step) => {
-          const tasks = await taskService.getTasks({ stepId: step.id });
+          // Adjust the parameter to match what taskService.getTasks accepts
+          const tasks = await taskService.getTasks({ category: step.id });
           const total = tasks.length;
           const completed = tasks.filter((t: Task) => t.status === "completed").length;
           newStepTasks[step.id] = { total, completed };
@@ -238,64 +226,21 @@ const JourneyHomePage: React.FC = () => {
   }, [steps]);
 
   // Handler for creating a new step
-  async function handleCreateStep(newStep: Partial<Step> & { share: boolean }) {
-    if (!companyId || !isValidUUID(companyId)) {
-      toast.error("No company selected. Please select a company first.");
-      return;
-    }
-
-    try {
-      // First, create the step in the steps table
-      const id = crypto.randomUUID();
-      const stepData = {
+  function handleCreateStep(newStep: Partial<Step> & { share: boolean }) {
+    // For demo, just add to local steps array
+    const id = crypto.randomUUID();
+    setSteps(prev => [
+      ...prev,
+      {
         ...newStep,
         id,
         created_at: new Date().toISOString(),
         active: true,
         snippet_references: newStep.snippet_references || [],
         resource_links: newStep.resource_links || [],
-      } as Step;
-
-      // Insert into steps table
-      const { error: stepError } = await supabase
-        .from("steps")
-        .insert([stepData]);
-
-      if (stepError) {
-        console.error("Failed to create step:", stepError);
-        toast.error("Failed to create step: " + stepError.message);
-        return;
-      }
-
-      // Then create the company_journey_steps entry
-      const { error: cjsError } = await supabase
-        .from("company_journey_steps")
-        .insert([
-          {
-            company_id: companyId,
-            step_id: id,
-            status: "ready"
-          }
-        ]);
-
-      if (cjsError) {
-        console.error("Failed to link step to company:", cjsError);
-        toast.error("Failed to link step to company: " + cjsError.message);
-        return;
-      }
-
-      // Update local state
-      setSteps(prev => [...prev, stepData]);
-      toast.success("Step created successfully!");
-
-      // Handle sharing logic if needed
-      if (newStep.share) {
-        // Implement sharing logic here if needed
-      }
-    } catch (error) {
-      console.error("Error creating step:", error);
-      toast.error("An unexpected error occurred while creating the step.");
-    }
+      } as Step,
+    ]);
+    // Optionally: handle sharing logic here
   }
 
   // Filter shared steps (for demo, any step with share === true)
@@ -320,41 +265,44 @@ const JourneyHomePage: React.FC = () => {
     : [];
 
   return (
+    <AIProvider>
     <div className="min-h-screen bg-gray-50 flex flex-row">
       {/* Sidebar */}
-      <CompanyStepsSidebar
-        stepsWithStatus={stepsWithStatus}
-        domains={domains}
-        phases={phases}
-        onViewStep={step => {
-          const s = stepsWithStatus.find(x => x.step.id === step.id);
-          setSelectedStep(step);
-          setModalPeerRate(s?.recommended ? 73 : undefined);
-          setModalPeerInsights(
-            s?.recommended
-              ? [
-                  "67% of SaaS startups are focusing on customer interviews this month.",
-                  "Most companies spend 2-4 weeks on market validation before building."
-                ]
-              : undefined
-          );
-          setModalOpen(true);
-        }}
-        onAddStep={() => setCreateStepModalOpen(true)}
-        onDeleteStep={stepId => {
-          setSteps(prev => prev.filter(s => s.id !== stepId));
-        }}
-        onOpenStep={stepId => {
-          const step = steps.find(s => s.id === stepId) || null;
-          setStepDetailStep(step);
-          setViewMode("step-detail");
-        }}
-      />
+      <div className="flex-shrink-0 mr-8">
+        <CompanyStepsSidebar
+          stepsWithStatus={stepsWithStatus}
+          domains={domains}
+          phases={phases}
+          onViewStep={step => {
+            const s = stepsWithStatus.find(x => x.step.id === step.id);
+            setSelectedStep(step);
+            setModalPeerRate(s?.recommended ? 73 : undefined);
+            setModalPeerInsights(
+              s?.recommended
+                ? [
+                    "67% of SaaS startups are focusing on customer interviews this month.",
+                    "Most companies spend 2-4 weeks on market validation before building."
+                  ]
+                : undefined
+            );
+            setModalOpen(true);
+          }}
+          onAddStep={() => setCreateStepModalOpen(true)}
+          onDeleteStep={stepId => {
+            setSteps(prev => prev.filter(s => s.id !== stepId));
+          }}
+          onOpenStep={(stepId) => {
+            const step = steps.find(s => s.id === stepId) || null;
+            setStepDetailStep(step);
+            setViewMode("step-detail");
+          }}
+        />
+      </div>
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col px-8">
         {viewMode === "dashboard" ? (
           <>
-            <div className="flex justify-between items-center w-full mb-8 mt-10 px-8">
+            <div className="flex justify-between items-center w-full mb-8 mt-10 px-0">
               <h1 className="text-3xl font-bold text-center">Journey</h1>
               <div className="flex gap-2">
                 <button
@@ -372,7 +320,7 @@ const JourneyHomePage: React.FC = () => {
               </div>
             </div>
             {/* Recommended Next Steps */}
-            <div className="w-full mb-8 px-8">
+            <div className="w-full mb-8 px-0">
               <AIProvider>
                 <RecommendedStepsPanel
                   recommendations={
@@ -412,9 +360,6 @@ const JourneyHomePage: React.FC = () => {
                   open={allStepsModalOpen}
                   steps={
                     (() => {
-                      // Debug: log ids
-                      console.log("allSteps ids:", allSteps.map(s => s.id));
-                      console.log("company steps ids:", steps.map(cs => cs.id));
                       return allSteps.filter(
                         s => !steps.some(cs => cs.id === s.id)
                       );
@@ -424,34 +369,35 @@ const JourneyHomePage: React.FC = () => {
                   domains={domains}
                   phases={phases}
                   onClose={() => setAllStepsModalOpen(false)}
-                  onViewDetails={async (step) => {
-                    // Add to company_journey_steps if not already present
-                    if (!companyId || !isValidUUID(companyId)) {
-                      toast.error("No company selected. Please select a company first.");
+                  onViewDetails={step => {
+                    setSelectedStep(step);
+                    setModalPeerRate(undefined);
+                    setModalPeerInsights(undefined);
+                    setModalOpen(true);
+                  }}
+                  onStartStep={async (step) => {
+                    // Insert into company_journey_steps
+                    console.log("onStartStep: companyId", companyId);
+                    if (!companyId) {
+                      alert("Company ID not set.");
                       return;
                     }
-                    const { data: existing, error: existingError } = await supabase
+                    const { data, error } = await supabase
                       .from("company_journey_steps")
-                      .select("id")
-                      .eq("company_id", companyId)
-                      .eq("step_id", step.id)
-                      .maybeSingle();
-                    if (!existing && !existingError) {
-                      await supabase
-                        .from("company_journey_steps")
-                        .insert([
-                          {
-                            company_id: companyId,
-                            step_id: step.id,
-                            status: "ready"
-                          }
-                        ]);
+                      .insert([
+                        {
+                          company_id: companyId,
+                          step_id: step.id,
+                          status: "not_started",
+                          created_at: new Date().toISOString(),
+                        },
+                      ]);
+                    if (error) {
+                      alert("Failed to add step: " + error.message);
+                      return;
                     }
-                    // Refetch company steps and update state before showing detail
+                    // Refresh company steps
                     await fetchCompanySteps();
-                    // Show in main pane (not full screen)
-                    setStepDetailStep(step);
-                    setViewMode("step-detail");
                     setAllStepsModalOpen(false);
                   }}
                 />
@@ -462,24 +408,10 @@ const JourneyHomePage: React.FC = () => {
                   domains={domains}
                   phases={phases}
                 />
-                {!companyId && createStepModalOpen && (
-                  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
-                      <h3 className="text-lg font-bold mb-4">Company Required</h3>
-                      <p className="mb-4">You need to select a company before creating steps.</p>
-                      <button
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
-                        onClick={() => setCreateStepModalOpen(false)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                )}
               </AIProvider>
             </div>
             {/* Peer Insights and Progress */}
-            <div className="w-full mb-8 px-8">
+            <div className="w-full mb-8 px-0">
               <SmartJourneyDashboard
                 recommendations={[]} // Only show peer insights and progress
                 peerInsights={[
@@ -495,18 +427,16 @@ const JourneyHomePage: React.FC = () => {
             </div>
             {/* Step Details Modal */}
             {selectedStep && (
-              <StepDetailsModal
-                open={modalOpen}
-                step={selectedStep}
-                peerRate={modalPeerRate}
-                peerInsights={modalPeerInsights}
-                onClose={() => setModalOpen(false)}
-                onOpenFullStep={step => {
-                  setStepDetailStep(step);
-                  setViewMode("step-detail");
-                  setModalOpen(false);
-                }}
-              />
+                <StepDetailsModal
+                  open={modalOpen}
+                  step={selectedStep}
+                  peerRate={modalPeerRate}
+                  peerInsights={modalPeerInsights}
+                  onClose={() => setModalOpen(false)}
+                  onOpenFullStep={step => {
+                    window.location.assign(`/journey/step/${step.id}`);
+                  }}
+                />
             )}
             {/* Community Steps Modal */}
             <CommunityStepsModal
@@ -534,7 +464,7 @@ const JourneyHomePage: React.FC = () => {
           </>
         ) : (
           // Step Detail View
-          <div className="w-full h-full flex flex-col px-8 py-10">
+          <div className="w-full h-full flex flex-col px-0 py-10">
             <button
               className="mb-4 w-fit px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               onClick={() => setViewMode("dashboard")}
@@ -542,7 +472,7 @@ const JourneyHomePage: React.FC = () => {
               ← Back to Journey
             </button>
             {stepDetailStep ? (
-              <div className="max-w-7xl mx-auto">
+              <div className="w-full">
                 <StepDetailWireframe
                   step={stepDetailStep}
                   tools={stepDetailTools}
@@ -550,6 +480,17 @@ const JourneyHomePage: React.FC = () => {
                   prereqSteps={stepDetailPrereqSteps}
                 />
                 <StepRelationshipManager stepId={stepDetailStep.id} />
+                
+                {/* Add the new recommendation panels */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                  <div className="md:col-span-2 space-y-6">
+                    <TemplateRecommendationPanel stepId={stepDetailStep.id} companyId={companyId || ''} />
+                    <PeerInsightsPanel stepId={stepDetailStep.id} companyId={companyId || ''} />
+                  </div>
+                  <div className="space-y-6">
+                    <ExpertRecommendationPanel stepId={stepDetailStep.id} companyId={companyId || ''} />
+                  </div>
+                </div>
               </div>
             ) : (
               <div>No step selected.</div>
@@ -558,6 +499,7 @@ const JourneyHomePage: React.FC = () => {
         )}
       </div>
     </div>
+    </AIProvider>
   );
 };
 

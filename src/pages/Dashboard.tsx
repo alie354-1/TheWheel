@@ -25,6 +25,7 @@ import {
 import OnboardingProgressCard from '../components/OnboardingProgressCard.tsx';
 import StandupHistory from '../components/StandupHistory.tsx';
 import JoinCompanyDialog from '../components/JoinCompanyDialog.tsx';
+import AiRecommendationPanel from '../components/AiRecommendationPanel.tsx';
 
 // Import TaskManager with error handling
 const TaskManager = React.lazy(() => import('../components/tasks/TaskManager.tsx'));
@@ -350,6 +351,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* AI Recommendation Panel */}
+        <AiRecommendationPanel />
 
         {/* Company Setup Card */}
         {!hasCompany && (
