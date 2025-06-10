@@ -1,6 +1,9 @@
+/// <reference lib="deno.ns" />
+/// <reference types="https://esm.sh/v135/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
 // supabase/functions/ai-categorize-comment/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import OpenAI from "https://esm.sh/openai@4.20.0";
 
 console.log("Hello from Functions/ai-categorize-comment!");
 
@@ -18,52 +21,33 @@ serve(async (req: Request) => {
       });
     }
 
-    // Placeholder for actual AI comment categorization
-    // This would involve NLP to understand the main topic of the comment.
-    // For now, simulate based on keywords.
-    let category = "General";
-    const lowerText = text.toLowerCase();
-
-    const categories: { [key: string]: string[] } = {
-      "Clarity": ["unclear", "confusing", "explain", "clarify", "understand", "meaning"],
-      "Design": ["visual", "aesthetic", "layout", "color", "font", "look", "feel", "ui", "ux", "style"],
-      "Market": ["market size", "target audience", "customer", "competition", "go-to-market", "positioning"],
-      "Business Logic": ["business model", "revenue", "monetization", "strategy", "pricing", "financials", "validation"],
-      "Technical": ["technical", "architecture", "database", "algorithm", "scalability", "performance", "integration", "feature"],
-      "Content": ["content", "story", "narrative", "message", "text", "copy", "information"],
-      "Presentation": ["slide", "flow", "order", "delivery", "presenting", "structure"],
-    };
-
-    let bestMatchCount = 0;
-    for (const cat in categories) {
-      let currentMatchCount = 0;
-      categories[cat].forEach(keyword => {
-        if (lowerText.includes(keyword)) {
-          currentMatchCount++;
-        }
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openAIApiKey) {
+      return new Response(JSON.stringify({ error: "Missing OPENAI_API_KEY" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
       });
-      if (currentMatchCount > bestMatchCount) {
-        bestMatchCount = currentMatchCount;
-        category = cat;
-      }
-    }
-    
-    // If no strong keyword match, keep it General or apply other logic
-    if (bestMatchCount === 0 && text.length < 50) {
-        category = "General/Brief";
     }
 
-    // For now, return a single category with a placeholder confidence
-    // The aiService.ts expects TopicCategorizationResult[]
-    // The deck_comments table expects a single text category.
-    // This function will return what aiService expects, and the service layer will adapt.
-    const result = [{ category: category, confidence: bestMatchCount > 0 ? 0.75 : 0.5 }];
+    const openai = new OpenAI({ apiKey: openAIApiKey });
 
-    return new Response(JSON.stringify(result), {
+    const prompt = `Categorize the following text into one of the following categories: Clarity, Design, Market, Business Logic, Technical, Content, Presentation, General. Text: "${text}"`;
+
+    const response = await openai.completions.create({
+      model: "text-davinci-003",
+      prompt: prompt,
+      max_tokens: 60,
+    });
+
+    const result = response.choices[0].text.trim();
+    const category = result;
+
+    return new Response(JSON.stringify([{ category: category, confidence: 1.0 }]), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
+  } catch (e) {
+    const error = e as Error;
     console.error("Error in ai-categorize-comment function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

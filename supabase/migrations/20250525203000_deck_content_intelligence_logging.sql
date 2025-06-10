@@ -63,14 +63,22 @@ WITH CHECK (is_claims_admin());
 
 DROP POLICY IF EXISTS "Allow authenticated users to insert their own logs" ON deck_content_interaction_logs;
 DROP POLICY IF EXISTS "Allow authenticated users to insert interaction logs" ON deck_content_interaction_logs;
--- Allow authenticated users to insert logs.
--- If user_id is provided in the log, it must match the inserter's ID.
--- If user_id is NULL, any authenticated user can insert (e.g., for system events or general load events).
+-- Allow authenticated users to insert logs, and anonymous users if they have a valid session.
 CREATE POLICY "Allow authenticated users to insert interaction logs"
 ON deck_content_interaction_logs
 FOR INSERT
-TO authenticated
-WITH CHECK (user_id IS NULL OR auth.uid() = user_id);
+WITH CHECK (
+  auth.role() = 'authenticated' OR
+  (
+    auth.role() = 'anon' AND
+    session_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1
+      FROM public.reviewer_sessions
+      WHERE reviewer_sessions.session_id = deck_content_interaction_logs.session_id
+    )
+  )
+);
 
 
 -- RLS Policies for deck_learning_insights

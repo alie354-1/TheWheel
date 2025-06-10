@@ -1,6 +1,9 @@
+/// <reference lib="deno.ns" />
+/// <reference types="https://esm.sh/v135/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
 // supabase/functions/ai-analyze-sentiment/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import OpenAI from "https://esm.sh/openai@4.20.0";
 
 console.log("Hello from Functions/ai-analyze-sentiment!");
 
@@ -19,35 +22,32 @@ serve(async (req: Request) => {
       });
     }
 
-    // Placeholder for actual AI sentiment analysis
-    // In a real scenario, this would call an AI model (e.g., OpenAI, a custom model)
-    // For now, let's simulate a simple sentiment score based on keywords
-    let sentimentScore = 0;
-    const positiveKeywords = ["good", "great", "excellent", "love", "like", "amazing", "wonderful", "positive"];
-    const negativeKeywords = ["bad", "terrible", "poor", "hate", "dislike", "awful", "negative", "problem"];
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openAIApiKey) {
+      return new Response(JSON.stringify({ error: "Missing OPENAI_API_KEY" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
 
-    const lowerText = text.toLowerCase();
-    positiveKeywords.forEach(keyword => {
-      if (lowerText.includes(keyword)) sentimentScore += 0.2;
+    const openai = new OpenAI({ apiKey: openAIApiKey });
+
+    const prompt = `Analyze the sentiment of the following text and return a score from -1 (very negative) to 1 (very positive) and a label ('positive', 'negative', 'neutral'). Text: "${text}"`;
+    
+    const response = await openai.completions.create({
+      model: "text-davinci-003",
+      prompt: prompt,
+      max_tokens: 60,
     });
-    negativeKeywords.forEach(keyword => {
-      if (lowerText.includes(keyword)) sentimentScore -= 0.2;
-    });
 
-    // Clamp score between -1 and 1
-    sentimentScore = Math.max(-1, Math.min(1, sentimentScore));
-    // Round to 2 decimal places
-    sentimentScore = parseFloat(sentimentScore.toFixed(2));
+    const result = response.choices[0].text.trim();
+    const [score, label] = result.split(',').map((s: string) => s.trim());
 
-    let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
-    if (sentimentScore > 0.1) sentiment = 'positive';
-    else if (sentimentScore < -0.1) sentiment = 'negative';
-
-    return new Response(JSON.stringify({ sentiment: sentiment, score: sentimentScore }), {
+    return new Response(JSON.stringify({ sentiment: label, score: parseFloat(score) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in ai-analyze-sentiment function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { DeckComment, AIFeedbackInsight, Deck, DeckSection } from '../../types/index.ts';
+import { DeckComment, AIFeedbackInsight, Deck, DeckSection, FeedbackCategory } from '../../types/index.ts';
 import { CommentThread } from './CommentThread.tsx';
 import { CommentInput } from './CommentInput.tsx';
 import { DeckService } from '../../services/deckService.ts';
@@ -8,14 +8,15 @@ interface CommentInputSubmitData {
   textContent: string;
   voiceNoteUrl?: string;
   markupData?: any;
+  feedbackCategory: FeedbackCategory;
 }
 
 interface FeedbackPanelProps {
   deckId: string;
   currentDeck?: Deck | null; 
   comments: DeckComment[];
-  onCommentSubmit: (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any) => void;
-  onCommentUpdate: (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status'>>) => void; // Modified to accept partial updates
+  onCommentSubmit: (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any, feedbackCategory?: FeedbackCategory, componentId?: string) => void;
+  onCommentUpdate: (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>) => void;
   onCommentDelete: (commentId: string) => void;
   onCommentStatusUpdate?: (commentId: string, status: DeckComment['status']) => void; // Prop for status updates
   onProposalsGenerated?: () => void; 
@@ -164,7 +165,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   }
 
   const handleNewTopLevelComment = (data: CommentInputSubmitData) => {
-    onCommentSubmit(data.textContent, undefined, data.voiceNoteUrl, data.markupData);
+    onCommentSubmit(data.textContent, undefined, data.voiceNoteUrl, data.markupData, data.feedbackCategory);
   };
 
   const handleReplySubmit = (threadId: string, text: string) => {

@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { ReviewerAvatar } from './ReviewerAvatar';
+import { ReviewerAvatar } from './ReviewerAvatar.tsx';
+import { FeedbackCategory } from '../../types/index.ts';
 
 interface CommentInputSubmitData {
   textContent: string;
   voiceNoteUrl?: string;
   markupData?: any;
+  feedbackCategory: FeedbackCategory;
 }
 
 interface CommentInputProps {
   currentUserDisplayName?: string | null;
-  currentUserAvatarUrl?: string | null; // For future use
+  currentUserAvatarUrl?: string | null;
   onSubmit: (data: CommentInputSubmitData) => void;
   onCancel?: () => void;
   placeholder?: string;
@@ -29,28 +31,25 @@ export const CommentInput: React.FC<CommentInputProps> = ({
   style,
 }) => {
   const [commentText, setCommentText] = useState(initialValue);
-  // Placeholder states for voice note URL and markup data
   const [pendingVoiceNoteUrl, setPendingVoiceNoteUrl] = useState<string | null>(null);
   const [pendingMarkupData, setPendingMarkupData] = useState<any | null>(null);
+  const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory>('General');
+  const [isRecording, setIsRecording] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // A comment can be just text, or include voice/markup.
-    // For now, we require text if no voice/markup, but this logic can be adjusted.
     if ((commentText.trim() || pendingVoiceNoteUrl || pendingMarkupData) && !isSubmitting) {
       const submitData: CommentInputSubmitData = {
         textContent: commentText.trim(),
+        feedbackCategory,
+        voiceNoteUrl: pendingVoiceNoteUrl || undefined,
+        markupData: pendingMarkupData || undefined,
       };
-      if (pendingVoiceNoteUrl) {
-        submitData.voiceNoteUrl = pendingVoiceNoteUrl;
-      }
-      if (pendingMarkupData) {
-        submitData.markupData = pendingMarkupData;
-      }
       onSubmit(submitData);
-      setCommentText(""); // Clear text input
-      setPendingVoiceNoteUrl(null); // Clear pending voice note
-      setPendingMarkupData(null); // Clear pending markup
+      setCommentText("");
+      setPendingVoiceNoteUrl(null);
+      setPendingMarkupData(null);
+      setFeedbackCategory('General');
     }
   };
 
@@ -83,8 +82,8 @@ export const CommentInput: React.FC<CommentInputProps> = ({
 
   const actionsStyle: React.CSSProperties = {
     display: 'flex',
-    justifyContent: 'space-between', // Align items to start and end
-    alignItems: 'center', // Vertically align items
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: '8px',
     marginTop: '8px',
   };
@@ -133,17 +132,13 @@ export const CommentInput: React.FC<CommentInputProps> = ({
         />
         <div style={actionsStyle}>
           <div style={additionalActionsStyle}>
-            {/* Placeholder for Voice Note Button */}
             <button
               type="button"
               onClick={() => {
                 if (pendingVoiceNoteUrl) {
                   setPendingVoiceNoteUrl(null);
-                  console.log('Pending voice note cleared.');
                 } else {
-                  // TODO: Implement actual voice recording UI trigger
                   setPendingVoiceNoteUrl('simulated_voice_note.mp3');
-                  console.log('Pending voice note set: simulated_voice_note.mp3');
                 }
               }}
               style={{ ...buttonStyle, backgroundColor: pendingVoiceNoteUrl ? '#28a745' : '#6c757d', color: 'white' }}
@@ -152,17 +147,13 @@ export const CommentInput: React.FC<CommentInputProps> = ({
             >
               🎤 {pendingVoiceNoteUrl ? '✓' : ''}
             </button>
-            {/* Placeholder for Markup Tool Button */}
             <button
               type="button"
               onClick={() => {
                 if (pendingMarkupData) {
                   setPendingMarkupData(null);
-                  console.log('Pending markup cleared.');
                 } else {
-                  // TODO: Implement markup UI trigger
                   setPendingMarkupData({ type: 'simulated_markup', data: 'path...' });
-                  console.log('Pending markup set: simulated_markup');
                 }
               }}
               style={{ ...buttonStyle, backgroundColor: pendingMarkupData ? '#28a745' : '#6c757d', color: 'white' }}
@@ -172,7 +163,19 @@ export const CommentInput: React.FC<CommentInputProps> = ({
               ✏️ {pendingMarkupData ? '✓' : ''}
             </button>
           </div>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <select
+              value={feedbackCategory}
+              onChange={(e) => setFeedbackCategory(e.target.value as FeedbackCategory)}
+              style={{ ...buttonStyle, backgroundColor: '#f0f0f0', color: '#333' }}
+              disabled={isSubmitting}
+            >
+              <option value="General">General</option>
+              <option value="Content">Content</option>
+              <option value="Form">Form</option>
+              <option value="Slide">Slide</option>
+              <option value="Component">Component</option>
+            </select>
             {onCancel && (
               <button
                 type="button"
