@@ -1,38 +1,19 @@
 import React from 'react';
-import { CitationBlock as CitationBlockType } from '../../../types/blocks'; // Aliasing to avoid name clash
+import { CitationBlock as CitationBlockType } from '../../../types/blocks.ts';
 
-interface CitationBlockProps extends CitationBlockType {
-  isSelected?: boolean; // To handle selection state if needed for styling
+interface CitationBlockProps {
+  block: CitationBlockType;
 }
 
-export const CitationBlock: React.FC<CitationBlockProps> = ({
-  text,
-  author,
-  source,
-  year,
-  // citationStyle, // Not used in basic rendering for now
-  // url, // Not used in basic rendering for now
-  style, // Pass through style for positioning and base styling
-  isSelected,
-}) => {
+export const CitationBlock: React.FC<CitationBlockProps> = ({ block }) => {
   return (
-    <div
-      style={style}
-      className={`p-4 border ${isSelected ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-300'} bg-gray-50 rounded deck-block citation-block`}
-    >
-      <blockquote className="text-lg italic border-l-4 border-gray-400 pl-4 mb-2">
-        {text || "Enter quote text here..."}
-      </blockquote>
-      <footer className="text-sm text-gray-600">
-        {author && <span className="font-semibold">{author}</span>}
-        {author && (source || year) && <span>, </span>}
-        {source && <cite className="italic">{source}</cite>}
-        {source && year && <span>, </span>}
-        {year && <span>{year}</span>}
-        {(!author && !source && !year) && <span>Citation details here...</span>}
-      </footer>
-    </div>
+    <blockquote className="p-4 my-4 border-l-4 border-gray-300 bg-gray-50">
+      <p className="text-xl italic font-semibold text-gray-900">{block.text}</p>
+      <cite className="block text-right mt-4">
+        - {block.author}
+        {block.source && <span className="text-sm text-gray-500">, {block.source}</span>}
+        {block.year && <span className="text-sm text-gray-500"> ({block.year})</span>}
+      </cite>
+    </blockquote>
   );
 };
-
-export default CitationBlock;

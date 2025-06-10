@@ -50,6 +50,48 @@ import { generateUUID } from '../utils/uuid.ts';
 import { ResizeHandle } from './ResizeHandle.tsx';
 import { RichTextEditor } from './editors/RichTextEditor.tsx';
 import { SafeTextRenderer } from './SafeTextRenderer.tsx';
+import { TractionWidget } from './canvas/blocks/TractionWidget.tsx';
+import { Timeline } from './canvas/blocks/Timeline.tsx';
+import { UseOfFundsBlock } from './canvas/blocks/UseOfFunds.tsx';
+import { TeamCardBlock } from './canvas/blocks/TeamCardBlock.tsx';
+import { MarketMapBlock } from './canvas/blocks/MarketMapBlock.tsx';
+import { CompetitorTableBlock } from './canvas/blocks/CompetitorTableBlock.tsx';
+import { ProblemSolutionBlock } from './canvas/blocks/ProblemSolutionBlock.tsx';
+import { LogoWallBlock } from './canvas/blocks/LogoWallBlock.tsx';
+import { BusinessModelBlock } from './canvas/blocks/BusinessModelBlock.tsx';
+import { TestimonialCardBlock } from './canvas/blocks/TestimonialCardBlock.tsx';
+import { CTACardBlock } from './canvas/blocks/CTACardBlock.tsx';
+import { DemoGalleryBlock } from './canvas/blocks/DemoGalleryBlock.tsx';
+import { MilestoneTrackerBlock } from './canvas/blocks/MilestoneTrackerBlock.tsx';
+import { MetricCounter } from './canvas/blocks/MetricCounterBlock.tsx';
+import { InvestmentAsk } from './canvas/blocks/InvestmentAskBlock.tsx';
+import { MapBlockComponent } from './canvas/blocks/MapBlock.tsx';
+import { CustomImage } from './canvas/blocks/CustomImageBlock.tsx';
+import { SocialProofBadgeBlock } from './canvas/blocks/SocialProofBadgeBlock.tsx';
+import { OpportunityIndicator } from './canvas/blocks/OpportunityIndicatorBlock.tsx';
+import BeforeAfterComparisonBlockComponent from './canvas/blocks/BeforeAfterComparisonBlock.tsx';
+import { BenefitCardBlock } from './canvas/blocks/BenefitCardBlock.tsx';
+import { CompetitivePositioningBlock } from './canvas/blocks/CompetitivePositioningBlock.tsx';
+import { MarketSegmentsBlock } from './canvas/blocks/MarketSegmentsBlock.tsx';
+import { AdvisorCardBlock } from './canvas/blocks/AdvisorCardBlock.tsx';
+import { HiringPlanBlock } from './canvas/blocks/HiringPlanBlock.tsx';
+import SkillMatrixBlock from './canvas/blocks/SkillMatrixBlock.tsx';
+import { PressCard } from './canvas/blocks/PressCardBlock.tsx';
+import { PartnershipCard } from './canvas/blocks/PartnershipCardBlock.tsx';
+import { InvestorContactForm } from './canvas/blocks/InvestorContactFormBlock.tsx';
+import * as HeroImageModule from './canvas/blocks/HeroImageBlock.tsx';
+const HeroImage = HeroImageModule.default;
+import ImageGallery from './canvas/blocks/ImageGalleryBlock.tsx';
+import MediaHero from './canvas/blocks/MediaHeroBlock.tsx';
+import StatsDisplay from './canvas/blocks/StatsDisplayBlock.tsx';
+import VisualQuote from './canvas/blocks/VisualQuoteBlock.tsx';
+import IconFeature from './canvas/blocks/IconFeatureBlock.tsx';
+import ImageWithCaption from './canvas/blocks/ImageWithCaptionBlock.tsx';
+import ButtonComponent from './canvas/blocks/ButtonBlock.tsx';
+import Shape from './canvas/blocks/ShapeBlock.tsx';
+import ChecklistBlock from './canvas/blocks/ChecklistBlock.tsx';
+import TimerBlock from './canvas/blocks/TimerBlock.tsx';
+import PollBlock from './canvas/blocks/PollBlock.tsx';
 
 type HandlePosition =
   | 'top-left' | 'top' | 'top-right'
@@ -163,6 +205,20 @@ export function VisualComponentRenderer({
       );
     }
 
+    // Render all block types with a user-friendly fallback for those without a custom implementation
+    const blockMeta = BLOCK_REGISTRY[type as BlockType];
+    const blockLabel = blockMeta?.label || type;
+    const blockIcon = blockMeta?.icon || "Star";
+    // Lucide icons are imported above, fallback to StarIcon if not found
+    const IconComponent = (() => {
+      try {
+        // @ts-ignore
+        return require("lucide-react")[blockIcon] || StarIcon;
+      } catch {
+        return StarIcon;
+      }
+    })();
+
     switch (type) {
       case 'text':
         return <SafeTextRenderer html={component.data.text || ''} style={{ ...componentStyle, width: '100%', height: '100%' }} />;
@@ -205,13 +261,103 @@ export function VisualComponentRenderer({
             </FeatureListWrapper>
           </div>
         );
+      case 'checklist':
+        return <ChecklistBlock {...component.data} />;
+      case 'timer':
+        return <TimerBlock {...component.data} />;
+      case 'poll':
+        return <PollBlock {...component.data} />;
       case 'calloutBox':
         return <SafeTextRenderer html={data.text} style={componentStyle} />;
+      case 'tractionWidget':
+        return <TractionWidget {...(data as any)} />;
+      case 'timeline':
+        return <Timeline {...(data as any)} />;
+      case 'useOfFunds':
+        return <UseOfFundsBlock block={data as any} />;
+      case 'teamCard':
+        return <TeamCardBlock {...(data as any)} id={component.id} />;
+      case 'marketMap':
+        return <MarketMapBlock {...(data as any)} id={component.id} />;
+      case 'competitorTable':
+        return <CompetitorTableBlock {...(data as any)} id={component.id} />;
+      case 'problemSolution':
+        return <ProblemSolutionBlock {...(data as any)} id={component.id} />;
+      case 'logoWall':
+        return <LogoWallBlock {...(data as any)} id={component.id} />;
+      case 'businessModel':
+        return <BusinessModelBlock {...(data as any)} id={component.id} />;
+      case 'testimonialCard':
+        return <TestimonialCardBlock {...(data as any)} id={component.id} />;
+      case 'ctaCard':
+        return <CTACardBlock {...(data as any)} id={component.id} />;
+      case 'demoGallery':
+        return <DemoGalleryBlock {...(data as any)} id={component.id} />;
+      case 'milestoneTracker':
+        return <MilestoneTrackerBlock {...(data as any)} id={component.id} />;
+      case 'metricCounter':
+        return <MetricCounter {...(data as any)} />;
+      case 'investmentAsk':
+        return <InvestmentAsk {...(data as any)} />;
+      case 'mapBlock':
+        return <MapBlockComponent {...(data as any)} />;
+      case 'customImage':
+        return <CustomImage {...(data as any)} />;
+      case 'socialProofBadge':
+        return <SocialProofBadgeBlock {...(data as any)} />;
+      case 'opportunityIndicator':
+        return <OpportunityIndicator {...(data as any)} />;
+      case 'beforeAfterComparison':
+        return <BeforeAfterComparisonBlockComponent {...component.data} />;
+      case 'benefitCard':
+        return <BenefitCardBlock block={component.data} />;
+      case 'competitivePositioning':
+        return <CompetitivePositioningBlock {...component.data} />;
+      case 'marketSegments':
+        return <MarketSegmentsBlock {...component.data} />;
+      case 'advisorCard':
+        return <AdvisorCardBlock {...component.data} />;
+      case 'hiringPlan':
+        return <HiringPlanBlock {...component.data} />;
+      case 'skillMatrix':
+        return <SkillMatrixBlock block={component.data} />;
+      case 'pressCard':
+        return <PressCard {...(data as any)} />;
+      case 'partnershipCard':
+        return <PartnershipCard {...(data as any)} />;
+      case 'investorContactForm':
+        return <InvestorContactForm {...(data as any)} />;
+      case 'heroImage':
+        return <HeroImage {...(data as any)} />;
+      case 'imageGallery':
+        return <ImageGallery {...(data as any)} />;
+      case 'mediaHero':
+        return <MediaHero {...(data as any)} />;
+      case 'statsDisplay':
+        return <StatsDisplay {...(data as any)} />;
+      case 'visualQuote':
+        return <VisualQuote {...(data as any)} />;
+      case 'iconFeature':
+        return <IconFeature {...(data as any)} />;
+      case 'imageWithCaption':
+        return <ImageWithCaption {...(data as any)} />;
+      case 'button':
+        return <ButtonComponent {...(data as any)} />;
+      case 'shape':
+        return <Shape {...(data as any)} />;
+      // Add a user-friendly placeholder for all other block types
       default:
         return (
-          <div className="p-2 text-xs text-gray-500">
-            <p>Unsupported component type: {type}</p>
-            <pre className="text-wrap">{JSON.stringify(data, null, 2)}</pre>
+          <div
+            className="flex flex-col items-center justify-center h-full w-full rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-center"
+            style={{ color: "#666", ...componentStyle }}
+          >
+            <div className="mb-2 flex items-center justify-center">
+              <IconComponent className="h-8 w-8 text-blue-400" />
+            </div>
+            <div className="font-semibold text-base mb-1">{blockLabel}</div>
+            <div className="text-xs mb-2">This block type is not yet fully implemented.<br />You can still add and edit it, but the final design will be improved soon.</div>
+            <pre className="text-xs text-gray-400 text-left w-full overflow-x-auto bg-white rounded p-2">{JSON.stringify(data, null, 2)}</pre>
           </div>
         );
     }

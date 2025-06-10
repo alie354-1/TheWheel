@@ -1,6 +1,9 @@
+/// <reference lib="deno.ns" />
+/// <reference types="https://esm.sh/v135/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
 // supabase/functions/ai-detect-expertise/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import OpenAI from "https://esm.sh/openai@4.20.0";
 
 console.log("Hello from Functions/ai-detect-expertise!");
 
@@ -18,42 +21,32 @@ serve(async (req: Request) => {
       });
     }
 
-    // Placeholder for actual AI expertise detection
-    // This would involve more sophisticated NLP to analyze the comment's depth,
-    // technical language, specificity, etc.
-    // For now, simulate based on comment length and some keywords.
-    let expertiseScore = 0.0;
-    const technicalKeywords = ["technical", "architecture", "database", "algorithm", "scalability", "performance", "integration"];
-    const businessKeywords = ["market", "strategy", "revenue", "monetization", "customer", "competition", "business model"];
-    const designKeywords = ["ux", "ui", "visual", "aesthetic", "layout", "typography", "user experience", "design system"];
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openAIApiKey) {
+      return new Response(JSON.stringify({ error: "Missing OPENAI_API_KEY" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
 
-    const lowerText = text.toLowerCase();
+    const openai = new OpenAI({ apiKey: openAIApiKey });
 
-    if (text.length > 200) expertiseScore += 0.2; // Longer comments might indicate more thought
-    if (text.length > 500) expertiseScore += 0.2;
+    const prompt = `Analyze the expertise level of the following text and return a score from 0 (novice) to 1 (expert). Consider factors like technical depth, specific examples, and industry knowledge. Text: "${text}"`;
 
-    let keywordCount = 0;
-    [...technicalKeywords, ...businessKeywords, ...designKeywords].forEach(keyword => {
-      if (lowerText.includes(keyword)) keywordCount++;
+    const response = await openai.completions.create({
+      model: "text-davinci-003",
+      prompt: prompt,
+      max_tokens: 60,
     });
 
-    if (keywordCount > 2) expertiseScore += 0.2;
-    if (keywordCount > 5) expertiseScore += 0.2;
-    
-    // Simulate some randomness or more complex factors
-    if (Math.random() < 0.3) expertiseScore += 0.1;
-
-
-    // Clamp score between 0 and 1
-    expertiseScore = Math.max(0, Math.min(1, expertiseScore));
-    // Round to 2 decimal places
-    expertiseScore = parseFloat(expertiseScore.toFixed(2));
+    const result = response.choices[0].text.trim();
+    const expertiseScore = parseFloat(result);
 
     return new Response(JSON.stringify({ expertise_score: expertiseScore }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in ai-detect-expertise function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

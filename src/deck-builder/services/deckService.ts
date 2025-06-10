@@ -2,7 +2,7 @@ import {
   Deck, DeckSection, Template, SectionType, VisualComponent, VisualComponentLayout, DeckDataTemplate, 
   DeckComment, DeckAiUpdateProposal,
   // New types for Unified Sharing
-  SmartShareLink, ReviewerSession, ShareType, ExpertiseLevel, AIFeedbackInsight,
+  SmartShareLink, ReviewerSession, ShareType, ExpertiseLevel, AIFeedbackInsight, DeckShareRecipient, FeedbackCategory,
   // Specific proposal data types
   TextEditProposedData, ProposedContentDataType,
   // Types for AI Service interaction
@@ -37,7 +37,7 @@ type DeckCommentUpdatePayload = Partial<Pick<DeckComment,
   'slideId' | 'elementId' | 'parentCommentId' | 'authorDisplayName' | 
   'coordinates' | 'textContent' | 'richTextContent' | 'voiceNoteUrl' | 
   'voiceTranscription' | 'markupData' | 'commentType' | 'urgency' | 
-  'status' | 'declaredRole' | 'focusArea'
+  'status' | 'declaredRole' | 'focusArea' | 'feedback_category' | 'component_id'
 >>;
 
 export class DeckService {
@@ -235,7 +235,7 @@ export class DeckService {
       if (deck.sections.length > 0) {
         const sectionsData = deck.sections.map(section => {
           // Deep clone slideStyle to avoid mutation and ensure all keys are serializable
-          let slideStyleToSave = undefined;
+          let slideStyleToSave: any = undefined;
           if (section.slideStyle && typeof section.slideStyle === 'object') {
             slideStyleToSave = { ...section.slideStyle };
             // Remove any undefined values (Supabase/Postgres JSONB does not store undefined)
@@ -431,6 +431,10 @@ export class DeckService {
         ai_analysis_enabled: options.aiAnalysisEnabled !== undefined ? options.aiAnalysisEnabled : true,
         custom_weights: options.customWeights || {},
         expires_at: options.expiresAt,
+        // New fields from schema
+        requires_verification: options.requires_verification || false,
+        allow_anonymous_feedback: options.allow_anonymous_feedback || false,
+        creator_is_anonymous: options.creator_is_anonymous || false,
       };
 
       const { data, error } = await supabase
@@ -463,6 +467,10 @@ export class DeckService {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       expiresAt: data.expires_at,
+      // Map new fields
+      requires_verification: data.requires_verification,
+      allow_anonymous_feedback: data.allow_anonymous_feedback,
+      creator_is_anonymous: data.creator_is_anonymous,
     };
   }
   // If all attempts fail, throw an error
@@ -494,6 +502,10 @@ export class DeckService {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       expiresAt: data.expires_at,
+      // Map new fields
+      requires_verification: data.requires_verification,
+      allow_anonymous_feedback: data.allow_anonymous_feedback,
+      creator_is_anonymous: data.creator_is_anonymous,
     };
   }
   
@@ -510,6 +522,100 @@ export class DeckService {
     if (!deck) return null;
 
     return { deck, shareLink };
+  }
+
+  static async getFeedbackWithClassification(deckId: string): Promise<{ content: DeckComment[]; form: DeckComment[]; general: DeckComment[] }> {
+    const comments = await this.getComments(deckId);
+    const content = comments.filter(c => c.feedback_category === 'Content');
+    const form = comments.filter(c => c.feedback_category === 'Form');
+    const general = comments.filter(c => c.feedback_category === 'General');
+    return { content, form, general };
+  }
+
+  static async getAIInsightsWithWeighting(deckId: string): Promise<any> {
+    // This is a placeholder for a more complex implementation
+    // that would involve calling the AI service with weighted feedback.
+    console.log(`Fetching AI insights with weighting for deck ${deckId}`);
+    const insights = await this.generateAndStoreAggregatedInsights(deckId);
+    return insights;
+  }
+
+  static async addShareRecipients(shareLinkId: string, recipients: Omit<DeckShareRecipient, 'id' | 'share_link_id' | 'created_at' | 'verified_at'>[]): Promise<DeckShareRecipient[]> {
+    if (!recipients || recipients.length === 0) {
+      return [];
+    }
+
+    const recipientsData = recipients.map(r => ({
+      share_link_id: shareLinkId,
+      email: r.email,
+      phone: r.phone,
+      role: r.role,
+      feedback_weight: r.feedback_weight,
+      access_code: r.access_code,
+    }));
+
+    const { data, error } = await supabase
+      .from('deck_share_recipients')
+      .insert(recipientsData)
+      .select();
+
+    if (error) {
+      console.error('Error adding share recipients:', error);
+      throw new Error('Failed to add share recipients.');
+    }
+
+    return data.map(r => ({
+      id: r.id,
+      share_link_id: r.share_link_id,
+      email: r.email,
+      phone: r.phone,
+      role: r.role,
+      feedback_weight: r.feedback_weight,
+      access_code: r.access_code,
+      verified_at: r.verified_at,
+      created_at: r.created_at,
+    }));
+  }
+
+  static async verifyRecipientAccess(shareToken: string, emailOrPhone: string, accessCode: string): Promise<{ success: boolean; message: string }> {
+    const shareLink = await this.getSmartShareLink(shareToken);
+    if (!shareLink) {
+      return { success: false, message: 'Invalid or expired share link.' };
+    }
+
+    const isEmail = emailOrPhone.includes('@');
+    const columnToQuery = isEmail ? 'email' : 'phone';
+
+    const { data, error } = await supabase
+      .from('deck_share_recipients')
+      .select('id, access_code, verified_at')
+      .eq('share_link_id', shareLink.id)
+      .eq(columnToQuery, emailOrPhone)
+      .single();
+
+    if (error || !data) {
+      return { success: false, message: 'You are not on the recipient list for this deck.' };
+    }
+
+    if (data.verified_at) {
+      return { success: true, message: 'Already verified.' };
+    }
+
+    if (data.access_code !== accessCode) {
+      return { success: false, message: 'Invalid access code.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('deck_share_recipients')
+      .update({ verified_at: new Date().toISOString() })
+      .eq('id', data.id);
+
+    if (updateError) {
+      console.error('Error updating recipient verification status:', updateError);
+      return { success: false, message: 'Verification failed. Please try again.' };
+    }
+
+    return { success: true, message: 'Verification successful.' };
   }
 
   static async createOrUpdateReviewerSession(
@@ -1133,10 +1239,10 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
 
   static async addComment(
     deckId: string,
-    commentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' | 
-                              'reviewerSessionId' | 'feedbackWeight' | 
+    commentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' |
+                              'reviewerSessionId' | 'feedbackWeight' |
                               'aiSentimentScore' | 'aiExpertiseScore' | 'aiImprovementCategory'>,
-    shareToken?: string, 
+    shareToken?: string,
     reviewerSessionId?: string
   ): Promise<DeckComment> {
     try {
@@ -1241,6 +1347,9 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         ai_sentiment_score: aiSentimentScore,
         ai_expertise_score: aiExpertiseScore,
         ai_improvement_category: aiImprovementCategory,
+        // Add new classification fields
+        feedback_category: commentData.feedback_category || 'General',
+        component_id: commentData.component_id,
       };
 
       const { data, error } = await supabase
@@ -1286,6 +1395,8 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
       };
     } catch (error) {
       console.error('Exception in addComment:', error);
@@ -1313,6 +1424,9 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
       }
       if (updates.declaredRole !== undefined) dbUpdates.declared_role = updates.declaredRole;
       if (updates.focusArea !== undefined) dbUpdates.focus_area = updates.focusArea;
+      // Add new fields to update payload
+      if ((updates as any).feedback_category !== undefined) dbUpdates.feedback_category = (updates as any).feedback_category;
+      if ((updates as any).component_id !== undefined) dbUpdates.component_id = (updates as any).component_id;
       
       if (Object.keys(dbUpdates).length === 0) {
         const existingComment = await this.getCommentById(commentId);
@@ -1369,6 +1483,8 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
       };
     } catch (error) {
       console.error('Exception in updateComment:', error);
@@ -1446,6 +1562,8 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: c.ai_expertise_score,
         aiImprovementCategory: c.ai_improvement_category,
         focusArea: c.focus_area,
+        feedback_category: c.feedback_category as FeedbackCategory,
+        component_id: c.component_id,
       }));
     } catch (error) {
       console.error('Exception in getComments:', error);
@@ -1490,6 +1608,8 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
       };
   }
 

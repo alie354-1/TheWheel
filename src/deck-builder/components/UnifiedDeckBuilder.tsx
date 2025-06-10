@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { SectionType, DeckSection, Deck, VisualComponent, VisualComponentLayout, DeckTheme } from '../types/index.ts';
+import { SectionType, DeckSection, Deck, VisualComponent, VisualComponentLayout, DeckTheme, FeedbackCategory } from '../types/index.ts';
 import { useDeck } from '../hooks/useDeck.ts';
 import { TemplateSelector } from './TemplateSelector.tsx';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel.tsx';
@@ -33,8 +33,10 @@ import {
   Maximize,
   GripVertical,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Share2
 } from 'lucide-react';
+import { EnhancedSharingModal } from './sharing/EnhancedSharingModal.tsx';
 import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter.ts';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelectToolbar } from './MultiSelectToolbar.tsx';
@@ -237,7 +239,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [currentUserDisplayNameState, setCurrentUserDisplayNameState] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('vertical');
   const [activePanel, setActivePanel] = useState<PanelMode>('components');
-  const [previewMode, setPreviewMode] = useState(false);
+  const previewMode = false;
+  const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [comments, setComments] = useState<DeckComment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -299,7 +302,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const handleUpdateComponentStyle = useCallback((style: Partial<React.CSSProperties>) => {
     if (selectedComponentIds.size === 0 || !currentSection || !updateSection) return;
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         return { ...c, style: { ...c.style, ...style } };
       }
@@ -564,13 +567,13 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     };
   }, [resizingCanvas, handleResizeCanvasMove, handleResizeCanvasEnd]);
 
-  const handleAddComment = async (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any) => {
+  const handleAddComment = async (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any, feedbackCategory?: FeedbackCategory, componentId?: string) => {
     if (!deck || !deck.id || !currentUserId) return;
     setIsSubmittingComment(true);
     try {
       const newCommentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' | 'reviewerSessionId' | 'feedbackWeight' | 'aiSentimentScore' | 'aiExpertiseScore' | 'aiImprovementCategory'> = {
         deckId: deck.id,
-        slideId: selectedSectionId!, 
+        slideId: selectedSectionId!,
         textContent: text,
         authorUserId: currentUserId,
         authorDisplayName: currentUserDisplayNameState || 'User',
@@ -580,6 +583,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         commentType: 'General',
         urgency: 'None',
         status: 'Open',
+        feedback_category: feedbackCategory,
+        component_id: componentId,
       };
       await DeckService.addComment(deck.id, newCommentData);
       if (deck?.id) fetchComments(deck.id);
@@ -590,11 +595,11 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     }
   };
 
-  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status'>>) => {
+  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>) => {
     if (!deck || !deck.id) return;
     try {
       await DeckService.updateComment(commentId, updates);
-      if (deck?.id) fetchComments(deck.id); 
+      if (deck?.id) fetchComments(deck.id);
     } catch (error) {
       console.error("Error updating comment:", error);
     }
@@ -692,7 +697,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   
   const handleComponentUpdate = (componentId: string, newData: any) => {
     if (!currentSection) return;
-    const updatedComponents = (currentSection.components || []).map(c => 
+    const updatedComponents = (currentSection.components || []).map((c: any) => 
       c.id === componentId ? { ...c, data: newData } : c
     );
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
@@ -854,7 +859,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     };
 
     // Create a new components array with the updated component
-    const updatedComponents = (currentSection.components || []).map(c =>
+    const updatedComponents = (currentSection.components || []).map((c: any) =>
       c.id === componentId ? updatedComponent : c
     );
 
@@ -916,7 +921,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         break;
     }
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         const newLayout = { ...c.layout };
         if (targetX !== undefined) {
@@ -949,8 +954,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!currentSection || selectedComponentIds.size < 3) return;
 
     const componentsToUpdate = (currentSection.components || [])
-      .filter(c => selectedComponentIds.has(c.id))
-      .sort((a, b) => distribution === 'horizontal' ? a.layout.x - b.layout.x : a.layout.y - b.layout.y);
+      .filter((c: any) => selectedComponentIds.has(c.id))
+      .sort((a: any, b: any) => distribution === 'horizontal' ? a.layout.x - b.layout.x : a.layout.y - b.layout.y);
 
     if (componentsToUpdate.length < 3) return;
 
@@ -978,8 +983,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       }
     }
 
-    const updatedComponents = (currentSection.components || []).map(c => {
-      const updated = componentsToUpdate.find(uc => uc.id === c.id);
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
+      const updated = componentsToUpdate.find((uc: any) => uc.id === c.id);
       return updated || c;
     });
 
@@ -994,7 +999,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
 
     const firstComponentLayout = componentsToUpdate[0].layout;
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         const newLayout = { ...c.layout };
         if (dimension === 'width' || dimension === 'both') {
@@ -1373,14 +1378,12 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             <span className="hidden sm:inline">Save</span>
           </button>
           <button
-            onClick={() => setPreviewMode(!previewMode)}
-            title={previewMode ? "Exit Preview Mode" : "Enter Preview Mode"}
-            className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
-              previewMode ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            onClick={() => setIsSharingModalOpen(true)}
+            title="Share Deck"
+            className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
           >
-            <Eye size={18} />
-            <span className="hidden lg:inline">{previewMode ? "Preview On" : "Preview Off"}</span>
+            <Share2 size={18} />
+            <span className="hidden lg:inline">Share</span>
           </button>
           <button
             onClick={() => setShowHtmlImportModal(true)}
@@ -1810,6 +1813,11 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           onDelete={handleDeleteSelected}
         />
       )}
+       <EnhancedSharingModal
+        isOpen={isSharingModalOpen}
+        onClose={() => setIsSharingModalOpen(false)}
+        deck={deck}
+      />
     </div>
     </DragDropContext>
   );

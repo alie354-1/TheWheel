@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RichTextEditor } from './editors/RichTextEditor.tsx';
 import { RichFeatureListEditor } from './editors/RichFeatureListEditor.tsx';
 import { VisualComponent, VisualComponentLayout as Layout } from '../types/index.ts';
-import { BLOCK_REGISTRY, BlockType, EditableProp } from '../types/blocks.ts'; 
-import { X, Save, Trash2 } from 'lucide-react';
+import { BLOCK_REGISTRY, BlockType, EditableProp, ImageBlock } from '../types/blocks.ts'; 
+import { X, Save, Trash2, UploadCloud, Loader2 } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
+import { uploadImage, deleteImage } from '../services/ImageUploadService.ts';
+import { useAuth } from '../../lib/contexts/AuthContext.tsx';
+import { supabase } from '../../lib/supabase.ts';
 // import { VisualComponentRenderer } from './VisualComponentRenderer.tsx';
 import { EnhancedDraggableComponent, ColorTheme as EditorModalColorTheme } from './EnhancedVisualDeckBuilderHelpers.tsx'; // Use alias for clarity
 import { ThemeSettings } from './ThemeCustomizationPanel.tsx'; // Import ThemeSettings for mapping if needed here, though mapping is in parent
@@ -26,8 +30,40 @@ export const VisualComponentEditorModal: React.FC<VisualComponentEditorModalProp
   onDelete,
   currentTheme,
 }) => {
+  const { user } = useAuth();
   const [editData, setEditData] = useState<any>({});
   const [previewLayout, setPreviewLayout] = useState<Layout | undefined>(component?.layout);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (!component || !user) return;
+
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    handleInputChange('uploading', true);
+
+    try {
+      const storagePath = await uploadImage(file, user.id);
+      const publicUrl = supabase.storage.from('deck_images').getPublicUrl(storagePath).data.publicUrl;
+      
+      handleInputChange('src', publicUrl);
+      handleInputChange('storagePath', storagePath);
+    } catch (error) {
+      console.error("Upload failed", error);
+      // Optionally, show an error message to the user
+    } finally {
+      setIsUploading(false);
+      handleInputChange('uploading', false);
+    }
+  }, [component, user]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.jpeg', '.png', '.gif', '.webp'] },
+    multiple: false,
+  });
 
   // Helper function to attempt to singularize a label
   const labelSingular = (label: string): string => {
@@ -196,6 +232,32 @@ export const VisualComponentEditorModal: React.FC<VisualComponentEditorModalProp
 
     return (
       <div className="space-y-4">
+        {component.type === 'image' && (
+          <div {...getRootProps()} className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}>
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center justify-center">
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                  <p className="mt-2 text-sm text-gray-600">Uploading...</p>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="h-8 w-8 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-600">
+                    {isDragActive ? "Drop the image here..." : "Drag 'n' drop an image here, or click to select"}
+                  </p>
+                  <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                </>
+              )}
+            </div>
+            {editData.src && !isUploading && (
+              <div className="mt-4">
+                <img src={editData.src} alt="Preview" className="max-h-32 mx-auto rounded-md" />
+              </div>
+            )}
+          </div>
+        )}
         {blockMeta.editableProps.map((propInfo: EditableProp) => {
           const fieldName = propInfo.name;
           const label = propInfo.label;

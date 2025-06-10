@@ -1,7 +1,6 @@
-import { DeckDataTemplate, SectionType, BlockType, VisualComponent } from '../types'; // Added VisualComponent
-import { SECTION_DEFAULTS } from './defaults'; // Import SECTION_DEFAULTS from defaults.ts
-import { generateUUID } from '../utils/uuid';
-import { BLOCK_REGISTRY } from '../types/blocks';
+import { DeckDataTemplate, SectionType, BlockType, VisualComponent } from '../types/index.ts'; 
+import { SECTION_DEFAULTS } from './defaults.ts'; 
+import { generateUUID } from '../utils/uuid.ts';
 
 const techPitchTemplate: DeckDataTemplate = {
   id: 'tech-pitch-v1',
@@ -28,7 +27,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'text' as BlockType,
             data: { 
-              ...(BLOCK_REGISTRY.text.sampleData || {}), 
               text: 'Revolutionizing [Industry] with [Groundbreaking Technology]', 
               variant: 'heading' 
             },
@@ -40,7 +38,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'text' as BlockType,
             data: { 
-              ...(BLOCK_REGISTRY.text.sampleData || {}), 
               text: 'Our unique approach to [problem domain] delivers unparalleled performance and scalability.', 
               variant: 'subheading' 
             },
@@ -60,7 +57,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'text' as BlockType,
             data: { 
-              ...(BLOCK_REGISTRY.text.sampleData || {}), 
               text: 'Current solutions for [problem domain] suffer from [limitation 1, limitation 2, limitation 3]. This results in [negative impact].', 
               variant: 'paragraph' 
             },
@@ -72,7 +68,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'image' as BlockType,
             data: {
-              ...(BLOCK_REGISTRY.image.sampleData || {}),
               src: 'https://via.placeholder.com/600x300?text=Diagram+of+Current+Limitations',
               alt: 'Current Limitations Diagram'
             },
@@ -92,7 +87,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'text' as BlockType,
             data: { 
-              ...(BLOCK_REGISTRY.text.sampleData || {}), 
               text: 'Our [Technology Name] leverages [key innovation 1] and [key innovation 2] to overcome these challenges.', 
               variant: 'paragraph' 
             },
@@ -104,7 +98,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'text' as BlockType, // Placeholder for architecture diagram
             data: { 
-              ...(BLOCK_REGISTRY.text.sampleData || {}), 
               text: '[Architecture Diagram: Showcasing core components and data flow. Consider using an Image block or a specialized diagram block if available.]', 
               variant: 'paragraph' 
             },
@@ -132,7 +125,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'tractionWidget' as BlockType,
             data: { 
-              ...(BLOCK_REGISTRY.tractionWidget?.sampleData || {}),
               metrics: [
                 { label: "Processing Speed", value: "10x Faster", trend: "up" },
                 { label: "Data Throughput", value: "5 Gbps", trend: "up" },
@@ -169,7 +161,6 @@ const techPitchTemplate: DeckDataTemplate = {
             id: generateUUID(),
             type: 'ctaCard' as BlockType,
             data: {
-              ...(BLOCK_REGISTRY.ctaCard.sampleData || {}),
               text: "Let's discuss a pilot program or technical deep-dive.",
               buttonLabel: "Schedule Technical Call",
               buttonUrl: "#"

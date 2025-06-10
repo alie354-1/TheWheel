@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { getFeatureFlagsService } from './lib/services/registry';
+import { getFeatureFlagsService } from './lib/services/registry.ts';
 import App from './App.tsx';
 import './index.css';
 

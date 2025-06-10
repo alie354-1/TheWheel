@@ -14,7 +14,7 @@ interface CommentInputSubmitData {
 interface CommentThreadProps {
   comment: DeckComment;
   onReplySubmit: (threadId: string, text: string) => void;
-  onCommentUpdate: (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status'>>) => void; // Corrected prop type
+  onCommentUpdate: (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>) => void;
   onCommentDelete: (commentId: string) => void;
   onCommentStatusUpdate?: (commentId: string, status: DeckComment['status']) => void;
   currentUserId?: string | null;

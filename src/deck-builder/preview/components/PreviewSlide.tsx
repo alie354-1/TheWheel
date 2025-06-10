@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { DeckSection, DeckTheme, VisualComponent, VisualComponentLayout } from '../../types/index.ts';
 import { VisualComponentRenderer } from '../../components/VisualComponentRenderer.tsx';
 import { ResizeHandle } from '../../components/ResizeHandle.tsx';
+import { getPublicUrl } from '../../services/ImageUploadService.ts';
 
 // Add these properties to the Window interface
 declare global {
@@ -302,10 +303,26 @@ const PreviewSlide: React.FC<PreviewSlideProps> = ({
       {componentsToRender.length > 0 &&
         componentsToRender.map((component: VisualComponent) => {
           const isSelected = !previewMode && selectedComponentIds?.has(component.id);
+          
+          // Modify the component data for rendering if it's an image with a storagePath
+          let componentToRender = component;
+          if (component.type === 'image' && component.data.storagePath && !component.data.src.startsWith('http')) {
+            const newSrc = getPublicUrl(component.data.storagePath);
+            if (newSrc) {
+              componentToRender = {
+                ...component,
+                data: {
+                  ...component.data,
+                  src: newSrc,
+                },
+              };
+            }
+          }
+
           return (
             <VisualComponentRenderer
               key={component.id}
-              component={component}
+              component={componentToRender}
               themeSettings={theme ? {
                 primaryColor: theme.colors.primary,
                 secondaryColor: theme.colors.secondary,

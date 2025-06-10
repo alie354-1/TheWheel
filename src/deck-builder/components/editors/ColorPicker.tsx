@@ -3,7 +3,9 @@ import { Editor } from '@tiptap/react';
 import { Palette } from 'lucide-react';
 
 interface ColorPickerProps {
-  editor: Editor;
+  value: string;
+  onChange: (value: string) => void;
+  editor?: Editor;
 }
 
 const PRESET_COLORS = [
@@ -11,7 +13,7 @@ const PRESET_COLORS = [
   '#FF0000', '#FF9900', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#9900FF', '#FF00FF',
 ];
 
-export const ColorPicker: React.FC<ColorPickerProps> = ({ editor }) => {
+export const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, editor }) => {
   const [isColorPickerOpen, setIsColorPickerOpen] = React.useState(false);
   const [recentColors, setRecentColors] = React.useState<string[]>(() => {
     const savedColors = localStorage.getItem('recentColors');
@@ -24,7 +26,16 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ editor }) => {
     localStorage.setItem('recentColors', JSON.stringify(updatedColors));
   };
 
-  const currentColor = editor.getAttributes('textStyle').color || '#000000';
+  const currentColor = editor ? editor.getAttributes('textStyle').color : (value || '#000000');
+
+  const handleColorChange = (color: string) => {
+    if (editor) {
+      editor.chain().focus().setColor(color).run();
+    }
+    onChange(color);
+    addRecentColor(color);
+    setIsColorPickerOpen(false);
+  };
 
   return (
     <div className="relative">
@@ -45,11 +56,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ editor }) => {
                 {recentColors.map((color) => (
                   <button
                     key={color}
-                    onClick={() => {
-                      editor.chain().focus().setColor(color).run();
-                      addRecentColor(color);
-                      setIsColorPickerOpen(false);
-                    }}
+                    onClick={() => handleColorChange(color)}
                     className="w-10 h-10 rounded-full border border-gray-300"
                     style={{ backgroundColor: color }}
                     title={color}
@@ -63,11 +70,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ editor }) => {
             {PRESET_COLORS.map((color) => (
               <button
                 key={color}
-                onClick={() => {
-                  editor.chain().focus().setColor(color).run();
-                  addRecentColor(color);
-                  setIsColorPickerOpen(false);
-                }}
+                onClick={() => handleColorChange(color)}
                 className="w-8 h-8 rounded-full border border-gray-300"
                 style={{ backgroundColor: color }}
                 title={color}
@@ -79,16 +82,18 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ editor }) => {
               type="color"
               onInput={(event) => {
                 const color = (event.target as HTMLInputElement).value;
-                editor.chain().focus().setColor(color).run();
-                addRecentColor(color);
+                handleColorChange(color);
               }}
-              value={editor.getAttributes('textStyle').color || '#000000'}
+              value={currentColor}
               className="w-full h-8 p-1 border-none rounded cursor-pointer"
             />
           </div>
           <button
             onClick={() => {
-              editor.chain().focus().unsetColor().run();
+              if (editor) {
+                editor.chain().focus().unsetColor().run();
+              }
+              onChange('');
               setIsColorPickerOpen(false);
             }}
             className="w-full mt-2 p-2 text-xs text-center text-gray-700 hover:bg-gray-100 rounded"

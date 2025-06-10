@@ -116,6 +116,7 @@ export interface DeckDataTemplate {
 // Re-export BlockType for use in other modules
 // Also make BlockType available internally for ProposedContentDataType
 export type { ImportedBlockType as BlockType }; // Re-export with the original name
+export type { TractionWidgetMetric, Milestone, FundAllocation, TeamMember, Competitor, Logo, TractionWidgetMetric as TractionMetric } from './blocks.ts';
 
 // Types for Collaborative Feedback System
 
@@ -153,7 +154,11 @@ export interface DeckComment {
   aiExpertiseScore?: number; // AI-analyzed expertise
   aiImprovementCategory?: string; // AI-assigned category
   focusArea?: string; // If comment relates to a specific focus area
+  feedback_category?: FeedbackCategory; // Added for Content vs. Form classification
+  component_id?: string; // Added for component-level feedback
 }
+
+export type FeedbackCategory = 'Content' | 'Form' | 'General';
 
 // Types for Unified Smart Sharing System
 export type ShareType = 'view' | 'feedback' | 'expert_review';
@@ -171,6 +176,22 @@ export interface SmartShareLink {
   createdAt: string;
   updatedAt: string;
   expiresAt?: string;
+  // New fields for enhanced sharing
+  requires_verification?: boolean;
+  allow_anonymous_feedback?: boolean;
+  creator_is_anonymous?: boolean;
+}
+
+export interface DeckShareRecipient {
+  id: number;
+  share_link_id: string;
+  email?: string;
+  phone?: string;
+  role: string;
+  feedback_weight: number;
+  access_code?: string;
+  verified_at?: string;
+  created_at: string;
 }
 
 export type ExpertiseLevel = 'beginner' | 'intermediate' | 'expert' | 'n/a';

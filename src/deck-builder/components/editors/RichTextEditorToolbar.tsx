@@ -147,7 +147,11 @@ export const RichTextEditorToolbar: React.FC<RichTextEditorToolbarProps> = ({ ed
       <div className="border-l border-gray-300 h-6 mx-2"></div>
       
       {/* Color */}
-      <ColorPicker editor={editor} />
+      <ColorPicker
+  value={editor.getAttributes('textStyle').color}
+  onChange={(color) => editor.chain().focus().setColor(color).run()}
+  editor={editor}
+/>
       
       <div className="border-l border-gray-300 h-6 mx-2"></div>
 
