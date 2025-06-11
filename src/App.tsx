@@ -7,6 +7,7 @@ import PrivateRoute from './components/PrivateRoute.tsx';
 
 // Layout components
 import Layout from './components/Layout.tsx';
+import CommunityRoutes from './routes/CommunityRoutes.tsx';
 
 // Static (eagerly loaded) pages
 import Dashboard from './pages/Dashboard.tsx';
@@ -14,6 +15,7 @@ import Profile from './pages/Profile.tsx';
 import ProfileSetup from './pages/ProfileSetup.tsx';
 import OnboardingPage from './pages/OnboardingPage.tsx';
 import InitialOnboardingPage from './pages/InitialOnboardingPage.tsx';
+import UserSettingsPage from './pages/UserSettingsPage.tsx';
 
 import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage.tsx';
 import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage.tsx';
@@ -124,6 +126,7 @@ const App: React.FC = () => {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="account-settings" element={<UserSettingsPage />} />
               <Route path="simplified-dashboard" element={<SimplifiedDashboard />} />
               
               {/* Business Operations Hub Routes */}
@@ -146,7 +149,8 @@ const App: React.FC = () => {
                 <Route path="dashboard" element={<CompanyDashboard />} />
                 <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
-                <Route path="journey" element={<JourneyHomePage companyId={''} />} />
+
+                <Route path="journey" element={<JourneyHomePage companyId="default" />} />
                 <Route path="journey-new" element={<RefactoredJourneyPage />} />
                 <Route path="journey/steps" element={<JourneyStepsPage />} />
                 <Route path="journey/steps/:stepId" element={<JourneyStepPage />} />
@@ -186,6 +190,9 @@ const App: React.FC = () => {
               {/* Analytics */}
               <Route path="analytics" element={<AnalyticsPage />} />
               
+              {/* Community Section */}
+              <Route path="community/*" element={<CommunityRoutes />} />
+              
               {/* Admin Section */}
               <Route path="admin">
                 <Route index element={<AdminPanel />} />
@@ -220,7 +227,8 @@ const App: React.FC = () => {
           } />
 
       {/* New Journey System */}
-      <Route path="/journey" element={<JourneyHomePage companyId={''} />} />
+
+      <Route path="/journey" element={<JourneyHomePage companyId="default" />} />
           <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
           <Route path="/journey/map" element={<JourneyMapPage />} />
           
