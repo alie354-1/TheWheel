@@ -57,7 +57,22 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
   ] = usePreviewState(deckIdToUse, slideViewportRef, initialDeckFromLibrary);
   
   const currentSlide = deck?.sections?.[currentSlideIndex];
-  
+
+  // --- DEBUG LOGGING AND FALLBACK MAPPING ---
+  if (currentSlide) {
+    console.log("DeckPreviewer: currentSlide object:", currentSlide);
+    console.log("DeckPreviewer: currentSlide.components:", currentSlide.components);
+    console.log("DeckPreviewer: currentSlide.content:", currentSlide.content);
+    // Fallback mapping: if components is undefined but content exists, assign it
+    if (!currentSlide.components && currentSlide.content) {
+      currentSlide.components = currentSlide.content;
+      console.log("DeckPreviewer: Fallback mapping applied, components set from content.");
+    }
+    // Log the final components array
+    console.log("DeckPreviewer: components to render:", currentSlide.components);
+  }
+  // ------------------------------------------
+
   // Extract dimensions directly from the section to ensure they're always read from there
   const sectionWidth = currentSlide?.width;
   const sectionHeight = currentSlide?.height;
