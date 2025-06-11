@@ -6,10 +6,10 @@ import AIRecommendationPanel from "./JourneyBoard/AIRecommendationPanel";
 import FilterBar from "./JourneyBoard/FilterBar";
 import * as journeyBoardService from "../../lib/services/journeyBoard.service";
 import ListView from "./JourneyBoard/ListView";
-import { ActionPanel } from '../../components/company/journey/ActionPanel'; // Import ActionPanel
+/* import { ActionPanel } from '../../components/company/journey/ActionPanel'; // Import ActionPanel */
 // Removed the old RecommendationsPanel import
 // import { RecommendationsPanel } from "../../components/company/journey/StepRecommendations"; 
-import { JourneyAnalyticsDashboard } from "../../components/company/journey/Analytics";
+/* import { JourneyAnalyticsDashboard } from "../../components/company/journey/Analytics"; */
 
 // Replace with real companyId from context/auth
 const companyId = "demo-company-id";
@@ -222,20 +222,15 @@ const JourneyMapPage: React.FC = () => {
               )}
             />
           )}
-          {view === "timeline" && (
-            <JourneyAnalyticsDashboard 
-              timeRange="month" 
-              className="mb-6"
-            />
-          )}
+          {/* Timeline view is disabled */}
         </div>
 
         {/* Action Panel Sidebar */}
         <div className="w-80 flex-shrink-0"> {/* Fixed width sidebar */}
-          <ActionPanel 
+          {/* <ActionPanel 
             companyId={companyId} 
             onStepSelect={handleStepSelect} // Pass the selection handler
-          />
+          /> */}
         </div>
       </div>
     </div>

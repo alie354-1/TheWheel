@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import JourneyStepDetails from '../../components/company/journey/JourneyStepDetails';
-import ChallengeEditor from '../../components/company/journey/ChallengeEditor';
+/* import LegacyJourneyStepDetails from '../../components/company/journey/LegacyJourneyStepDetails'; */
+/* import ChallengeEditor from '../../components/company/journey/ChallengeEditor'; */
 import { supabase } from '../../lib/supabase';
 import { JourneyChallengesService } from '../../lib/services/journeyChallenges.service';
 import { JourneyChallenge } from '../../lib/types/journey-challenges.types';
@@ -127,7 +127,7 @@ const JourneyStepPage: React.FC<JourneyStepPageProps> = ({ mode = 'view' }) => {
       </div>
       
       {mode === 'view' && (
-        <JourneyStepDetails companyId={companyId} />
+        {/* <LegacyJourneyStepDetails companyId={companyId} /> */}
       )}
       
       {(mode === 'edit' || mode === 'create') && (
@@ -135,12 +135,12 @@ const JourneyStepPage: React.FC<JourneyStepPageProps> = ({ mode = 'view' }) => {
           <h1 className="text-2xl font-bold text-gray-800 mb-6">
             {mode === 'create' ? 'Create New Challenge' : 'Edit Challenge'}
           </h1>
-          <ChallengeEditor 
+          {/* <ChallengeEditor 
             challengeId={currentId}
             phaseId={challenge?.phase_id} 
             onSave={handleChallengeSubmit}
             onCancel={() => navigate(getBackLink())}
-          />
+          /> */}
         </div>
       )}
     </div>

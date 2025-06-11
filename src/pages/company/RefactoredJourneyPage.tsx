@@ -14,15 +14,15 @@ import { useFeatureFlags } from '../../lib/hooks/useFeatureFlags';
 import { useAnalytics } from '../../lib/hooks/useAnalytics';
 
 // Import journey-specific components
-import { ViewToggle, ViewMode } from '../../components/company/journey/ViewToggle/ViewToggle';
-import { SimplePhaseProgressList } from '../../components/company/journey/PhaseProgress/SimplePhaseProgressList';
+/* import { ViewToggle, ViewMode } from '../../components/company/journey/ViewToggle/ViewToggle'; */
+/* import { SimplePhaseProgressList } from '../../components/company/journey/PhaseProgress/SimplePhaseProgressList'; */
 import { StepStatus } from '../../components/company/journey/StepCard/StepCardProps';
-import { TimelineView } from '../../components/company/journey/TimelineView/TimelineView';
+/* import { TimelineView } from '../../components/company/journey/TimelineView/TimelineView'; */
 import { ListView } from '../../components/company/journey/ListView/ListView';
 import { Term } from '../../components/terminology/Term';
-import { StepAssistant } from '../../components/company/journey/StepAssistant/StepAssistant';
+/* import { StepAssistant } from '../../components/company/journey/StepAssistant/StepAssistant'; */
 import { MilestoneCelebrationAnimation } from '../../components/visualization';
-import { ActionPanel } from '../../components/company/journey/ActionPanel/ActionPanel';
+/* import { ActionPanel } from '../../components/company/journey/ActionPanel/ActionPanel'; */
 
 // Import journey data hook, but in the future consider migrating to a service
 import { useJourneyPageData } from '../../lib/hooks/useJourneyPageData';
@@ -43,7 +43,7 @@ const RefactoredJourneyPage: React.FC = () => {
   const { isEnabled } = useFeatureFlags();
 
   // Local state
-  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
+  // const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedStep, setSelectedStep] = useState<any>(null);
   const [showStepPanel, setShowStepPanel] = useState<boolean>(false);
@@ -205,13 +205,13 @@ const RefactoredJourneyPage: React.FC = () => {
                 Filters
               </button>
               
-              <ViewToggle 
+              {/* <ViewToggle 
                 activeView={viewMode} 
                 onChange={(mode) => {
                   setViewMode(mode);
                   trackEvent('change_journey_view', { newView: mode });
                 }} 
-              />
+              /> */}
             </div>
           </div>
 
@@ -227,7 +227,7 @@ const RefactoredJourneyPage: React.FC = () => {
             )}
             
             {/* Skip rendering SimplePhaseProgressList if phases are not available */}
-            {phases.length > 0 && (
+            {/* {phases.length > 0 && (
               <SimplePhaseProgressList 
                 phases={phases.map(phase => ({
                   id: phase.id,
@@ -246,7 +246,7 @@ const RefactoredJourneyPage: React.FC = () => {
                   trackEvent('click_journey_phase', { phaseId });
                 }}
               />
-            )}
+            )} */}
           </div>
         </Container>
       </div>
@@ -306,7 +306,7 @@ const RefactoredJourneyPage: React.FC = () => {
         <div className="flex gap-4">
           {/* Main Content Area */}
           <div className={`flex-grow ${showStepPanel ? 'pr-4' : ''}`}>
-            {viewMode === 'timeline' ? (
+            {/* {viewMode === 'timeline' ? (
               <TimelineView 
                 phases={phases}
                 steps={filteredSteps}
@@ -324,16 +324,24 @@ const RefactoredJourneyPage: React.FC = () => {
                 onSelectStep={handleStepSelect}
                 onUpdateStatus={handleStatusUpdate}
               />
-            )}
+            )} */}
+            {/* <TimelineView 
+              phases={phases}
+              steps={filteredSteps}
+              companySteps={companySteps}
+              selectedStepId={selectedStepId || undefined}
+              onSelectStep={handleStepSelect}
+              onUpdateStatus={handleStatusUpdate}
+            /> */}
           </div>
 
           {/* Action Panel - Sprint 3 Addition */}
           <div className="w-80 flex flex-col gap-4">
             {/* Show action panel if feature is enabled */}
-            <ActionPanel 
+            {/* <ActionPanel 
               companyId={companyId || ''} 
               onStepSelect={handleStepSelect}
-            />
+            /> */}
             
             {/* Step Preview Panel */}
             {showStepPanel && selectedStepId && (
@@ -359,12 +367,12 @@ const RefactoredJourneyPage: React.FC = () => {
                         )}
                       </div>
                       
-                      <StepAssistant
+                      {/* <StepAssistant
                         stepId={selectedStepId}
                         stepName={selectedStep.name}
                         stepDescription={selectedStep.description}
                         stepDifficulty={selectedStep.difficulty || 'medium'}
-                      />
+                      /> */}
                       
                       <div className="mt-4">
                         <button 
