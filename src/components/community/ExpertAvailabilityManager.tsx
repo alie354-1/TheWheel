@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { toast } from '@/lib/utils/toast';
 import { availabilityService, ExpertAvailability } from '@/lib/services/availability.service';
 import { Tabs, Tab } from '@/components/ui/Tabs';
