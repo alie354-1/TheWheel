@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EnhancedJourneyStep } from '../../lib/types/journey-steps.types';
-import { StepList, DraggableStepList } from '../../components/company/journey/StepList';
-import { PhaseProgress } from '../../components/company/journey/PhaseProgress';
+/* import { StepList, DraggableStepList } from '../../components/company/journey/StepList'; */
+/* import { PhaseProgress } from '../../components/company/journey/PhaseProgress'; */
 import journeyStepsService from '../../lib/services/journeySteps.service';
 import { Switch } from '@headlessui/react';
 
@@ -197,14 +197,14 @@ const JourneyStepsPage: React.FC = () => {
       </div>
       
       {/* Phase selector and progress */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <PhaseProgress 
           phases={phases}
           companyId={companyId}
           selectedPhaseId={selectedPhaseId}
           onPhaseSelect={setSelectedPhaseId}
         />
-      </div>
+      </div> */}
       
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4 justify-between">
@@ -278,7 +278,7 @@ const JourneyStepsPage: React.FC = () => {
       
       {/* Steps list - choose between regular and draggable based on mode */}
       <div>
-        {reorderMode ? (
+        {/* {reorderMode ? (
           <DraggableStepList
             steps={filteredSteps}
             showPhase={false}
@@ -299,7 +299,7 @@ const JourneyStepsPage: React.FC = () => {
             onMarkIrrelevantClick={handleMarkIrrelevant}
             emptyMessage="No steps found matching your filters. Try adjusting your search criteria."
           />
-        )}
+        )} */}
       </div>
     </div>
   );

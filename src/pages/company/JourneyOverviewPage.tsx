@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowRight, PlusCircle } from 'lucide-react';
-import JourneyOverview from '../../components/company/journey/JourneyOverview';
+/* import JourneyOverview from '../../components/company/journey/JourneyOverview'; */
 import { Term } from '../../components/terminology/Term';
 
 /**
@@ -96,10 +96,10 @@ export default function JourneyOverviewPage() {
         </header>
         
         {/* Using our reusable JourneyOverview component */}
-        <JourneyOverview 
+        {/* <JourneyOverview 
           companyId={companyId}
           onSelectStep={(stepId) => navigate(`/company/journey/step/${stepId}`)}
-        />
+        /> */}
         
         {/* Quick Actions */}
         <div className="bg-white rounded-xl shadow-md p-6">
