@@ -453,13 +453,15 @@ export interface AdvisorCardBlock extends BaseBlock {
 
 export interface HiringPlanBlock extends BaseBlock {
   type: 'hiringPlan';
-  roles: {
-    title: string;
-    department: string;
-    count: number;
-    timeline: string; // e.g., "Q3 2024"
-  }[];
+  roles: HiringRole[];
   title?: string;
+}
+
+export interface HiringRole {
+  title: string;
+  department: string;
+  count: number;
+  timeline: string;
 }
 
 export interface SkillMatrixBlock extends BaseBlock {

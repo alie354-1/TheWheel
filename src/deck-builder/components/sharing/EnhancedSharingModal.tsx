@@ -37,21 +37,25 @@ const PRESET_ROLES = ['Designer', 'Business Expert', 'Investor', 'Technical Lead
 
 export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck, isOpen, onClose }) => {
   const { user } = useAuth();
-
+  
   // Stepper state: 0 = mode select, 1 = options, 2 = summary/link
   const [step, setStep] = useState(0);
-
+  
   // Step 0: Mode selection
   const [shareType, setShareType] = useState<ShareType | null>(null);
-
+  
   // Step 1: Mode-specific options
   const [recipients, setRecipients] = useState<RecipientInput[]>([]);
-  const [newRecipient, setNewRecipient] = useState<RecipientInput>({ email: '', role: 'General', feedback_weight: 1.0 });
+  const [newRecipient, setNewRecipient] = useState<RecipientInput>({
+    email: '',
+    role: 'General',
+    feedback_weight: 1.0
+  });
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [allowAnonymousFeedback, setAllowAnonymousFeedback] = useState(false);
   const [creatorIsAnonymous, setCreatorIsAnonymous] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>('');
-
+  
   // Step 2: Summary/link
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +110,7 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
       setIsLoading(false);
       return;
     }
+
     setIsLoading(true);
     setError(null);
     setGeneratedLink(null);
@@ -246,7 +251,10 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
               {recipients.map((recipient, idx) => (
                 <div key={idx} style={styles.recipientRow}>
                   <span>{recipient.email || recipient.phone} ({recipient.role}, {recipient.feedback_weight}x)</span>
-                  <button onClick={() => setRecipients(recipients.filter((_, i) => i !== idx))} style={styles.deleteButton}>
+                  <button
+                    onClick={() => setRecipients(recipients.filter((_, i) => i !== idx))}
+                    style={styles.deleteButton}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -298,8 +306,12 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
             </div>
           </div>
           <div style={styles.stepNavRow}>
-            <button style={{ ...styles.button, ...styles.backButton }} onClick={() => setStep(0)}>
-              <ChevronLeft size={18} style={{ marginRight: 4 }} /> Back
+            <button
+              style={{ ...styles.button, ...styles.backButton }}
+              onClick={() => setStep(0)}
+            >
+              <ChevronLeft size={18} style={{ marginRight: 4 }} />
+              Back
             </button>
             <button
               style={{ ...styles.button, ...styles.nextButton }}
@@ -312,6 +324,7 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
         </div>
       );
     }
+
     if (shareType === 'expert_review') {
       return (
         <div>
@@ -352,7 +365,10 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
               {recipients.map((recipient, idx) => (
                 <div key={idx} style={styles.recipientRow}>
                   <span>{recipient.email || recipient.phone} ({recipient.role}, {recipient.feedback_weight}x)</span>
-                  <button onClick={() => setRecipients(recipients.filter((_, i) => i !== idx))} style={styles.deleteButton}>
+                  <button
+                    onClick={() => setRecipients(recipients.filter((_, i) => i !== idx))}
+                    style={styles.deleteButton}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -423,8 +439,12 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
             </div>
           </div>
           <div style={styles.stepNavRow}>
-            <button style={{ ...styles.button, ...styles.backButton }} onClick={() => setStep(0)}>
-              <ChevronLeft size={18} style={{ marginRight: 4 }} /> Back
+            <button
+              style={{ ...styles.button, ...styles.backButton }}
+              onClick={() => setStep(0)}
+            >
+              <ChevronLeft size={18} style={{ marginRight: 4 }} />
+              Back
             </button>
             <button
               style={{ ...styles.button, ...styles.nextButton }}
@@ -437,6 +457,7 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
         </div>
       );
     }
+
     if (shareType === 'view') {
       return (
         <div>
@@ -466,8 +487,12 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
             </div>
           </div>
           <div style={styles.stepNavRow}>
-            <button style={{ ...styles.button, ...styles.backButton }} onClick={() => setStep(0)}>
-              <ChevronLeft size={18} style={{ marginRight: 4 }} /> Back
+            <button
+              style={{ ...styles.button, ...styles.backButton }}
+              onClick={() => setStep(0)}
+            >
+              <ChevronLeft size={18} style={{ marginRight: 4 }} />
+              Back
             </button>
             <button
               style={{ ...styles.button, ...styles.nextButton }}
@@ -480,6 +505,7 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
         </div>
       );
     }
+
     return null;
   };
 
@@ -527,18 +553,34 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
         {error && <div style={styles.errorText}>{error}</div>}
         {generatedLink && (
           <div style={styles.linkBox}>
-            <input type="text" value={generatedLink} readOnly style={styles.linkInput} />
-            <button onClick={handleCopyLink} style={styles.copyButton} title="Copy link">
+            <input
+              type="text"
+              value={generatedLink}
+              readOnly
+              style={styles.linkInput}
+            />
+            <button
+              onClick={handleCopyLink}
+              style={styles.copyButton}
+              title="Copy link"
+            >
               <Copy size={18} />
             </button>
           </div>
         )}
       </div>
       <div style={styles.stepNavRow}>
-        <button style={{ ...styles.button, ...styles.backButton }} onClick={() => setStep(1)}>
-          <ChevronLeft size={18} style={{ marginRight: 4 }} /> Back
+        <button
+          style={{ ...styles.button, ...styles.backButton }}
+          onClick={() => setStep(1)}
+        >
+          <ChevronLeft size={18} style={{ marginRight: 4 }} />
+          Back
         </button>
-        <button style={{ ...styles.button, ...styles.closeButton }} onClick={onClose}>
+        <button
+          style={{ ...styles.button, ...styles.closeButton }}
+          onClick={onClose}
+        >
           Close
         </button>
       </div>
@@ -552,7 +594,9 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
       <div style={styles.modalContent}>
         <div style={styles.modalHeader}>
           <h2>Share "{deck.title}"</h2>
-          <button onClick={onClose} style={styles.closeButtonIcon}><IconX size={20} /></button>
+          <button onClick={onClose} style={styles.closeButtonIcon}>
+            <IconX size={20} />
+          </button>
         </div>
         <div style={styles.progressBarContainer}>
           <div style={{ ...styles.progressBar, width: `${((step + 1) / 3) * 100}%` }} />
@@ -580,71 +624,222 @@ const circleRadio = (selected?: boolean): React.CSSProperties => ({
 
 const styles: { [key: string]: React.CSSProperties } = {
   modalOverlay: {
-    position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1050, padding: '20px'
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1050,
+    padding: '20px'
   },
   modalContent: {
-    backgroundColor: 'white', padding: '24px', borderRadius: '12px',
+    backgroundColor: 'white',
+    padding: '24px',
+    borderRadius: '12px',
     boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 20px 40px -20px rgba(0,0,0,0.2)',
-    width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '20px',
-    maxHeight: '90vh', overflowY: 'auto'
+    width: '100%',
+    maxWidth: '560px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    maxHeight: '90vh',
+    overflowY: 'auto'
   },
   modalHeader: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    paddingBottom: '16px', borderBottom: '1px solid #e5e7eb'
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: '16px',
+    borderBottom: '1px solid #e5e7eb'
   },
   closeButtonIcon: {
-    background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px'
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#6b7280',
+    padding: '4px'
   },
   progressBarContainer: {
-    width: '100%', height: 6, background: '#f3f4f6', borderRadius: 4, marginBottom: 12, overflow: 'hidden'
+    width: '100%',
+    height: 6,
+    background: '#f3f4f6',
+    borderRadius: 4,
+    marginBottom: 12,
+    overflow: 'hidden'
   },
   progressBar: {
-    height: '100%', background: '#2563eb', borderRadius: 4, transition: 'width 0.3s'
+    height: '100%',
+    background: '#2563eb',
+    borderRadius: 4,
+    transition: 'width 0.3s'
   },
-  stepTitle: { fontWeight: 600, fontSize: '1.1rem', marginBottom: 12, color: '#1e293b' },
-  modeOptionsRow: { display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 16 },
+  stepTitle: {
+    fontWeight: 600,
+    fontSize: '1.1rem',
+    marginBottom: 12,
+    color: '#1e293b'
+  },
+  modeOptionsRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: 16
+  },
   modeOption: {
-    display: 'flex', alignItems: 'flex-start', gap: '16px', border: '2px solid #d1d5db', borderRadius: '10px',
-    padding: '16px', cursor: 'pointer', background: '#fff', transition: 'border-color 0.2s, background 0.2s'
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '16px',
+    border: '2px solid #d1d5db',
+    borderRadius: '10px',
+    padding: '16px',
+    cursor: 'pointer',
+    background: '#fff',
+    transition: 'border-color 0.2s, background 0.2s'
   },
-  radioInput: { display: 'none' },
-  // circleRadio removed; now a standalone function above
-  modeLabel: { fontWeight: 600, fontSize: '1rem', color: '#1e293b', marginBottom: 2 },
-  modeDescription: { fontSize: '0.95rem', color: '#475569', marginTop: 2 },
-  stepNavRow: { display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 },
+  radioInput: {
+    display: 'none'
+  },
+  modeLabel: {
+    fontWeight: 600,
+    fontSize: '1rem',
+    color: '#1e293b',
+    marginBottom: 2
+  },
+  modeDescription: {
+    fontSize: '0.95rem',
+    color: '#475569',
+    marginTop: 2
+  },
+  stepNavRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 24
+  },
   button: {
-    padding: '10px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-    backgroundColor: '#2563eb', color: 'white', fontSize: '0.95rem', fontWeight: 500,
+    padding: '10px 18px',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    fontSize: '0.95rem',
+    fontWeight: 500,
     transition: 'background-color 0.2s',
-    display: 'flex', alignItems: 'center'
+    display: 'flex',
+    alignItems: 'center'
   },
   nextButton: {},
-  backButton: { backgroundColor: '#6b7280' },
-  closeButton: { backgroundColor: '#6b7280' },
-  optionsSection: { display: 'flex', flexDirection: 'column', gap: '14px' },
-  groupLabel: { fontWeight: 600, fontSize: '0.95rem', color: '#374151', marginBottom: '4px' },
-  label: { display: 'block', fontWeight: 500, fontSize: '0.875rem', color: '#374151', marginBottom: '6px' },
-  inputField: {
-    width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px',
-    fontSize: '0.875rem', boxSizing: 'border-box'
+  backButton: {
+    backgroundColor: '#6b7280'
   },
-  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: '#374151', cursor: 'pointer' },
-  addRecipientForm: { display: 'flex', gap: '8px', alignItems: 'center' },
-  addButton: { background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '4px' },
-  deleteButton: { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' },
-  recipientRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', backgroundColor: '#f9fafb', borderRadius: '6px' },
-  summarySection: { marginBottom: 16 },
-  summaryList: { margin: 0, paddingLeft: 18, fontSize: '0.97em', color: '#374151' },
-  linkDisplaySection: { marginTop: '12px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' },
-  linkBox: { display: 'flex', alignItems: 'center', gap: '8px' },
+  closeButton: {
+    backgroundColor: '#6b7280'
+  },
+  optionsSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px'
+  },
+  groupLabel: {
+    fontWeight: 600,
+    fontSize: '0.95rem',
+    color: '#374151',
+    marginBottom: '4px'
+  },
+  label: {
+    display: 'block',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    color: '#374151',
+    marginBottom: '6px'
+  },
+  inputField: {
+    width: '100%',
+    padding: '10px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    boxSizing: 'border-box'
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '0.875rem',
+    color: '#374151',
+    cursor: 'pointer'
+  },
+  addRecipientForm: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center'
+  },
+  addButton: {
+    background: 'none',
+    border: 'none',
+    color: '#10b981',
+    cursor: 'pointer',
+    padding: '4px'
+  },
+  deleteButton: {
+    background: 'none',
+    border: 'none',
+    color: '#ef4444',
+    cursor: 'pointer',
+    padding: '4px'
+  },
+  recipientRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px',
+    backgroundColor: '#f9fafb',
+    borderRadius: '6px'
+  },
+  summarySection: {
+    marginBottom: 16
+  },
+  summaryList: {
+    margin: 0,
+    paddingLeft: 18,
+    fontSize: '0.97em',
+    color: '#374151'
+  },
+  linkDisplaySection: {
+    marginTop: '12px',
+    padding: '12px',
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px'
+  },
+  linkBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
   linkInput: {
-    flexGrow: 1, padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px',
-    fontSize: '0.875rem', backgroundColor: '#fff',
+    flexGrow: 1,
+    padding: '10px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    backgroundColor: '#fff',
   },
   copyButton: {
-    padding: '10px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-    backgroundColor: '#e5e7eb', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center'
+    padding: '10px',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    backgroundColor: '#e5e7eb',
+    color: '#374151',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  errorText: { color: '#ef4444', fontSize: '0.875rem', textAlign: 'center' }
+  errorText: {
+    color: '#ef4444',
+    fontSize: '0.875rem',
+    textAlign: 'center'
+  }
 };

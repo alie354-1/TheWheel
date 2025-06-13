@@ -1,8 +1,8 @@
 import React from 'react';
-import { AdvisorCardBlock } from '../../types/blocks';
-import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
-import { Label } from '../../../components/ui/label';
+import { AdvisorCardBlock } from '../../types/blocks.ts';
+import { Input } from '../../../components/ui/input.tsx';
+import { Textarea } from '../../../components/ui/textarea.tsx';
+import { Label } from '../../../components/ui/label.tsx';
 
 interface AdvisorCardEditorProps {
   block: AdvisorCardBlock;
@@ -16,42 +16,42 @@ export const AdvisorCardEditor: React.FC<AdvisorCardEditorProps> = ({ block, onC
         <Label>Name</Label>
         <Input
           value={block.name}
-          onChange={(e) => onChange({ name: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ name: e.target.value })}
         />
       </div>
       <div>
         <Label>Title</Label>
         <Input
           value={block.title}
-          onChange={(e) => onChange({ title: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ title: e.target.value })}
         />
       </div>
       <div>
         <Label>Company</Label>
         <Input
           value={block.company}
-          onChange={(e) => onChange({ company: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ company: e.target.value })}
         />
       </div>
       <div>
         <Label>Photo URL</Label>
         <Input
           value={block.photoUrl}
-          onChange={(e) => onChange({ photoUrl: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ photoUrl: e.target.value })}
         />
       </div>
       <div>
         <Label>Bio</Label>
         <Textarea
           value={block.bio}
-          onChange={(e) => onChange({ bio: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange({ bio: e.target.value })}
         />
       </div>
       <div>
         <Label>LinkedIn URL</Label>
         <Input
           value={block.linkedin}
-          onChange={(e) => onChange({ linkedin: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ linkedin: e.target.value })}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Deck, DeckTheme, DeckComment } from '../../types/index.ts';
+import { Deck, DeckTheme, DeckComment, FeedbackCategory } from '../../types/index.ts';
 import PreviewSlide from './PreviewSlide.tsx';
 import PreviewControls from './PreviewControls.tsx';
 import { AccessibilitySettings } from './AccessibilityToolbar.tsx';
@@ -18,7 +18,7 @@ interface DeckPreviewerProps {
   deckId?: string;
   isPublicView?: boolean;
   enableCommenting?: boolean;
-  shareToken?: string;
+  shareToken?: string | null | undefined;  // Updated to accept the types that are actually passed
   reviewerSessionId?: string;
   reviewerDisplayName?: string | null;
   reviewerEmail?: string | null;
@@ -26,6 +26,7 @@ interface DeckPreviewerProps {
   disableActions?: boolean;
   onClosePreview?: () => void;
   initialDeckFromLibrary?: Deck;
+  onSlideChange?: (slideId: string) => void;
 }
 
 const FALLBACK_LOGICAL_SLIDE_WIDTH = 960; 
@@ -42,6 +43,7 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
   disableActions = false,
   onClosePreview,
   initialDeckFromLibrary,
+  onSlideChange,
 }) => {
   const params = useParams();
   const navigate = useNavigate();
@@ -55,8 +57,14 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
     { deck, currentSlideIndex, isLoading, error, isFullscreen, accessibilitySettings, isPresenterNotesVisible, zoomLevel, isSlideNavigatorVisible, comments, isFullScreenEditMode },
     { goToNextSlide, goToPrevSlide, goToSlide, toggleFullscreen, updateAccessibilitySettings, retryFetch, togglePresenterNotes, toggleSlideNavigator, addCommentToState, toggleFullScreenEditMode }
   ] = usePreviewState(deckIdToUse, slideViewportRef, initialDeckFromLibrary);
-  
+
   const currentSlide = deck?.sections?.[currentSlideIndex];
+
+  useEffect(() => {
+    if (currentSlide?.id) {
+      onSlideChange?.(currentSlide.id);
+    }
+  }, [currentSlide?.id, onSlideChange]);
   
   // Extract dimensions directly from the section to ensure they're always read from there
   const sectionWidth = currentSlide?.width;
@@ -115,29 +123,44 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
 
   const handleCommentSubmitOnLayer = useCallback(async (
     text: string,
-    coordinates: { x: number; y: number },
-    slideId: string,
-    elementId?: string,
+    parentCommentId?: string,
     voiceNoteUrl?: string,
-    markupData?: any
+    markupData?: any,
+    feedbackCategory?: FeedbackCategory,
+    componentId?: string,
+    slideId?: string | null,
+    coordinates?: { x: number; y: number }
   ) => {
-    if (!deck || !shareToken || !reviewerSessionId) {
-      console.error("Cannot submit comment: Missing deck, shareToken, or reviewerSessionId");
+    // Enhanced defensive null checking
+    if (!deck) {
+      console.error("Cannot submit comment: Missing deck data");
+      return;
+    }
+    
+    if (!shareToken) {
+      console.error("Cannot submit comment: Missing share token");
+      return;
+    }
+    
+    if (!reviewerSessionId) {
+      console.error("Cannot submit comment: Missing reviewer session ID");
       return;
     }
     try {
       const commentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' | 'reviewerSessionId' | 'feedbackWeight' | 'aiSentimentScore' | 'aiExpertiseScore' | 'aiImprovementCategory'> = {
         deckId: deck.id,
-        slideId,
+        slideId: slideId ?? '',
         textContent: text,
-        authorDisplayName: reviewerDisplayName || 'Anonymous Reviewer', 
+        authorDisplayName: reviewerDisplayName || 'Anonymous Reviewer',
         commentType: 'General',
         status: 'Open',
         urgency: 'None',
         coordinates,
-        elementId,
+        elementId: componentId,
         voiceNoteUrl,
         markupData,
+        feedback_category: feedbackCategory || 'General',
+        parentCommentId: parentCommentId,
       };
       const newComment = await DeckService.addComment(deck.id, commentData, shareToken, reviewerSessionId);
       addCommentToState(newComment);
@@ -171,7 +194,19 @@ const DeckPreviewer: React.FC<DeckPreviewerProps> = ({
     },
   };
   
+  // Enhanced check for commenting enabled status with more explicit logging
   const actualCommentingEnabledForLayer = !!enableCommenting && !!shareToken && !!reviewerSessionId && !!deck;
+  
+  // Log the commenting status for debugging
+  useEffect(() => {
+    if (enableCommenting && !actualCommentingEnabledForLayer) {
+      console.log('Commenting is enabled but not active due to missing:', {
+        hasShareToken: !!shareToken,
+        hasReviewerSessionId: !!reviewerSessionId,
+        hasDeck: !!deck
+      });
+    }
+  }, [enableCommenting, actualCommentingEnabledForLayer, shareToken, reviewerSessionId, deck]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading presentation...</div>;

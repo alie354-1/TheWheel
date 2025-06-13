@@ -1,178 +1,77 @@
-import React, { useState, useCallback } from 'react';
-import { DeckService } from '../../services/deckService.ts';
+import React, { useState } from 'react';
+import { Mail, Key } from 'lucide-react';
 
 interface RecipientVerificationModalProps {
-  shareToken: string;
-  isOpen: boolean;
+  recipientEmail: string;
+  onVerify: (verificationCode: string) => Promise<boolean>;
   onClose: () => void;
-  onVerificationSuccess: (verified: boolean) => void;
+  isVerifying: boolean;
 }
 
 export const RecipientVerificationModal: React.FC<RecipientVerificationModalProps> = ({
-  shareToken,
-  isOpen,
+  recipientEmail,
+  onVerify,
   onClose,
-  onVerificationSuccess,
+  isVerifying,
 }) => {
-  const [identifier, setIdentifier] = useState(''); // Can be email or phone
-  const [accessCode, setAccessCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const handleVerification = useCallback(async () => {
-    if (!identifier || !accessCode) {
-      setError('Please enter both your email/phone and the access code.');
-      return;
-    }
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verificationCode.trim() || isVerifying) return;
+
     setError(null);
-    setMessage(null);
-
-    try {
-      const result = await DeckService.verifyRecipientAccess(shareToken, identifier, accessCode);
-      if (result.success) {
-        setMessage(result.message);
-        onVerificationSuccess(true);
-        setTimeout(() => onClose(), 1500); // Close modal after a short delay on success
-      } else {
-        setError(result.message);
-        onVerificationSuccess(false);
-      }
-    } catch (err) {
-      console.error('Verification error:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
-      onVerificationSuccess(false);
-    } finally {
-      setIsLoading(false);
+    const success = await onVerify(verificationCode);
+    if (!success) {
+      setError('Invalid verification code. Please try again.');
     }
-  }, [shareToken, identifier, accessCode, onClose, onVerificationSuccess]);
-
-  if (!isOpen) return null;
+  };
 
   return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modalContent}>
-        <div style={styles.modalHeader}>
-          <h2>Verification Required</h2>
-          <button onClick={onClose} style={styles.closeButton}>&times;</button>
-        </div>
-        <p style={styles.instructions}>
-          To access this deck, please enter the email or phone number it was shared with and the access code you received.
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 m-4">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Verify Your Identity</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          A verification code has been sent to <span className="font-medium">{recipientEmail}</span>. Please enter it below to access the deck.
         </p>
-        <div style={styles.formGroup}>
-          <label htmlFor="identifier" style={styles.label}>Email or Phone Number</label>
-          <input
-            type="text"
-            id="identifier"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            style={styles.input}
-            placeholder="e.g., user@example.com or 1234567890"
-            disabled={isLoading}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label htmlFor="accessCode" style={styles.label}>Access Code</label>
-          <input
-            type="text"
-            id="accessCode"
-            value={accessCode}
-            onChange={(e) => setAccessCode(e.target.value)}
-            style={styles.input}
-            placeholder="Enter your 6-character code"
-            disabled={isLoading}
-          />
-        </div>
-        {error && <p style={styles.errorText}>{error}</p>}
-        {message && <p style={styles.successText}>{message}</p>}
-        <button onClick={handleVerification} disabled={isLoading} style={styles.verifyButton}>
-          {isLoading ? 'Verifying...' : 'Verify & Access Deck'}
-        </button>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 mb-1">
+              Verification Code
+            </label>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                id="verification-code"
+                type="text"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                required
+                className="w-full pl-10 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter code..."
+              />
+            </div>
+          </div>
+          {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isVerifying || !verificationCode.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              {isVerifying ? 'Verifying...' : 'Verify'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
-
-const styles: { [key: string]: React.CSSProperties } = {
-    modalOverlay: {
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1050,
-    },
-    modalContent: {
-      backgroundColor: 'white',
-      padding: '24px',
-      borderRadius: '12px',
-      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 20px 40px -20px rgba(0,0,0,0.2)',
-      width: '100%',
-      maxWidth: '480px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-    },
-    modalHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingBottom: '12px',
-      borderBottom: '1px solid #e5e7eb',
-    },
-    closeButton: {
-      background: 'none',
-      border: 'none',
-      fontSize: '1.5rem',
-      cursor: 'pointer',
-      color: '#6b7280',
-    },
-    instructions: {
-      fontSize: '0.875rem',
-      color: '#4b5563',
-      lineHeight: 1.5,
-    },
-    formGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-    },
-    label: {
-      marginBottom: '8px',
-      fontWeight: 500,
-      fontSize: '0.875rem',
-      color: '#374151',
-    },
-    input: {
-      padding: '10px 12px',
-      border: '1px solid #d1d5db',
-      borderRadius: '6px',
-      fontSize: '0.875rem',
-    },
-    verifyButton: {
-      padding: '12px 18px',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      backgroundColor: '#2563eb',
-      color: 'white',
-      fontSize: '1rem',
-      fontWeight: 500,
-      marginTop: '8px',
-    },
-    errorText: {
-      color: '#ef4444',
-      fontSize: '0.875rem',
-      textAlign: 'center',
-      margin: 0,
-    },
-    successText: {
-      color: '#10b981',
-      fontSize: '0.875rem',
-      textAlign: 'center',
-      margin: 0,
-    },
-  };
-  
-  export default RecipientVerificationModal;
