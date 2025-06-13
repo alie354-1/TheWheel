@@ -12,6 +12,7 @@ interface CommentThreadProps {
   onCommentDelete: (commentId: string) => void;
   onCommentStatusUpdate?: (commentId: string, status: DeckComment['status']) => void;
   onJumpToSlide?: (slideId: string) => void;
+  onJumpToComment?: (commentId: string) => void;
   currentUserId?: string | null;
   currentUserDisplayName?: string | null;
   currentUserAvatarUrl?: string | null;
@@ -26,6 +27,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
   onCommentDelete,
   onCommentStatusUpdate,
   onJumpToSlide,
+  onJumpToComment,
   currentUserId,
   currentUserDisplayName,
   currentUserAvatarUrl,
@@ -315,6 +317,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
               onCommentDelete={onCommentDelete}
               onCommentStatusUpdate={onCommentStatusUpdate} // Pass down
               onJumpToSlide={onJumpToSlide}
+              onJumpToComment={onJumpToComment}
               isAdminOrDeckOwnerView={isAdminOrDeckOwnerView} // Pass down
               currentUserId={currentUserId}
               currentUserDisplayName={currentUserDisplayName}

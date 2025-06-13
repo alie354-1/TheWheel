@@ -3,6 +3,8 @@ import { DeckSection, DeckTheme, VisualComponent, VisualComponentLayout } from '
 import { VisualComponentRenderer } from '../../components/VisualComponentRenderer.tsx';
 import { ResizeHandle } from '../../components/ResizeHandle.tsx';
 import { getPublicUrl } from '../../services/ImageUploadService.ts';
+import { DeckComment } from '../../types/index.ts';
+import { CommentBubble } from '../..//components/feedback/CommentBubble.tsx';
 
 // Add these properties to the Window interface
 declare global {
@@ -32,6 +34,8 @@ interface PreviewSlideProps {
   onDeleteComponent?: (componentId: string) => void;
   selectedComponentIds?: Set<string>;
   onAddComponentRequested?: (x: number, y: number) => void; // New prop for adding components
+  comments?: DeckComment[];
+  highlightedCommentId?: string | null;
 }
 
 const PreviewSlide: React.FC<PreviewSlideProps> = ({
@@ -48,6 +52,8 @@ const PreviewSlide: React.FC<PreviewSlideProps> = ({
   onDeleteComponent,
   selectedComponentIds,
   onAddComponentRequested,
+  comments,
+  highlightedCommentId,
 }) => {
   
   const [resizingComponentId, setResizingComponentId] = useState<string | null>(null);
@@ -377,6 +383,14 @@ const PreviewSlide: React.FC<PreviewSlideProps> = ({
           <p>This slide is empty or has no visual components.</p>
         </div>
       )}
+      {!previewMode && comments && comments.map(comment => (
+        <CommentBubble
+          key={comment.id}
+          comment={comment}
+          isSelected={highlightedCommentId?.includes(comment.id)}
+          onClick={() => onSelect && onSelect(comment.id)}
+        />
+      ))}
     </div>
   );
 };
