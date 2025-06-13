@@ -62,11 +62,8 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
       const containerWidth = container.offsetWidth;
       const containerHeight = container.offsetHeight;
       
-      // In fullscreen mode with slide list, adjust for the space taken by the slide list
-      const availableWidth = isFullscreen ? containerWidth - 200 : containerWidth; // 200px for slide list
-      
       const scale = Math.min(
-        availableWidth / LOGICAL_SLIDE_WIDTH,
+        containerWidth / LOGICAL_SLIDE_WIDTH,
         containerHeight / LOGICAL_SLIDE_HEIGHT
       );
       setPreviewScale(scale);
@@ -74,7 +71,7 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, [isFullscreen]);
+  }, [isFullscreen, LOGICAL_SLIDE_WIDTH, LOGICAL_SLIDE_HEIGHT]);
 
   // Auto-play functionality
   const startAutoplay = () => {
@@ -341,9 +338,9 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
           </div>
 
           {/* Main content area */}
-          <div className="flex-1 flex flex-col bg-black">
+          <div className="flex-1 flex flex-col bg-black overflow-hidden">
             {/* Top bar */}
-            <div className="h-12 bg-black bg-opacity-30 flex items-center justify-between px-4 z-30">
+            <div className="h-12 bg-black bg-opacity-30 flex items-center justify-between px-4 z-30 flex-shrink-0">
               <h1 className="text-white text-md font-semibold truncate" title={deck.title}>{deck.title}</h1>
               <div className="flex items-center space-x-3">
                 <span className="text-white text-xs">
@@ -362,29 +359,31 @@ export function DeckPreview({ deck, isPublic = false, onShare, onEdit }: DeckPre
             {/* Slide area */}
             <div
               ref={presentationAreaRef}
-              className="flex-1 relative overflow-hidden"
+              className="flex-1 relative flex items-center justify-center overflow-hidden"
               style={{
                 backgroundColor: 'black',
               }}
             >
               {currentSection && (
-                <PreviewSlide
-                  section={currentSection}
-                  theme={currentDeckThemeForPreview}
-                  zoomLevel={previewScale}
-                  logicalWidth={LOGICAL_SLIDE_WIDTH}
-                  logicalHeight={LOGICAL_SLIDE_HEIGHT}
-                  previewMode={true}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                  }}
-                />
+                 <div
+                    style={{
+                      width: LOGICAL_SLIDE_WIDTH,
+                      height: LOGICAL_SLIDE_HEIGHT,
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'center',
+                      boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+                      background: 'white', // Fallback for slide background
+                    }}
+                  >
+                    <PreviewSlide
+                      section={currentSection}
+                      theme={currentDeckThemeForPreview}
+                      zoomLevel={1} // The container is scaled, so the slide itself is at 1x
+                      logicalWidth={LOGICAL_SLIDE_WIDTH}
+                      logicalHeight={LOGICAL_SLIDE_HEIGHT}
+                      previewMode={true}
+                    />
+                  </div>
               )}
             </div>
           </div>

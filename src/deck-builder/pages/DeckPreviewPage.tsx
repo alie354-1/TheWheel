@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { DeckService } from '../services/deckService';
-import { DeckPreview } from '../components/DeckPreview';
-import { Deck } from '../types';
-import { supabase } from '../../lib/supabase';
+import { DeckService } from '../services/deckService.ts';
+import { DeckPreview } from '../components/DeckPreview.tsx';
+import { Deck } from '../types/index.ts';
+import { supabase } from '../../lib/supabase.ts';
 import { ArrowLeft, Share, Edit, Download } from 'lucide-react';
 
 function DeckPreviewPage() {
@@ -88,9 +88,9 @@ function DeckPreviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -102,7 +102,7 @@ function DeckPreviewPage() {
                 Back to Library
               </Link>
               <div className="border-l border-gray-300 h-6"></div>
-              <h1 className="text-xl font-semibold text-gray-900">{deck.title}</h1>
+              <h1 className="text-xl font-semibold text-gray-900 truncate">{deck.title}</h1>
             </div>
 
             <div className="flex items-center space-x-3">
@@ -137,7 +137,7 @@ function DeckPreviewPage() {
       </div>
 
       {/* Preview */}
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="flex-1 w-full h-full overflow-auto">
         <DeckPreview
           deck={deck}
           isPublic={!isOwner}

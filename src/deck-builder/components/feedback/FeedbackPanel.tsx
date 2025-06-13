@@ -504,6 +504,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
                   <span role="img" aria-label="location">📍</span>
                   <span>
                     On Slide {(currentDeck?.sections.findIndex(s => s.id === comment.slideId) ?? -1) + 1}
+                    {comment.markupData?.x !== undefined && ` (x: ${comment.markupData.x.toFixed(0)}, y: ${comment.markupData.y.toFixed(0)})`}
                   </span>
                 </div>
               )}
