@@ -1,8 +1,8 @@
 import React from 'react';
-import { HiringPlanBlock, HiringRole } from '../../types/blocks';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
-import { Label } from '../../../components/ui/label';
+import { HiringPlanBlock, HiringRole } from '../../types/blocks.ts';
+import { Input } from '../../../components/ui/input.tsx';
+import { Button } from '../../../components/ui/button.tsx';
+import { Label } from '../../../components/ui/label.tsx';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
 interface HiringPlanEditorProps {
@@ -13,19 +13,19 @@ interface HiringPlanEditorProps {
 export const HiringPlanEditor: React.FC<HiringPlanEditorProps> = ({ block, onChange }) => {
   const { roles, title } = block;
 
-  const handleRoleChange = (index: number, field: string, value: any) => {
+  const handleRoleChange = (index: number, field: keyof HiringRole, value: any) => {
     const newRoles = [...roles];
     newRoles[index] = { ...newRoles[index], [field]: value };
     onChange({ roles: newRoles });
   };
 
   const addRole = () => {
-    const newRole = { title: 'New Role', department: 'Engineering', timeline: 'Q1 2025' };
+    const newRole: HiringRole = { title: 'New Role', department: 'Engineering', timeline: 'Q1 2025', count: 1 };
     onChange({ roles: [...roles, newRole] });
   };
 
   const removeRole = (index: number) => {
-    const newRoles = roles.filter((_, i) => i !== index);
+    const newRoles = roles.filter((_: HiringRole, i: number) => i !== index);
     onChange({ roles: newRoles });
   };
 
@@ -35,26 +35,26 @@ export const HiringPlanEditor: React.FC<HiringPlanEditorProps> = ({ block, onCha
         <Label>Title</Label>
         <Input
           value={title}
-          onChange={(e) => onChange({ title: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ title: e.target.value })}
         />
       </div>
       <div className="space-y-2">
         <Label>Roles</Label>
-        {roles.map((role, index) => (
+        {roles.map((role: HiringRole, index: number) => (
           <div key={index} className="space-y-2 p-2 border rounded">
             <Input
               value={role.title}
-              onChange={(e) => handleRoleChange(index, 'title', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleRoleChange(index, 'title', e.target.value)}
               placeholder="Role Title"
             />
             <Input
               value={role.department}
-              onChange={(e) => handleRoleChange(index, 'department', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleRoleChange(index, 'department', e.target.value)}
               placeholder="Department"
             />
             <Input
               value={role.timeline}
-              onChange={(e) => handleRoleChange(index, 'timeline', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleRoleChange(index, 'timeline', e.target.value)}
               placeholder="Timeline"
             />
             <Button variant="danger" size="sm" onClick={() => removeRole(index)}>

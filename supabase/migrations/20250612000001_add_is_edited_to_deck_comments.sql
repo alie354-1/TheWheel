@@ -1,0 +1,2 @@
+ALTER TABLE deck_comments
+ADD COLUMN is_edited BOOLEAN DEFAULT FALSE;

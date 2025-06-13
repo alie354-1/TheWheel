@@ -154,8 +154,14 @@ export interface DeckComment {
   aiExpertiseScore?: number; // AI-analyzed expertise
   aiImprovementCategory?: string; // AI-assigned category
   focusArea?: string; // If comment relates to a specific focus area
-  feedback_category?: FeedbackCategory; // Added for Content vs. Form classification
+  feedback_category: FeedbackCategory; // Added for Content vs. Form classification
   component_id?: string; // Added for component-level feedback
+  is_edited?: boolean;
+  edit_history?: {
+    textContent: string;
+    feedback_category: FeedbackCategory;
+    editedAt: string;
+  }[];
 }
 
 export type FeedbackCategory = 'Content' | 'Form' | 'General';
@@ -183,15 +189,16 @@ export interface SmartShareLink {
 }
 
 export interface DeckShareRecipient {
-  id: number;
+  id: string;
   share_link_id: string;
   email?: string;
   phone?: string;
   role: string;
   feedback_weight: number;
-  access_code?: string;
-  verified_at?: string;
   created_at: string;
+  verified_at?: string;
+  access_code?: string;
+  can_reshare?: boolean;
 }
 
 export type ExpertiseLevel = 'beginner' | 'intermediate' | 'expert' | 'n/a';

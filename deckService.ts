@@ -32,6 +32,14 @@ export interface ViewMetadata {
   sectionsViewed?: number[];
 }
 
+// Define a specific type for the update payload of a comment
+type DeckCommentUpdatePayload = Partial<Pick<DeckComment, 
+  'slideId' | 'elementId' | 'parentCommentId' | 'authorDisplayName' | 
+  'coordinates' | 'textContent' | 'richTextContent' | 'voiceNoteUrl' | 
+  'voiceTranscription' | 'markupData' | 'commentType' | 'urgency' | 
+  'status' | 'declaredRole' | 'focusArea' | 'feedback_category' | 'component_id'
+>>;
+
 export class DeckService {
   // Template management
   static getTemplates(): DeckDataTemplate[] {
@@ -1389,8 +1397,6 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         focusArea: data.focus_area,
         feedback_category: data.feedback_category as FeedbackCategory,
         component_id: data.component_id,
-        is_edited: data.is_edited,
-        edit_history: data.edit_history,
       };
     } catch (error) {
       console.error('Exception in addComment:', error);
@@ -1398,49 +1404,37 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
     }
   }
 
-  static async updateComment(
+  static async updateComment( 
     commentId: string,
-    updates: Partial<DeckComment>
+    updates: DeckCommentUpdatePayload
   ): Promise<DeckComment> {
     try {
-      const existingComment = await this.getCommentById(commentId);
-      if (!existingComment) {
-        throw new Error(`Comment with ID ${commentId} not found.`);
+      const dbUpdates: Record<string, any> = {};
+      if (updates.textContent !== undefined) dbUpdates.text_content = updates.textContent;
+      if (updates.richTextContent !== undefined) dbUpdates.rich_text_content = updates.richTextContent;
+      if (updates.voiceNoteUrl !== undefined) dbUpdates.voice_note_url = updates.voiceNoteUrl;
+      if (updates.voiceTranscription !== undefined) dbUpdates.voice_transcription = updates.voiceTranscription;
+      if (updates.markupData !== undefined) dbUpdates.markup_data = updates.markupData;
+      if (updates.commentType !== undefined) dbUpdates.comment_type = updates.commentType;
+      if (updates.urgency !== undefined) dbUpdates.urgency = updates.urgency;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.coordinates !== undefined) {
+        dbUpdates.coordinates_x = updates.coordinates.x;
+        dbUpdates.coordinates_y = updates.coordinates.y;
       }
-
-      const dbUpdates: Record<string, any> = {
-        updated_at: new Date().toISOString(),
-      };
-
-      if (updates.textContent !== undefined && updates.textContent !== existingComment.textContent) {
-        dbUpdates.text_content = updates.textContent;
-        dbUpdates.is_edited = true;
-      }
+      if (updates.declaredRole !== undefined) dbUpdates.declared_role = updates.declaredRole;
+      if (updates.focusArea !== undefined) dbUpdates.focus_area = updates.focusArea;
+      // Add new fields to update payload
+      if ((updates as any).feedback_category !== undefined) dbUpdates.feedback_category = (updates as any).feedback_category;
+      if ((updates as any).component_id !== undefined) dbUpdates.component_id = (updates as any).component_id;
       
-      if (updates.feedback_category !== undefined && updates.feedback_category !== existingComment.feedback_category) {
-        dbUpdates.feedback_category = updates.feedback_category;
-      }
-
-      if (updates.status !== undefined && updates.status !== existingComment.status) {
-        dbUpdates.status = updates.status;
-      }
-
-      if (dbUpdates.is_edited) {
-        const editHistoryEntry = {
-          timestamp: existingComment.updatedAt,
-          oldValues: {
-            textContent: existingComment.textContent,
-          },
-        };
-        const newEditHistory = Array.isArray(existingComment.edit_history)
-          ? [...existingComment.edit_history, editHistoryEntry]
-          : [editHistoryEntry];
-        dbUpdates.edit_history = newEditHistory;
-      }
-
-      if (Object.keys(dbUpdates).length === 1) {
+      if (Object.keys(dbUpdates).length === 0) {
+        const existingComment = await this.getCommentById(commentId);
+        if (!existingComment) throw new Error('Comment not found for no-op update.');
         return existingComment;
       }
+      
+      dbUpdates.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
         .from('deck_comments')
@@ -1450,10 +1444,19 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         .single();
 
       if (error) {
-        console.error(`Error updating comment ${commentId}:`, error);
+        console.error('Error updating comment:', error);
         throw new Error('Failed to update comment');
       }
-
+      
+      DeckService.logContentInteraction(
+        data.deck_id, 
+        'COMMENT_UPDATE',
+        { commentId: data.id, updatedFields: Object.keys(dbUpdates) },
+        data.author_user_id, 
+        data.slide_id,
+        data.element_id
+      ).catch(logError => console.error("Logging failed for COMMENT_UPDATE:", logError));
+      
       return {
         id: data.id,
         deckId: data.deck_id,
@@ -1482,67 +1485,9 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         focusArea: data.focus_area,
         feedback_category: data.feedback_category as FeedbackCategory,
         component_id: data.component_id,
-        is_edited: data.is_edited,
-        edit_history: data.edit_history,
       };
     } catch (error) {
-      console.error(`Exception in updateComment for comment ${commentId}:`, error);
-      throw error;
-    }
-  }
-
-  static async updateCommentContent(commentId: string, textContent: string, feedbackCategory: FeedbackCategory): Promise<DeckComment> {
-    try {
-      const { data, error } = await supabase
-        .from('deck_comments')
-        .update({
-          text_content: textContent,
-          feedback_category: feedbackCategory,
-          updated_at: new Date().toISOString(),
-          is_edited: true,
-        })
-        .eq('id', commentId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error(`Error updating comment content for comment ${commentId}:`, error);
-        throw new Error('Failed to update comment content');
-      }
-
-      return {
-        id: data.id,
-        deckId: data.deck_id,
-        slideId: data.slide_id,
-        elementId: data.element_id,
-        parentCommentId: data.parent_comment_id,
-        authorUserId: data.author_user_id,
-        authorDisplayName: data.author_display_name,
-        coordinates: (data.coordinates_x !== null && data.coordinates_y !== null) ? { x: data.coordinates_x, y: data.coordinates_y } : undefined,
-        textContent: data.text_content,
-        richTextContent: data.rich_text_content,
-        voiceNoteUrl: data.voice_note_url,
-        voiceTranscription: data.voice_transcription,
-        markupData: data.markup_data,
-        commentType: data.comment_type as DeckComment['commentType'],
-        urgency: data.urgency as DeckComment['urgency'],
-        status: data.status as DeckComment['status'],
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        reviewerSessionId: data.reviewer_session_id,
-        declaredRole: data.declared_role,
-        feedbackWeight: data.feedback_weight,
-        aiSentimentScore: data.ai_sentiment_score,
-        aiExpertiseScore: data.ai_expertise_score,
-        aiImprovementCategory: data.ai_improvement_category,
-        focusArea: data.focus_area,
-        feedback_category: data.feedback_category as FeedbackCategory,
-        component_id: data.component_id,
-        is_edited: data.is_edited,
-        edit_history: data.edit_history,
-      };
-    } catch (error) {
-      console.error(`Exception in updateCommentContent for comment ${commentId}:`, error);
+      console.error('Exception in updateComment:', error);
       throw error;
     }
   }
@@ -1619,42 +1564,11 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         focusArea: c.focus_area,
         feedback_category: c.feedback_category as FeedbackCategory,
         component_id: c.component_id,
-        is_edited: c.is_edited,
-        edit_history: c.edit_history,
       }));
     } catch (error) {
       console.error('Exception in getComments:', error);
       throw error;
     }
-  }
-
-  static subscribeToDeckComments(deckId: string, callback: (comments: DeckComment[]) => void): () => void {
-    const channel = supabase.channel(`deck-comments-${deckId}`);
-  
-    const subscription = channel
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'deck_comments', filter: `deck_id=eq.${deckId}` },
-        async (payload) => {
-          console.log('Real-time change received:', payload);
-          // Refetch all comments for the deck to ensure consistency
-          const updatedComments = await this.getComments(deckId);
-          callback(updatedComments);
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Subscribed to deck comments for deck ${deckId}`);
-        }
-        if (err) {
-          console.error(`Error subscribing to deck comments for deck ${deckId}:`, err);
-        }
-      });
-  
-    return () => {
-      console.log(`Unsubscribing from deck comments for deck ${deckId}`);
-      supabase.removeChannel(channel);
-    };
   }
   
   private static async getCommentById(commentId: string): Promise<DeckComment | null> {
@@ -1696,8 +1610,6 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         focusArea: data.focus_area,
         feedback_category: data.feedback_category as FeedbackCategory,
         component_id: data.component_id,
-        is_edited: data.is_edited,
-        edit_history: data.edit_history,
       };
   }
 

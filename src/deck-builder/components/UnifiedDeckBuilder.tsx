@@ -15,6 +15,7 @@ import { DeckComment } from '../types/index.ts';
 import { ComponentEditingBar } from './ComponentEditingBar.tsx';
 import { DeckService } from '../services/deckService.ts';
 import PreviewSlide from '../preview/components/PreviewSlide.tsx';
+import { ClickToCommentLayer } from './feedback/ClickToCommentLayer.tsx';
 import { FontSelection } from './FontSelection.tsx';
 import { 
   Eye, 
@@ -239,6 +240,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [currentUserDisplayNameState, setCurrentUserDisplayNameState] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('vertical');
   const [activePanel, setActivePanel] = useState<PanelMode>('components');
+  const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(true);
   const previewMode = false;
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -251,6 +253,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [htmlInput, setHtmlInput] = useState('');
   const [resizingCanvas, setResizingCanvas] = useState(false); 
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isClickToCommentMode, setIsClickToCommentMode] = useState(false);
   
   const slideViewportRef = useRef<HTMLDivElement>(null);
   const previewContentViewportRef = useRef<HTMLDivElement>(null);
@@ -258,6 +261,21 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const slideCanvasContainerSplitRef = useRef<HTMLDivElement>(null);
 
   const { isCollapsed: isNavigatorCollapsed, toggleCollapsed: toggleNavigatorCollapsed } = useCollapsibleNavigator();
+
+  // Memoized close handler to prevent constant recreation and useEffect loops
+  const handleCloseSharingModal = useCallback(() => {
+    console.log('Closing sharing modal from UnifiedDeckBuilder - current state:', isSharingModalOpen);
+    
+    // Immediate state reset
+    setIsSharingModalOpen(false);
+    console.log('Called setIsSharingModalOpen(false)');
+    
+    // Backup force close mechanism - ensure modal is really closed
+    setTimeout(() => {
+      console.log('Backup close check - forcing modal state to false');
+      setIsSharingModalOpen(false);
+    }, 100);
+  }, [isSharingModalOpen]);
   
   const {
     deck,
@@ -477,10 +495,26 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (deck?.sections.length && !selectedSectionId) {
       setSelectedSectionId(deck.sections[0].id);
     }
-    if (deck?.id) {
-      fetchComments(deck.id);
+
+    if (!deck?.id) {
+      setComments([]);
+      return;
     }
-  }, [deck?.id, deck?.sections, selectedSectionId]);
+
+    // Initial fetch
+    fetchComments(deck.id);
+
+    // Set up real-time subscription
+    const unsubscribe = DeckService.subscribeToDeckComments(deck.id, (updatedComments) => {
+      console.log('Real-time update received in UnifiedDeckBuilder, setting comments:', updatedComments);
+      setComments(updatedComments);
+    });
+
+    // Cleanup subscription on component unmount or when deck.id changes
+    return () => {
+      unsubscribe();
+    };
+  }, [deck?.id]);
 
   const handleResizeCanvasMove = useCallback((e: MouseEvent) => {
     if (!resizingCanvas || !currentSection) return;
@@ -583,11 +617,11 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         commentType: 'General',
         urgency: 'None',
         status: 'Open',
-        feedback_category: feedbackCategory,
+        feedback_category: feedbackCategory || 'General',
         component_id: componentId,
       };
       await DeckService.addComment(deck.id, newCommentData);
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error adding comment:", error);
     } finally {
@@ -595,13 +629,19 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     }
   };
 
-  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>) => {
-    if (!deck || !deck.id) return;
+  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>): Promise<void> => {
+    console.log('handleUpdateComment called in UnifiedDeckBuilder', { commentId, updates });
+    if (!deck || !deck.id) {
+      console.error('handleUpdateComment aborted: deck or deck.id is missing.');
+      return;
+    }
     try {
       await DeckService.updateComment(commentId, updates);
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error updating comment:", error);
+      // Optionally re-throw or handle the error appropriately
+      throw error;
     }
   };
 
@@ -609,7 +649,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!deck || !deck.id) return;
     try {
       await DeckService.updateComment(commentId, { status });
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error(`Error updating comment ${commentId} status to ${status}:`, error);
     }
@@ -619,7 +659,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!deck || !deck.id) return;
     try {
       await DeckService.deleteComment(commentId, deck.id, currentUserId ? currentUserId : undefined);
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error deleting comment:", error);
     }
@@ -641,32 +681,30 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     console.log('[UnifiedDeckBuilder] deck present?:', !!deck);
     console.log('[UnifiedDeckBuilder] hasUnsavedChanges:', hasUnsavedChanges);
 
-    if (!currentUserId) { 
-      alert('Please log in to save your deck'); 
+    if (!currentUserId) {
+      alert('Please log in to save your deck');
       console.log('[UnifiedDeckBuilder] Save aborted: no currentUserId.');
-      return; 
+      return;
     }
-    if (!deck) { 
-      alert('No deck to save.'); 
+    if (!deck) {
+      alert('No deck to save.');
       console.log('[UnifiedDeckBuilder] Save aborted: no deck.');
-      return; 
+      return;
     }
     console.log('[UnifiedDeckBuilder] About to call saveDeck with userId:', currentUserId);
     try {
       console.log('[UnifiedDeckBuilder] saveDeck function exists?', typeof saveDeck === 'function');
       console.log('[UnifiedDeckBuilder] Starting saveDeck call...');
-      // Force save even if hasUnsavedChanges is false - this ensures the save button always works
       const success = await saveDeck(currentUserId);
       console.log('[UnifiedDeckBuilder] saveDeck returned:', success);
       if (success) alert('Deck saved successfully!');
-    } catch (err) { 
-      // Properly type the error for TypeScript
+    } catch (err) {
       const error = err as Error;
       console.error('[UnifiedDeckBuilder] Save error details:', error);
       console.error('[UnifiedDeckBuilder] Error name:', error.name);
-      console.error('[UnifiedDeckBuilder] Error message:', error.message); 
+      console.error('[UnifiedDeckBuilder] Error message:', error.message);
       console.error('[UnifiedDeckBuilder] Error stack:', error.stack);
-      alert('Failed to save deck. Please try again.'); 
+      alert('Failed to save deck. Please try again.');
     }
   };
 
@@ -1020,6 +1058,18 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     // Grouping logic here
   };
 
+  const handleJumpToSlide = (slideId: string) => {
+    const sectionExists = deck?.sections.some(s => s.id === slideId);
+    if (sectionExists) {
+      setSelectedSectionId(slideId);
+      // Optionally, you can scroll the navigator to the slide
+      const slideElement = document.querySelector(`[data-rbd-draggable-id="${slideId}"]`);
+      slideElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      console.warn(`Attempted to jump to non-existent slideId: ${slideId}`);
+    }
+  };
+
   const handleUngroup = () => {
     // Ungrouping logic here
   };
@@ -1358,10 +1408,16 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             <span className="hidden lg:inline">Themes</span>
           </button>
           <button
-            onClick={() => setActivePanel(activePanel === 'feedback' ? null : 'feedback')}
-            title="Feedback"
+            onClick={() => {
+              setIsFeedbackPanelOpen(!isFeedbackPanelOpen);
+              // If opening feedback panel, also enable click-to-comment mode for better UX
+              if (!isFeedbackPanelOpen) {
+                setIsClickToCommentMode(true);
+              }
+            }}
+            title="Toggle Feedback & Comments"
             className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
-              activePanel === 'feedback' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+              isFeedbackPanelOpen ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <MessageSquare size={18} />
@@ -1376,14 +1432,6 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           >
             <Save size={16} />
             <span className="hidden sm:inline">Save</span>
-          </button>
-          <button
-            onClick={() => setIsSharingModalOpen(true)}
-            title="Share Deck"
-            className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
-          >
-            <Share2 size={18} />
-            <span className="hidden lg:inline">Share</span>
           </button>
           <button
             onClick={() => setShowHtmlImportModal(true)}
@@ -1579,6 +1627,15 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         onDeleteComponent={(id: string) => handleComponentDelete(id)}
         selectedComponentIds={selectedComponentIds}
       />
+      {isClickToCommentMode && currentSection && (
+        <ClickToCommentLayer
+          slideId={currentSection.id}
+          onCommentSubmit={handleAddComment}
+          isCommentingEnabled={isClickToCommentMode}
+          slideDimensions={{ width: currentSection.width || 960, height: currentSection.height || 540 }}
+          currentUserDisplayName={currentUserDisplayNameState}
+        />
+      )}
       <div
         ref={slideCanvasContainerRef}
         className="resize-handle-wrapper"
@@ -1663,6 +1720,15 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
         selectedComponentIds={!previewMode ? selectedComponentIds : undefined}
       />
+      {isClickToCommentMode && currentSection && (
+        <ClickToCommentLayer
+          slideId={currentSection.id}
+          onCommentSubmit={handleAddComment}
+          isCommentingEnabled={isClickToCommentMode}
+          slideDimensions={{ width: currentSection.width || 960, height: currentSection.height || 540 }}
+          currentUserDisplayName={currentUserDisplayNameState}
+        />
+      )}
       {!previewMode && (
         <div
                           className="resize-handle-wrapper"
@@ -1703,83 +1769,38 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           </div>
         </div>
 
-        {activePanel && (
+        {isFeedbackPanelOpen && (
           <div
             className={`
               bg-white border-l border-gray-300 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
-              ${activePanel ? 'w-72 sm:w-80' : 'w-0'}
+              w-72 sm:w-80
               fixed right-0 top-0 h-full z-50 shadow-lg
               lg:static lg:z-auto lg:shadow-none
             `}
             style={{ width: 'clamp(288px, 22vw, 400px)', maxWidth: '100vw' }}
           >
             <div className="flex-1 overflow-y-auto p-1">
-              {activePanel === 'components' && (
-                <ComponentLibraryPanel onAddComponent={handleAddComponent} />
-              )}
-              {activePanel === 'themes' && (
-                <ThemeCustomizationPanel
-                  deck={deck}
-                  initialSettings={themeSettings}
-                  onThemeChange={handleThemeChange}
-                  onClose={() => setActivePanel(null)}
-                />
-              )}
-              {activePanel === 'feedback' && deck && deck.id && (
-                <div className="flex flex-col h-full">
-                  <div className="p-2 border-b border-gray-200">
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => setActiveFeedbackView('comments')}
-                        className={`px-3 py-1.5 text-xs rounded-md ${activeFeedbackView === 'comments' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      >
-                        Comments
-                      </button>
-                      <button
-                        onClick={() => setActiveFeedbackView('proposals')}
-                        className={`px-3 py-1.5 text-xs rounded-md ${activeFeedbackView === 'proposals' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      >
-                        AI Suggestions
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-grow overflow-y-auto">
-                    {activeFeedbackView === 'comments' && (
-                      <FeedbackPanel
-                        deckId={deck.id}
-                        currentDeck={deck}
-                        comments={comments}
-                        onCommentSubmit={handleAddComment}
-                        onCommentUpdate={handleUpdateComment} 
-                        onCommentDelete={handleDeleteComment}
-                        onCommentStatusUpdate={handleCommentStatusUpdate} 
-                        onCommentsNeedRefresh={() => deck?.id && fetchComments(deck.id)}
-                        isAdminOrDeckOwnerView={true} 
-                        currentUserId={currentUserId}
-                        currentUserDisplayName={currentUserDisplayNameState}
-                        selectedSlideId={selectedSectionId}
-                        isSubmittingComment={isSubmittingComment}
-                        highlightedCommentId={highlightedCommentId}
-                        onProposalsGenerated={() => {
-                          console.log('Proposals generated, refreshing panel and switching view.');
-                          setProposalPanelRefreshKey(prevKey => prevKey + 1);
-                          setActiveFeedbackView('proposals');
-                        }}
-                      />
-                    )}
-                    {activeFeedbackView === 'proposals' && currentSection && ( 
-                      <AIProposalsPanel 
-                        deckId={deck.id}
-                        selectedSlideId={currentSection.id} 
-                        refreshKey={proposalPanelRefreshKey}
-                      />
-                    )}
-                    {activeFeedbackView === 'proposals' && !currentSection && (
-                       <p className="p-4 text-sm text-gray-500">Select a slide to see AI suggestions.</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              <FeedbackPanel
+                deckId={deck.id}
+                currentDeck={deck}
+                comments={comments}
+                onCommentSubmit={handleAddComment}
+                onCommentDelete={handleDeleteComment}
+                onCommentStatusUpdate={handleCommentStatusUpdate}
+                onCommentsNeedRefresh={() => deck?.id && fetchComments(deck.id)}
+                onJumpToSlide={handleJumpToSlide}
+                isAdminOrDeckOwnerView={true}
+                currentUserId={currentUserId}
+                currentUserDisplayName={currentUserDisplayNameState}
+                selectedSlideId={selectedSectionId}
+                isSubmittingComment={isSubmittingComment}
+                highlightedCommentId={highlightedCommentId}
+                isClickToCommentMode={isClickToCommentMode}
+                onClickToCommentToggle={setIsClickToCommentMode}
+                onProposalsGenerated={() => {
+                  setProposalPanelRefreshKey(prevKey => prevKey + 1);
+                }}
+              />
             </div>
           </div>
         )}
@@ -1813,11 +1834,13 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           onDelete={handleDeleteSelected}
         />
       )}
-       <EnhancedSharingModal
-        isOpen={isSharingModalOpen}
-        onClose={() => setIsSharingModalOpen(false)}
-        deck={deck}
-      />
+      {isSharingModalOpen && (
+        <EnhancedSharingModal
+          isOpen={isSharingModalOpen}
+          onClose={handleCloseSharingModal}
+          deck={deck}
+        />
+      )}
     </div>
     </DragDropContext>
   );

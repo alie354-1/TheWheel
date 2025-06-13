@@ -24,7 +24,7 @@ export const InvestorContactForm: React.FC<InvestorContactFormBlockProps> = ({
       <CardContent className="flex flex-col items-center w-full">
         <form className="w-full flex flex-col gap-2" onSubmit={e => e.preventDefault()}>
           {formFields && formFields.length > 0 ? (
-            formFields.map((field: { name: string; label: string; type: string; required: boolean }, i: number) => (
+            formFields.map((field, i: number) => (
               <div key={field.name || i} className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-gray-600" htmlFor={field.name}>{field.label}{field.required && <span className="text-red-500">*</span>}</label>
                 {field.type === 'textarea' ? (

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { DeckComment, AIFeedbackInsight, Deck, DeckSection, FeedbackCategory } from '../../types/index.ts';
-import { CommentThread } from './CommentThread.tsx';
+import { SharedCommentThread } from './SharedCommentThread.tsx';
 import { CommentInput, CommentInputSubmitData } from './CommentInput.tsx';
 import { DeckService } from '../../services/deckService.ts';
 import { FeedbackSummary } from './FeedbackSummary.tsx';
@@ -30,11 +30,9 @@ interface FeedbackPanelProps {
   isAdminOrDeckOwnerView?: boolean;
   showAggregatedInsights?: boolean; // New: Explicitly control insights visibility
   showOnlyOwnComments?: boolean; // New: Force showing only user's own comments
-  isClickToCommentMode?: boolean; // New: Click-to-comment mode state
-  onClickToCommentToggle?: (enabled: boolean) => void; // New: Toggle click-to-comment mode
 }
 
-export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
+export const SharedFeedbackPanel: React.FC<FeedbackPanelProps> = ({
   deckId,
   currentDeck,
   comments,
@@ -56,16 +54,14 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   showOnlyOwnComments = false, // Default to false
   onVisibilityToggle,
   onJumpToSlide,
-  isClickToCommentMode = false, // Default to false
-  onClickToCommentToggle,
 }) => {
-  const [aggregatedInsights, setAggregatedInsights] = useState<AIFeedbackInsight | null>(null);
-  const [isLoadingAggregates, setIsLoadingAggregates] = useState(false);
-  const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
   const [showOnlyOpen, setShowOnlyOpen] = useState(true); // Default to true
   const [selectedCategory, setSelectedCategory] = useState<FeedbackCategory | 'All'>('All');
   const [commentScope, setCommentScope] = useState<'slide' | 'deck'>('slide');
   const commentItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const [isLoadingAggregates, setIsLoadingAggregates] = useState(false);
+  const [aggregatedInsights, setAggregatedInsights] = useState<AIFeedbackInsight[] | null>(null);
+  const [isGeneratingProposals, setIsGeneratingProposals] = useState(false);
 
   useEffect(() => {
     if (highlightedCommentId && commentItemRefs.current[highlightedCommentId]) {
@@ -88,7 +84,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     setIsLoadingAggregates(true);
     try {
       const insights = await DeckService.generateAndStoreAggregatedInsights(deckId);
-      setAggregatedInsights(insights);
+      setAggregatedInsights(insights as any);
     } catch (error) {
       console.error("Error fetching aggregated insights:", error);
       setAggregatedInsights(null);
@@ -147,32 +143,6 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     color: '#333',
   };
   
-  const buttonContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '10px',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    padding: '6px 10px',
-    fontSize: '12px',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  };
-
-  const aggregatedInsightsSectionStyle: React.CSSProperties = {
-    marginTop: '20px',
-    paddingTop: '15px',
-    borderTop: '1px solid #ccc',
-  };
-
-  const insightItemStyle: React.CSSProperties = {
-    marginBottom: '8px',
-    fontSize: '13px',
-  }
-
   const handleNewTopLevelComment = (data: CommentInputSubmitData) => {
     onCommentSubmit(data.textContent, undefined, data.voiceNoteUrl, data.markupData, data.feedbackCategory, undefined, data.slideId);
   };
@@ -180,20 +150,6 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   const handleReplySubmit = (threadId: string, text: string) => {
     onCommentSubmit(text, threadId);
   };
-
-  const commentCountsByCategory = useMemo(() => {
-    const counts: Record<FeedbackCategory, number> = {
-      General: 0,
-      Content: 0,
-      Form: 0,
-    };
-    comments.forEach(comment => {
-      if (counts[comment.feedback_category] !== undefined) {
-        counts[comment.feedback_category]++;
-      }
-    });
-    return counts;
-  }, [comments]);
 
   const displayedComments = useMemo(() => {
     let filtered = comments.filter(c => !c.parentCommentId); // Start with all top-level comments
@@ -226,81 +182,14 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     return filtered;
   }, [comments, selectedSlideId, showOnlyOpen, showOnlyOwnComments, currentUserId, selectedCategory, commentScope]);
 
-  const exportCommentsToCSV = () => {
-    const headers = ['ID', 'Author', 'Text', 'Category', 'Status', 'Slide ID', 'Created At'];
-    const rows = displayedComments.map(comment => [
-      comment.id,
-      comment.authorDisplayName || 'Anonymous',
-      comment.textContent,
-      comment.feedback_category,
-      comment.status,
-      comment.slideId || 'Deck-wide',
-      new Date(comment.createdAt).toLocaleString(),
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "deck_comments.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div style={panelStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={titleStyle}>
-          {commentScope === 'deck'
-            ? 'All Feedback'
-            : selectedSlideId
-            ? 'Feedback for Current Slide'
-            : 'Deck-Wide Feedback'}
+          Feedback
         </h3>
-        {isAdminOrDeckOwnerView && (
-          <button
-            onClick={exportCommentsToCSV}
-            style={{ ...buttonStyle, backgroundColor: '#17a2b8' }}
-            title="Export visible comments to CSV"
-          >
-            Export CSV
-          </button>
-        )}
       </div>
       
-      <CommentScopeToggle
-        scope={commentScope}
-        onScopeChange={setCommentScope}
-      />
-
-      {onVisibilityToggle && (
-        <PrivateCommentsToggle
-          showOnlyOwnComments={showOnlyOwnComments}
-          onToggle={onVisibilityToggle}
-        />
-      )}
-
-      {onClickToCommentToggle && (
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
-            <input
-              type="checkbox"
-              checked={isClickToCommentMode}
-              onChange={(e) => onClickToCommentToggle(e.target.checked)}
-              style={{ marginRight: '8px' }}
-            />
-            Enable click-to-comment mode
-          </label>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px', marginLeft: '20px' }}>
-            Click anywhere on the slide to add contextual comments
-          </div>
-        </div>
-      )}
-
       <div style={{ marginBottom: '15px' }}>
         <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
           <input
@@ -312,75 +201,6 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
           Show only open comments
         </label>
       </div>
-      
-      {isAdminOrDeckOwnerView && (
-        <>
-          <div style={buttonContainerStyle}>
-            <button 
-              onClick={fetchAggregatedInsights} 
-              disabled={isLoadingAggregates}
-              style={{ ...buttonStyle, backgroundColor: '#007bff' }}
-            >
-              {isLoadingAggregates ? 'Loading Insights...' : 'Show Aggregated Insights'}
-            </button>
-            {selectedSlideId && (
-              <button
-                onClick={handleGenerateAIProposals}
-                disabled={isGeneratingProposals || !currentDeck?.sections || comments.filter(c => c.slideId === selectedSlideId).length === 0}
-                style={{ ...buttonStyle, backgroundColor: '#28a745' }}
-                title={comments.filter(c => c.slideId === selectedSlideId).length === 0 ? "No comments on this slide to generate proposals from" : "Generate AI suggestions for this slide"}
-              >
-                {isGeneratingProposals ? 'Generating...' : 'Generate AI Suggestions'}
-              </button>
-            )}
-          </div>
-          
-          <CategoryFilterTabs
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            commentCounts={{
-              All: comments.length,
-              ...commentCountsByCategory,
-            }}
-          />
-        </>
-      )}
-
-      {isAdminOrDeckOwnerView && showAggregatedInsights && aggregatedInsights && aggregatedInsights.insights && (
-        <div style={aggregatedInsightsSectionStyle}>
-          <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>Aggregated Insights</h4>
-          <FeedbackSummary comments={comments} />
-          <div style={insightItemStyle}><strong>Total Comments:</strong> {aggregatedInsights.insights.totalComments}</div>
-          
-          <div style={insightItemStyle}>
-            <strong>Sentiment:</strong> 
-            Avg: {aggregatedInsights.insights.sentimentBreakdown?.averageScore?.toFixed(2)} 
-            (Pos: {aggregatedInsights.insights.sentimentBreakdown?.positive}, 
-            Neu: {aggregatedInsights.insights.sentimentBreakdown?.neutral}, 
-            Neg: {aggregatedInsights.insights.sentimentBreakdown?.negative})
-          </div>
-
-          {aggregatedInsights.insights.keyThemes && aggregatedInsights.insights.keyThemes.length > 0 && (
-            <div style={insightItemStyle}>
-              <strong>Key Themes:</strong>
-              <ul style={{ listStyleType: 'disc', marginLeft: '20px', marginTop: '4px' }}>
-                {aggregatedInsights.insights.keyThemes.map((theme: { category: string, count: number }, index: number) => (
-                  <li key={index}>{theme.category} ({theme.count})</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {aggregatedInsights.insights.expertiseDistribution && (
-             <div style={insightItemStyle}>
-              <strong>Expertise Distribution:</strong> 
-              High: {aggregatedInsights.insights.expertiseDistribution.high}, 
-              Mid: {aggregatedInsights.insights.expertiseDistribution.mid}, 
-              Low: {aggregatedInsights.insights.expertiseDistribution.low}
-            </div>
-          )}
-        </div>
-      )}
       
       <CommentInput
         onSubmit={handleNewTopLevelComment}
@@ -407,7 +227,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
              'No feedback to display.'}
           </p>
         )}
-        {displayedComments.map((comment, index) => (
+        {displayedComments.map((comment: DeckComment, index: number) => (
           <div
             key={comment.id}
             ref={(el) => (commentItemRefs.current[comment.id] = el)}
@@ -422,7 +242,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
           >
             <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#555', marginTop: '12px', minWidth: '20px', textAlign: 'right' }}>{index + 1}.</span>
             <div style={{ flexGrow: 1 }}>
-              <CommentThread
+              <SharedCommentThread
                 comment={comment}
                 onReplySubmit={handleReplySubmit}
                 onCommentDelete={onCommentDelete}

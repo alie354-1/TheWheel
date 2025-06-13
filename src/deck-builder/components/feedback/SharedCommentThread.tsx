@@ -20,7 +20,7 @@ interface CommentThreadProps {
   isAdminOrDeckOwnerView?: boolean; // New prop
 }
 
-export const CommentThread: React.FC<CommentThreadProps> = ({
+export const SharedCommentThread: React.FC<CommentThreadProps> = ({
   comment,
   onReplySubmit,
   onCommentDelete,
@@ -154,54 +154,6 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
                 <span>{categoryConfig[comment.feedback_category].label}</span>
               </span>
             )}
-            {comment.slideId ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ color: '#4A5568', backgroundColor: '#EBF8FF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>
-                  Slide: {comment.slideId.substring(0, 6)}...
-                </span>
-                {comment.coordinates && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4A5568', backgroundColor: '#F0F9FF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>
-                    <MapPin size={12} />
-                    <span>{`Location: ${comment.coordinates.x.toFixed(0)}, ${comment.coordinates.y.toFixed(0)}`}</span>
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span style={{ fontWeight: 'bold', color: '#4A5568', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>
-                Deck-Wide
-              </span>
-            )}
-          </div>
-          <div style={{...commentMetaStyle, marginTop: '4px'}}>
-            {comment.aiSentimentScore != null && (
-              <span 
-                style={{
-                  ...aiInsightStyle,
-                  backgroundColor: comment.aiSentimentScore > 0.3 ? '#e6fffa' : comment.aiSentimentScore < -0.3 ? '#fff5f5' : '#f7fafc',
-                  color: comment.aiSentimentScore > 0.3 ? '#2c7a7b' : comment.aiSentimentScore < -0.3 ? '#c53030' : '#4a5568',
-                }}
-              >
-                Sentiment: {comment.aiSentimentScore.toFixed(2)}
-                {comment.aiSentimentScore > 0.3 ? ' 👍' : comment.aiSentimentScore < -0.3 ? ' 👎' : ' 😐'}
-              </span>
-            )}
-            {comment.aiExpertiseScore != null && ( // Changed from !== undefined to != null
-               <span 
-                style={{
-                  ...aiInsightStyle,
-                  backgroundColor: comment.aiExpertiseScore > 0.7 ? '#e6fffa' : comment.aiExpertiseScore < 0.4 ? '#fff5f5' : '#fefcbf',
-                  color: comment.aiExpertiseScore > 0.7 ? '#2c7a7b' : comment.aiExpertiseScore < 0.4 ? '#c53030' : '#744210',
-                }}
-              >
-                Expertise: {comment.aiExpertiseScore.toFixed(2)} 
-                {comment.aiExpertiseScore > 0.7 ? ' (High)' : comment.aiExpertiseScore < 0.4 ? ' (Low)' : ' (Mid)'}
-              </span>
-            )}
-            {comment.aiImprovementCategory && (
-              <span style={{...aiInsightStyle, backgroundColor: '#e2e8f0', color: '#4a5568' }}>
-                Category: {comment.aiImprovementCategory}
-              </span>
-            )}
           </div>
         </div>
         <span style={timestampStyle}>
@@ -308,7 +260,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
       {comment.replies && comment.replies.length > 0 && (
         <div style={repliesContainerStyle}>
           {comment.replies.map((reply: DeckComment) => (
-            <CommentThread
+            <SharedCommentThread
               key={reply.id}
               comment={reply}
               onReplySubmit={onReplySubmit}

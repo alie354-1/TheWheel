@@ -67,7 +67,7 @@ export const CompetitorTableEditor: React.FC<CompetitorTableEditorProps> = ({ bl
               value={feature}
               onChange={(e) => handleFeatureChange(index, e.target.value)}
             />
-            <Button variant="destructive" size="sm" onClick={() => removeFeature(index)}>
+            <Button variant="danger" size="sm" onClick={() => removeFeature(index)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -86,7 +86,7 @@ export const CompetitorTableEditor: React.FC<CompetitorTableEditorProps> = ({ bl
               onChange={(e) => handleCompetitorChange(index, 'name', e.target.value)}
               placeholder="Competitor Name"
             />
-            <Button variant="destructive" size="sm" onClick={() => removeCompetitor(index)}>
+            <Button variant="danger" size="sm" onClick={() => removeCompetitor(index)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

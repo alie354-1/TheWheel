@@ -1,22 +1,18 @@
 import React, { useState, useRef } from 'react';
-import { CommentInput } from './CommentInput'; // Assuming CommentInput is in the same directory
-
-// Define CommentInputSubmitData if not already imported from CommentInput or a shared types file
-interface CommentInputSubmitData {
-  textContent: string;
-  voiceNoteUrl?: string;
-  markupData?: any;
-}
+import { CommentInput, CommentInputSubmitData } from './CommentInput.tsx';
+import { FeedbackCategory } from '../../types/index.ts';
 
 interface ClickToCommentLayerProps {
   slideId: string;
   onCommentSubmit: (
-    text: string, 
-    coordinates: { x: number; y: number }, 
-    slideId: string, 
-    elementId?: string,
-    voiceNoteUrl?: string, // Added for Phase 4
-    markupData?: any      // Added for Phase 4
+    text: string,
+    parentCommentId?: string,
+    voiceNoteUrl?: string,
+    markupData?: any,
+    feedbackCategory?: FeedbackCategory,
+    componentId?: string,
+    slideId?: string | null,
+    coordinates?: { x: number; y: number }
   ) => void;
   currentUserDisplayName?: string | null;
   currentUserAvatarUrl?: string | null;
@@ -53,34 +49,32 @@ export const ClickToCommentLayer: React.FC<ClickToCommentLayerProps> = ({
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    // TODO: Add logic to identify if the click was on a specific element (VisualComponent)
-    // For now, we'll just use coordinates.
-    // const targetElement = event.target as HTMLElement;
-    // const elementId = targetElement.dataset.componentId; // Example: if components have data-component-id
+    const target = event.target as HTMLElement;
+    const componentElement = target.closest('[data-component-id]');
+    const elementId = componentElement ? componentElement.getAttribute('data-component-id') || undefined : undefined;
 
     setPendingComment({
       text: "",
       coordinates: { x, y },
-  // elementId, 
-  });
+      elementId,
+    });
 };
 
-const handleInputSubmit = (data: CommentInputSubmitData) => {
-  if (pendingComment) {
-    // For comments initiated by clicking on the layer, we primarily expect text.
-    // Voice/markup might be added through the CommentInput's own buttons,
-    // so data.voiceNoteUrl and data.markupData would be populated by CommentInput itself.
-    onCommentSubmit(
-      data.textContent, 
-      pendingComment.coordinates, 
-      slideId, 
-      pendingComment.elementId,
-      data.voiceNoteUrl, // Pass through if available
-      data.markupData    // Pass through if available
-    );
-    setPendingComment(null);
-  }
-};
+  const handleInputSubmit = (data: CommentInputSubmitData) => {
+    if (pendingComment) {
+      onCommentSubmit(
+        data.textContent,
+        undefined, // parentCommentId
+        data.voiceNoteUrl,
+        data.markupData,
+        data.feedbackCategory,
+        pendingComment.elementId,
+        slideId,
+        pendingComment.coordinates
+      );
+      setPendingComment(null);
+    }
+  };
 
   const handleInputCancel = () => {
     setPendingComment(null);
@@ -121,6 +115,7 @@ const handleInputSubmit = (data: CommentInputSubmitData) => {
             currentUserAvatarUrl={currentUserAvatarUrl}
             placeholder="Add comment here..."
             initialValue=""
+            slideId={slideId}
             // isSubmitting={...} // Pass down submitting state if needed
           />
         </div>

@@ -1,82 +1,82 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
-import Login from './pages/Login.tsx';
-import Signup from './pages/Signup.tsx';
-import PrivateRoute from './components/PrivateRoute.tsx';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import PrivateRoute from './components/PrivateRoute';
 
 // Layout components
-import Layout from './components/Layout.tsx';
-import CommunityRoutes from './routes/CommunityRoutes.tsx';
+import Layout from './components/Layout';
+import CommunityRoutes from './routes/CommunityRoutes';
 
 // Static (eagerly loaded) pages
-import Dashboard from './pages/Dashboard.tsx';
-import Profile from './pages/Profile.tsx';
-import ProfileSetup from './pages/ProfileSetup.tsx';
-import OnboardingPage from './pages/OnboardingPage.tsx';
-import InitialOnboardingPage from './pages/InitialOnboardingPage.tsx';
-import UserSettingsPage from './pages/UserSettingsPage.tsx';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import ProfileSetup from './pages/ProfileSetup';
+import OnboardingPage from './pages/OnboardingPage';
+import InitialOnboardingPage from './pages/InitialOnboardingPage';
+import UserSettingsPage from './pages/UserSettingsPage';
 
-import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage.tsx';
-import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage.tsx';
-import DomainDetail from './business-ops-hub/pages/DomainDetail.tsx';
-import StepDetailPage from './components/company/journey/pages/StepDetailPage.tsx';
-import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage.tsx';
-import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage.tsx';
+import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage';
+import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage';
+import DomainDetail from './business-ops-hub/pages/DomainDetail';
+import StepDetailPage from './components/company/journey/pages/StepDetailPage';
+import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage';
+import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage';
 
 // Sprint 13-16 feature components
-import TeamManager from './business-ops-hub/components/team/TeamManager.tsx';
-import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository.tsx';
-import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager.tsx';
-import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide.tsx';
+import TeamManager from './business-ops-hub/components/team/TeamManager';
+import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository';
+import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager';
+import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide';
 
 // Test pages
-const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage.tsx'));
-const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage.tsx'));
-const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage.tsx'));
+const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage'));
+const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage'));
+const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage'));
 
 // Lazily loaded pages for better initial load performance
-const IdeaHub = lazy(() => import('./pages/IdeaHub.tsx'));
-const EnhancedIdeaHubPage = lazy(() => import('./pages/EnhancedIdeaHubPage.tsx'));
-// const DeckBuilderPage = lazy(() => import('./pages/DeckBuilderPage.tsx')); // Phase 1 Deck Builder - REMOVED
-// const VisualDeckBuilderPage = lazy(() => import('./pages/VisualDeckBuilderPage.tsx')); // Visual Deck Builder - REMOVED
-const DeckLibraryPage = lazy(() => import('./deck-builder/pages/DeckLibraryPage.tsx')); // Phase 2 Deck Library
-const DeckEditPage = lazy(() => import('./deck-builder/pages/DeckEditPage.tsx')); // Phase 2 Deck Edit
-// const DeckPreviewPage = lazy(() => import('./deck-builder/pages/DeckPreviewPage.tsx')); // Phase 2 Deck Preview - REPLACED
-const DeckPreviewHostPage = lazy(() => import('./deck-builder/pages/DeckPreviewHostPage.tsx')); // New Preview Host Page
-const SharedDeckViewerPage = lazy(() => import('./pages/SharedDeckViewerPage.tsx')); // Added for Unified Sharing
-const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage.tsx'));
-const CompanySetup = lazy(() => import('./pages/company/CompanySetup.tsx'));
-const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard.tsx'));
-const RefactoredCompanyDashboard = lazy(() => import('./pages/company/RefactoredCompanyDashboard.tsx'));
-const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage.tsx'));
-const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage.tsx'));
-const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage.tsx'));
-const JourneyPage = lazy(() => import('./pages/company/JourneyPage.tsx'));
-const RefactoredJourneyPage = lazy(() => import('./pages/company/RefactoredJourneyPage.tsx'));
-const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage.tsx'));
-const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage.tsx'));
-const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage.tsx'));
-const JourneyOverviewPage = lazy(() => import('./pages/company/JourneyOverviewPage.tsx'));
-const CompanyToolsPage = lazy(() => import('./pages/company/CompanyToolsPage.tsx'));
-const CompanyToolEvaluationPage = lazy(() => import('./pages/company/CompanyToolEvaluationPage.tsx'));
-const FinancialHubPage = lazy(() => import('./pages/FinancialHubPage.tsx'));
-const ToolsMarketplacePage = lazy(() => import('./pages/ToolsMarketplacePage.tsx'));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage.tsx'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel.tsx'));
-const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage.tsx'));
-const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage.tsx'));
-const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage.tsx'));
-const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage.tsx'));
-const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage.tsx')); // Added for Deck Admin
-const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage.tsx'));
-const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard.tsx'));
+const IdeaHub = lazy(() => import('./pages/IdeaHub'));
+const EnhancedIdeaHubPage = lazy(() => import('./pages/EnhancedIdeaHubPage'));
+// const DeckBuilderPage = lazy(() => import('./pages/DeckBuilderPage')); // Phase 1 Deck Builder - REMOVED
+// const VisualDeckBuilderPage = lazy(() => import('./pages/VisualDeckBuilderPage')); // Visual Deck Builder - REMOVED
+const DeckLibraryPage = lazy(() => import('./deck-builder/pages/DeckLibraryPage')); // Phase 2 Deck Library
+const DeckEditPage = lazy(() => import('./deck-builder/pages/DeckEditPage')); // Phase 2 Deck Edit
+// const DeckPreviewPage = lazy(() => import('./deck-builder/pages/DeckPreviewPage')); // Phase 2 Deck Preview - REPLACED
+const DeckPreviewHostPage = lazy(() => import('./deck-builder/pages/DeckPreviewHostPage')); // New Preview Host Page
+const SharedDeckViewerPage = lazy(() => import('./pages/SharedDeckViewerPage')); // Added for Unified Sharing
+const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage'));
+const CompanySetup = lazy(() => import('./pages/company/CompanySetup'));
+const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard'));
+const RefactoredCompanyDashboard = lazy(() => import('./pages/company/RefactoredCompanyDashboard'));
+const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage'));
+const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage'));
+const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage'));
+const JourneyPage = lazy(() => import('./pages/company/JourneyPage'));
+const RefactoredJourneyPage = lazy(() => import('./pages/company/RefactoredJourneyPage'));
+const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage'));
+const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage'));
+const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage'));
+const JourneyOverviewPage = lazy(() => import('./pages/company/JourneyOverviewPage'));
+const CompanyToolsPage = lazy(() => import('./pages/company/CompanyToolsPage'));
+const CompanyToolEvaluationPage = lazy(() => import('./pages/company/CompanyToolEvaluationPage'));
+const FinancialHubPage = lazy(() => import('./pages/FinancialHubPage'));
+const ToolsMarketplacePage = lazy(() => import('./pages/ToolsMarketplacePage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage'));
+const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage'));
+const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage'));
+const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage'));
+const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage')); // Added for Deck Admin
+const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage'));
+const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard'));
 
 // Idea Hub pages
-const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration.tsx'));
-const Refinement = lazy(() => import('./pages/idea-hub/Refinement.tsx'));
-const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage.tsx'));
-const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot.tsx'));
+const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration'));
+const Refinement = lazy(() => import('./pages/idea-hub/Refinement'));
+const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage'));
+const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot'));
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -86,9 +86,9 @@ const LoadingFallback = () => (
 );
 
 // Import our AppProvider
-import { AppProvider } from './lib/contexts/AppProvider.tsx';
+import { AppProvider } from './lib/contexts/AppProvider';
 import { Provider as TooltipProvider } from '@radix-ui/react-tooltip';
-import JourneyHomePage from './components/company/journey/pages/JourneyHomePage.tsx';
+import JourneyHomePage from './components/company/journey/pages/JourneyHomePage';
 
 const App: React.FC = () => {
   return (
