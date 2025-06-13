@@ -243,6 +243,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [isFeedbackPanelOpen, setIsFeedbackPanelOpen] = useState(true);
   const previewMode = false;
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
+  const [arePanelsCollapsed, setArePanelsCollapsed] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [comments, setComments] = useState<DeckComment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -254,6 +255,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [resizingCanvas, setResizingCanvas] = useState(false); 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isClickToCommentMode, setIsClickToCommentMode] = useState(false);
+  const [showCommentBubbles, setShowCommentBubbles] = useState(true);
   
   const slideViewportRef = useRef<HTMLDivElement>(null);
   const previewContentViewportRef = useRef<HTMLDivElement>(null);
@@ -1070,6 +1072,18 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     }
   };
 
+  const handleJumpToComment = (commentId: string) => {
+    // The commentId can be a single ID or a comma-separated list of IDs
+    const ids = commentId.split(',');
+    const firstId = ids[0];
+    
+    const comment = comments.find(c => c.id === firstId);
+    if (comment && comment.slideId) {
+      handleJumpToSlide(comment.slideId);
+      setHighlightedCommentId(commentId);
+    }
+  };
+
   const handleUngroup = () => {
     // Ungrouping logic here
   };
@@ -1441,6 +1455,14 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             <FileText size={18} />
             <span className="hidden lg:inline">Import HTML</span>
           </button>
+          <button
+            onClick={() => setArePanelsCollapsed(true)}
+            title="Collapse All Panels"
+            className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
+          >
+            <ChevronRight size={18} />
+            <span className="hidden lg:inline">Collapse All</span>
+          </button>
         </div>
       </div>
 
@@ -1626,6 +1648,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         }}
         onDeleteComponent={(id: string) => handleComponentDelete(id)}
         selectedComponentIds={selectedComponentIds}
+        comments={showCommentBubbles ? comments.filter(c => c.slideId === currentSection.id) : []}
+        highlightedCommentId={highlightedCommentId}
       />
       {isClickToCommentMode && currentSection && (
         <ClickToCommentLayer
@@ -1719,6 +1743,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                         } : undefined}
         onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
         selectedComponentIds={!previewMode ? selectedComponentIds : undefined}
+        comments={showCommentBubbles ? comments.filter(c => c.slideId === currentSection.id) : []}
+        highlightedCommentId={highlightedCommentId}
       />
       {isClickToCommentMode && currentSection && (
         <ClickToCommentLayer
@@ -1769,7 +1795,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           </div>
         </div>
 
-        {isFeedbackPanelOpen && (
+        {isFeedbackPanelOpen && !arePanelsCollapsed && (
           <div
             className={`
               bg-white border-l border-gray-300 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
@@ -1789,6 +1815,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                 onCommentStatusUpdate={handleCommentStatusUpdate}
                 onCommentsNeedRefresh={() => deck?.id && fetchComments(deck.id)}
                 onJumpToSlide={handleJumpToSlide}
+                onJumpToComment={handleJumpToComment}
                 isAdminOrDeckOwnerView={true}
                 currentUserId={currentUserId}
                 currentUserDisplayName={currentUserDisplayNameState}
@@ -1800,6 +1827,9 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                 onProposalsGenerated={() => {
                   setProposalPanelRefreshKey(prevKey => prevKey + 1);
                 }}
+                showCommentBubbles={showCommentBubbles}
+                onShowCommentBubblesToggle={setShowCommentBubbles}
+                onClose={() => setIsFeedbackPanelOpen(false)}
               />
             </div>
           </div>

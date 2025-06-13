@@ -10,7 +10,7 @@ import { CommentScopeToggle } from './CommentScopeToggle.tsx';
 
 interface FeedbackPanelProps {
   deckId: string;
-  currentDeck?: Deck | null; 
+  currentDeck?: Deck | null;
   comments: DeckComment[];
   onCommentSubmit: (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any, feedbackCategory?: FeedbackCategory, componentId?: string, slideId?: string | null) => void;
   onCommentDelete: (commentId: string) => void;
@@ -19,6 +19,7 @@ interface FeedbackPanelProps {
   onCommentsNeedRefresh?: () => void; // New prop to signal parent to refresh comments
   onVisibilityToggle?: (showOnlyOwn: boolean) => void; // For private comments toggle
   onJumpToSlide?: (slideId: string) => void;
+  onJumpToComment?: (commentId: string) => void; // To highlight a specific comment bubble
   currentUserId?: string | null;
   currentUserDisplayName?: string | null;
   currentUserAvatarUrl?: string | null;
@@ -32,6 +33,9 @@ interface FeedbackPanelProps {
   showOnlyOwnComments?: boolean; // New: Force showing only user's own comments
   isClickToCommentMode?: boolean; // New: Click-to-comment mode state
   onClickToCommentToggle?: (enabled: boolean) => void; // New: Toggle click-to-comment mode
+  showCommentBubbles?: boolean;
+  onShowCommentBubblesToggle?: (show: boolean) => void;
+  onClose?: () => void;
 }
 
 export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
@@ -56,8 +60,12 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   showOnlyOwnComments = false, // Default to false
   onVisibilityToggle,
   onJumpToSlide,
+  onJumpToComment,
   isClickToCommentMode = false, // Default to false
   onClickToCommentToggle,
+  showCommentBubbles = true,
+  onShowCommentBubblesToggle,
+  onClose,
 }) => {
   const [aggregatedInsights, setAggregatedInsights] = useState<AIFeedbackInsight | null>(null);
   const [isLoadingAggregates, setIsLoadingAggregates] = useState(false);
@@ -68,18 +76,23 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   const commentItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    if (highlightedCommentId && commentItemRefs.current[highlightedCommentId]) {
-      commentItemRefs.current[highlightedCommentId]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+    if (highlightedCommentId) {
+      const ids = highlightedCommentId.split(',');
+      ids.forEach((id, index) => {
+        const el = commentItemRefs.current[id];
+        if (el) {
+          if (index === 0) {
+            el.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+            });
+          }
+          el.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+          setTimeout(() => {
+            el.style.backgroundColor = '';
+          }, 2000);
+        }
       });
-      const el = commentItemRefs.current[highlightedCommentId];
-      if (el) {
-        el.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
-        setTimeout(() => {
-          el.style.backgroundColor = '';
-        }, 2000);
-      }
     }
   }, [highlightedCommentId]);
 
@@ -251,6 +264,17 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     document.body.removeChild(link);
   };
 
+  const handleShowAllOnSlide = () => {
+    if (commentScope === 'slide' && selectedSlideId && onJumpToComment) {
+      const slideCommentIds = comments
+        .filter(c => c.slideId === selectedSlideId)
+        .map(c => c.id);
+      if (slideCommentIds.length > 0) {
+        onJumpToComment(slideCommentIds.join(','));
+      }
+    }
+  };
+
   return (
     <div style={panelStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -261,21 +285,44 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             ? 'Feedback for Current Slide'
             : 'Deck-Wide Feedback'}
         </h3>
-        {isAdminOrDeckOwnerView && (
-          <button
-            onClick={exportCommentsToCSV}
-            style={{ ...buttonStyle, backgroundColor: '#17a2b8' }}
-            title="Export visible comments to CSV"
-          >
-            Export CSV
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {isAdminOrDeckOwnerView && (
+            <button
+              onClick={exportCommentsToCSV}
+              style={{ ...buttonStyle, backgroundColor: '#17a2b8', marginRight: '10px' }}
+              title="Export visible comments to CSV"
+            >
+              Export CSV
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{ ...buttonStyle, backgroundColor: 'transparent', color: '#6c757d', border: '1px solid #6c757d' }}
+              title="Close panel"
+            >
+              &times;
+            </button>
+          )}
+        </div>
       </div>
       
       <CommentScopeToggle
         scope={commentScope}
         onScopeChange={setCommentScope}
       />
+
+      {commentScope === 'slide' && selectedSlideId && (
+        <div style={{ marginBottom: '10px' }}>
+          <button
+            onClick={handleShowAllOnSlide}
+            style={{ ...buttonStyle, backgroundColor: '#6c757d', width: '100%' }}
+            title="Highlight all comments on the current slide"
+          >
+            Show All on Slide
+          </button>
+        </div>
+      )}
 
       {onVisibilityToggle && (
         <PrivateCommentsToggle
@@ -312,6 +359,20 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
           Show only open comments
         </label>
       </div>
+
+      {onShowCommentBubblesToggle && (
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
+            <input
+              type="checkbox"
+              checked={showCommentBubbles}
+              onChange={(e) => onShowCommentBubblesToggle(e.target.checked)}
+              style={{ marginRight: '8px' }}
+            />
+            Show comment bubbles on slide
+          </label>
+        </div>
+      )}
       
       {isAdminOrDeckOwnerView && (
         <>
@@ -422,12 +483,37 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
           >
             <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#555', marginTop: '12px', minWidth: '20px', textAlign: 'right' }}>{index + 1}.</span>
             <div style={{ flexGrow: 1 }}>
+              {comment.slideId && onJumpToComment && (
+                <div 
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#007bff', 
+                    cursor: 'pointer', 
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s',
+                  }} 
+                  onClick={() => onJumpToComment(comment.id)}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e9ecef'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <span role="img" aria-label="location">📍</span>
+                  <span>
+                    On Slide {(currentDeck?.sections.findIndex(s => s.id === comment.slideId) ?? -1) + 1}
+                  </span>
+                </div>
+              )}
               <CommentThread
                 comment={comment}
                 onReplySubmit={handleReplySubmit}
                 onCommentDelete={onCommentDelete}
                 onCommentStatusUpdate={onCommentStatusUpdate}
                 onJumpToSlide={onJumpToSlide}
+                onJumpToComment={onJumpToComment}
                 isAdminOrDeckOwnerView={isAdminOrDeckOwnerView}
                 currentUserId={currentUserId}
                 currentUserDisplayName={currentUserDisplayName}
