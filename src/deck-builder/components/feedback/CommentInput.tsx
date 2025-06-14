@@ -5,6 +5,7 @@ import { EnhancedCategorySelector } from './EnhancedCategorySelector.tsx';
 import { CommentScopeToggle } from './CommentScopeToggle.tsx';
 import { VoiceRecorder } from './VoiceRecorder.tsx';
 import { aiService } from '../../../lib/services/ai.service.ts';
+import { RichTextEditor } from '../editors/RichTextEditor.tsx';
 
 export interface CommentInputSubmitData {
   textContent: string;
@@ -84,8 +85,8 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCommentText(e.target.value);
+  const handleTextChange = (content: string) => {
+    setCommentText(content);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -110,9 +111,9 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     localStorage.removeItem(draftKey);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      handleSubmit(e);
+      handleSubmit(e as any);
     }
   };
 
@@ -181,14 +182,10 @@ export const CommentInput: React.FC<CommentInputProps> = ({
         size={36}
       />
       <div style={{ flexGrow: 1 }}>
-        <textarea
-          value={commentText}
+        <RichTextEditor
+          content={commentText}
           onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          style={textareaStyle}
-          rows={2}
-          disabled={isSubmitting}
         />
         <div style={{ marginTop: '12px' }}>
           <EnhancedCategorySelector
