@@ -1,26 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { JourneyService } from "../services/journey.service.ts";
-import { StepsList } from "../components/step/StepsList.tsx";
-import SmartJourneyDashboard from "../components/SmartJourneyDashboard.tsx";
-import StepDetailsModal from "../components/step/StepDetailsModal.tsx";
-import StepsFilterPanel from "../components/step/StepsFilterPanel.tsx";
-import CompanyStepsSection from "../components/step/CompanyStepsSection.tsx";
-import CompanyStepsSidebar from "../components/step/CompanyStepsSidebar.tsx";
-import RecommendedStepsPanel from "../components/step/RecommendedStepsPanel.tsx";
-import AllStepsModal from "../components/step/AllStepsModal.tsx";
-import CreateStepModal from "../components/step/CreateStepModal.tsx";
-import { Step } from "../types/journey.types.ts";
-import { Task } from "../../../../lib/types/task.types.ts";
-import { taskService } from "../../../../lib/services/task.service.ts";
-import { AIProvider } from "../../../../lib/services/ai/ai-context.provider.tsx";
-import CommunityStepsModal from "../components/step/CommunityStepsModal.tsx";
-import { StepDetailWireframe } from "../components/step/StepDetailWireframe.tsx";
-import StepRelationshipManager from "../components/step/StepRelationshipManager.tsx";
-import { supabase } from "../../../../lib/supabase.ts";
-import { useCompany } from "../../../../lib/hooks/useCompany.ts";
-import { AiRecommendationPanel } from "../../../journey/AiRecommendationPanel.tsx";
-import JourneyAnalyticsDashboard from "../../../journey/JourneyAnalyticsDashboard.tsx";
-import CompanyMembersPage from "../../../../pages/company/CompanyMembersPage.tsx";
+import { journeyFrameworkService } from "../../../../lib/services/journeyFramework.service";
+import { companyJourneyServiceEnhanced } from "../../../../lib/services/companyJourneyEnhanced.service";
+import { journeyProgressService, SmartRecommendation } from "../../../../lib/services/journeyProgress.service";
+import { communityJourneyIntegrationService } from "../../../../lib/services/communityJourneyIntegration.service";
+import { 
+  JourneyPhase, 
+  CompanyJourneyStep,
+  step_status
+} from "../../../../lib/types/journey-unified.types";
+import { useCompany } from "../../../../lib/hooks/useCompany";
+import SmartJourneyDashboard from "../components/SmartJourneyDashboard";
+import FrameworkStepsBrowser from "../components/FrameworkStepsBrowser";
+import TemplateUpdateNotifications from "../components/TemplateUpdateNotifications";
 
 // Placeholder for companyMetadata (replace with real context/provider as needed)
 const companyMetadata = {
@@ -35,19 +26,55 @@ const JourneyHomePage: React.FC = () => {
   useEffect(() => {
     console.log("JourneyHomePage: companyId from useCompany hook", companyId);
   }, [companyId]);
-  const [domains, setDomains] = useState<any[]>([]);
-  const [phases, setPhases] = useState<any[]>([]);
+  const [domains, setDomains] = useState<JourneyDomain[]>([]);
+  const [phases, setPhases] = useState<JourneyPhase[]>([]);
 
   // Fetch domains and phases from DB on mount
   useEffect(() => {
     async function fetchMeta() {
-      const dbDomains = await JourneyService.getDomains();
-      setDomains(dbDomains);
-      const dbPhases = await JourneyService.getPhases();
-      setPhases(dbPhases);
+      try {
+        const dbDomains = await journeyFrameworkService.getDomains();
+        setDomains(dbDomains);
+        const dbPhases = await journeyFrameworkService.getPhases();
+        setPhases(dbPhases);
+      } catch (error) {
+        console.error('Error fetching metadata:', error);
+      }
     }
     fetchMeta();
   }, []);
+
+  // Adapter functions to convert new types to old component interfaces
+  const adaptDomainsForComponent = (domains: JourneyDomain[]) => {
+    return domains.map(domain => ({
+      id: domain.id,
+      key: domain.id,
+      name: domain.name,
+      description: domain.description,
+      color: domain.color,
+      icon_url: domain.icon_url,
+      is_active: domain.is_active,
+      metadata: domain.metadata,
+      created_at: domain.created_at,
+      updated_at: domain.updated_at
+    }));
+  };
+
+  const adaptPhasesForComponent = (phases: JourneyPhase[]) => {
+    return phases.map(phase => ({
+      id: phase.id,
+      key: phase.id,
+      name: phase.name,
+      description: phase.description,
+      order_index: phase.order_index,
+      icon_url: phase.icon_url,
+      color: phase.color,
+      is_active: phase.is_active,
+      metadata: phase.metadata,
+      created_at: phase.created_at,
+      updated_at: phase.updated_at
+    }));
+  };
 
   // Filter state
   const [selectedDomain, setSelectedDomain] = useState<string>("");
@@ -67,22 +94,22 @@ const JourneyHomePage: React.FC = () => {
     // Fetch all company steps for this company, regardless of status
     const { data: cjs, error: cjsError } = await supabase
       .from("company_journey_steps")
-      .select("step_id")
+      .select("template_id")
       .eq("company_id", companyId);
     if (cjsError) {
       console.error("Failed to fetch company_journey_steps:", cjsError);
       setSteps([]);
       return;
     }
-    const stepIds = (cjs || []).map((row: any) => row.step_id);
-    if (stepIds.length === 0) {
+    const templateIds = (cjs || []).map((row: any) => row.template_id);
+    if (templateIds.length === 0) {
       setSteps([]);
       return;
     }
     const { data: dbSteps, error: stepsError } = await supabase
-      .from("steps")
+      .from("journey_step_templates")
       .select("*")
-      .in("id", stepIds);
+      .in("id", templateIds);
     if (stepsError) {
       console.error("Failed to fetch steps for company:", stepsError);
       setSteps([]);
@@ -98,7 +125,7 @@ const JourneyHomePage: React.FC = () => {
   // Fetch all steps for the "View All Steps" modal
   useEffect(() => {
     async function fetchAllSteps() {
-      const { data, error } = await supabase.from("steps").select("*");
+      const { data, error } = await supabase.from("journey_step_templates").select("*");
       if (error) {
         console.error("Failed to fetch all steps:", error);
         setAllSteps([]);
@@ -129,32 +156,31 @@ const JourneyHomePage: React.FC = () => {
       setStepDetailTools(JourneyService.getToolsForStep(stepDetailStep.id));
       // Next steps
       const { data: nextData, error: nextError } = await supabase
-        .from("step_relationships")
-        .select("to_step_id, probability_weight, steps!step_relationships_to_step_id_fkey(name)")
-        .eq("from_step_id", stepDetailStep.id)
-        .eq("relationship_type", "next")
-        .order("probability_weight", { ascending: false });
+        .from("journey_step_template_dependencies")
+        .select("depends_on_template_id, dependency_type, journey_step_templates!journey_step_template_dependencies_depends_on_template_id_fkey(name)")
+        .eq("step_template_id", stepDetailStep.id)
+        .eq("dependency_type", "suggested");
       if (!nextError && nextData) {
         setStepDetailNextSteps(
           nextData.map((row: any) => ({
-            to_step_id: row.to_step_id,
-            probability_weight: row.probability_weight,
-            step_name: row.steps?.name
+            to_step_id: row.depends_on_template_id,
+            probability_weight: 0,
+            step_name: row.journey_step_templates?.name
           }))
         );
       }
       // Prereq steps
       const { data: prereqData, error: prereqError } = await supabase
-        .from("step_relationships")
-        .select("from_step_id, relationship_type, steps!step_relationships_from_step_id_fkey(name)")
-        .eq("to_step_id", stepDetailStep.id)
-        .in("relationship_type", ["prerequisite", "blocking"]);
+        .from("journey_step_template_dependencies")
+        .select("step_template_id, dependency_type, journey_step_templates!journey_step_template_dependencies_step_template_id_fkey(name)")
+        .eq("depends_on_template_id", stepDetailStep.id)
+        .in("dependency_type", ["prerequisite", "blocking"]);
       if (!prereqError && prereqData) {
         setStepDetailPrereqSteps(
           prereqData.map((row: any) => ({
-            from_step_id: row.from_step_id,
-            relationship_type: row.relationship_type,
-            step_name: row.steps?.name
+            from_step_id: row.step_template_id,
+            relationship_type: row.dependency_type,
+            step_name: row.journey_step_templates?.name
           }))
         );
       }
@@ -232,9 +258,7 @@ const JourneyHomePage: React.FC = () => {
         ...newStep,
         id,
         created_at: new Date().toISOString(),
-        active: true,
-        snippet_references: newStep.snippet_references || [],
-        resource_links: newStep.resource_links || [],
+        is_active: true,
       } as Step,
     ]);
     // Optionally: handle sharing logic here
@@ -393,6 +417,10 @@ const JourneyHomePage: React.FC = () => {
                 stepsWithStatus={stepsWithStatus}
                 domains={domains}
                 phases={phases}
+                selectedDomain={selectedDomain}
+                selectedPhase={selectedPhase}
+                onSelectedDomainChange={setSelectedDomain}
+                onSelectedPhaseChange={setSelectedPhase}
                 onClose={() => setAllStepsModalOpen(false)}
                 onViewDetails={step => {
                   setSelectedStep(step);
@@ -412,7 +440,11 @@ const JourneyHomePage: React.FC = () => {
                     .insert([
                       {
                         company_id: companyId,
-                        step_id: step.id,
+                        template_id: step.id,
+                        name: step.name,
+                        description: step.description,
+                        phase_id: step.phase_id,
+                        domain_id: step.domain_id,
                         status: "not_started",
                         created_at: new Date().toISOString(),
                       },
@@ -434,20 +466,48 @@ const JourneyHomePage: React.FC = () => {
                 phases={phases}
               />
             </div>
-            {/* Peer Insights and Progress */}
+            {/* Peer Insights and Maturity Levels (No Completion Percentages) */}
             <div className="w-full mb-8 px-0">
-              <SmartJourneyDashboard
-                recommendations={[]} // Only show peer insights and progress
-                peerInsights={[
-                  "67% of SaaS startups are focusing on customer interviews this month.",
-                  "Most companies spend 2-4 weeks on market validation before building."
-                ]}
-                progressSummary={{
-                  Strategy: "80",
-                  Product: "60",
-                  Operations: "30"
-                }}
-              />
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Your Journey</h2>
+                <p className="mb-6 text-gray-600">
+                  Your startup journey is never complete. Continue to evolve and grow across all domains.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Maturity Levels Section */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-gray-700">Domain Maturity</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span>Strategy</span>
+                        <span className="font-medium text-blue-600">Refining</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Product</span>
+                        <span className="font-medium text-green-600">Practicing</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Marketing</span>
+                        <span className="font-medium text-purple-600">Learning</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Operations</span>
+                        <span className="font-medium text-gray-500">Exploring</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Peer Insights Section */}
+                  <div>
+                    <h3 className="font-medium text-gray-700 mb-4">Peer Insights</h3>
+                    <ul className="space-y-3">
+                      <li className="text-sm text-gray-600">67% of SaaS startups are focusing on customer interviews this month.</li>
+                      <li className="text-sm text-gray-600">Most companies spend 2-4 weeks on market validation before building.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
             {/* Step Details Modal */}
             {selectedStep && (

@@ -34,6 +34,9 @@ import ToolImplementationGuide from './business-ops-hub/components/ToolImplement
 const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage.tsx'));
 const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage.tsx'));
 const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage.tsx'));
+const JourneySystemTestPage = lazy(() => import('./pages/JourneySystemTestPage.tsx'));
+const JourneyDashboardDemo = lazy(() => import('./pages/JourneyDashboardDemo.tsx'));
+const NewJourneyRouter = lazy(() => import('./components/company/new_journey/NewJourneyRouter.tsx'));
 
 // Lazily loaded pages for better initial load performance
 const IdeaHub = lazy(() => import('./pages/IdeaHub.tsx'));
@@ -48,12 +51,12 @@ const SharedDeckViewerPage = lazy(() => import('./pages/SharedDeckViewerPage.tsx
 const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage.tsx'));
 const CompanySetup = lazy(() => import('./pages/company/CompanySetup.tsx'));
 const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard.tsx'));
-const RefactoredCompanyDashboard = lazy(() => import('./pages/company/RefactoredCompanyDashboard.tsx'));
+// Removed RefactoredCompanyDashboard import - old component not in use
 const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage.tsx'));
 const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage.tsx'));
 const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage.tsx'));
 const JourneyPage = lazy(() => import('./pages/company/JourneyPage.tsx'));
-const RefactoredJourneyPage = lazy(() => import('./pages/company/RefactoredJourneyPage.tsx'));
+// Removed RefactoredJourneyPage import - old component not in use
 const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage.tsx'));
 const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage.tsx'));
 const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage.tsx'));
@@ -67,6 +70,7 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel.tsx'));
 const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage.tsx'));
 const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage.tsx'));
 const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage.tsx'));
+const PhaseManager = lazy(() => import('./pages/admin/journey/PhaseManager.tsx'));
 const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage.tsx'));
 const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage.tsx')); // Added for Deck Admin
 const CommunitySubmissionsPage = lazy(() => import('./pages/admin/CommunitySubmissionsPage.tsx'));
@@ -102,6 +106,9 @@ const App: React.FC = () => {
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          
+          {/* Public Test Pages */}
+          <Route path="/journey-system-test" element={<JourneySystemTestPage />} />
           {/* Authentication & Onboarding */}
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/initial-onboarding" element={<InitialOnboardingPage />} />
@@ -150,21 +157,22 @@ const App: React.FC = () => {
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="setup" element={<CompanySetup />} />
                 <Route path="dashboard" element={<CompanyDashboard />} />
-                <Route path="dashboard-new" element={<RefactoredCompanyDashboard />} />
+                {/* Removed dashboard-new route - using old refactored component */}
                 <Route path="profile/:companyId" element={<CompanyProfilePage />} />
 
-                <Route path="journey" element={<JourneyHomePage />} />
-                <Route path="journey-new" element={<RefactoredJourneyPage />} />
-                <Route path="journey/steps" element={<JourneyStepsPage />} />
-                <Route path="journey/steps/:stepId" element={<JourneyStepPage />} />
-                <Route path="journey/map" element={<JourneyMapPage />} />
-                <Route path="journey/overview" element={<JourneyOverviewPage />} />
-                <Route path="journey/submit-step" element={<SubmitStepPage />} />
-                <Route path="journey/community-steps" element={<CommunityStepsPage />} />
+                {/* Redirect old journey routes to new journey */}
+                <Route path="journey" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/steps" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/steps/:stepId" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/map" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/overview" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/submit-step" element={<Navigate to="/company/new-journey" replace />} />
+                <Route path="journey/community-steps" element={<Navigate to="/company/new-journey" replace />} />
                 <Route path="tools" element={<CompanyToolsPage />} />
                 <Route path="tools/evaluation/:toolId" element={<CompanyToolEvaluationPage />} />
                 <Route path="budget" element={<CompanyBudgetPage />} />
                 <Route path="members" element={<CompanyMembersPage />} />
+                <Route path="new-journey/*" element={<NewJourneyRouter />} />
               </Route>
               
               {/* Idea Hub */}
@@ -200,6 +208,7 @@ const App: React.FC = () => {
               
               {/* Admin Section */}
               <Route path="admin">
+  <Route path="journey/phase-manager" element={<PhaseManager />} />
                 <Route index element={<AdminPanel />} />
                 <Route path="settings" element={<AdminAppSettingsPage />} />
                 <Route path="tool-moderation" element={<AdminToolModerationPage />} />
@@ -214,6 +223,7 @@ const App: React.FC = () => {
               <Route path="test-deck-builder" element={<TestDeckBuilderPage />} />
               <Route path="simple-drag-test" element={<SimpleDragTestPage />} />
               <Route path="manual-drag-test" element={<ManualDragTestPage />} />
+              <Route path="journey-dashboard-demo" element={<JourneyDashboardDemo />} />
             </Route>
           </Route>
           
@@ -234,9 +244,10 @@ const App: React.FC = () => {
 
       {/* New Journey System */}
 
-      <Route path="/journey" element={<JourneyHomePage />} />
-          <Route path="/journey/step/:stepId" element={<StepDetailPage />} />
-          <Route path="/journey/map" element={<JourneyMapPage />} />
+      {/* Redirect standalone journey routes to new journey */}
+      <Route path="/journey" element={<Navigate to="/company/new-journey" replace />} />
+      <Route path="/journey/step/:stepId" element={<Navigate to="/company/new-journey/company-step/:stepId" replace />} />
+      <Route path="/journey/map" element={<Navigate to="/company/new-journey" replace />} />
           
           {/* Fallback for unknown routes - temporary error page */}
           <Route path="*" element={<Navigate to="/route-not-found" replace />} />

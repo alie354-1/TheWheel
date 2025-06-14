@@ -1,17 +1,23 @@
 #!/bin/bash
 
-# Apply All Journey System Changes
-# This script applies all the journey system changes
+# Master script to apply all journey system changes
+echo "Starting complete journey system installation..."
 
-echo "Applying All Journey System Changes..."
-
-# Step 1: Make all scripts executable
+# Make the scripts executable first
 echo "Making all scripts executable..."
-./make_all_scripts_executable.sh
+chmod +x supabase/make_journey_system_executable.sh
+./supabase/make_journey_system_executable.sh
 
-# Step 2: Apply the complete journey system
-echo "Applying complete journey system..."
-./apply_complete_journey_system.sh
+# Apply the journey system schema and data
+echo "Applying journey system schema and data..."
+./supabase/apply_complete_journey_system.sh
 
-echo "All Journey System Changes applied successfully!"
-echo "You can now access the journey system with all features enabled."
+echo "Journey system installation complete!"
+echo "==================================="
+echo "The following components have been installed:"
+echo "1. Journey schema structure"
+echo "2. Journey step templates data"
+echo "3. Journey step task templates data"
+echo "4. Additional journey configuration data"
+echo "==================================="
+echo "You can now use the journey system!"

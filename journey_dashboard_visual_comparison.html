@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Dashboard Redesign - Visual Comparison</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .dashboard-mockup {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            min-height: 600px;
+            background-color: #f9fafb;
+        }
+        .sidebar {
+            border-right: 1px solid #e5e7eb;
+            min-height: 600px;
+        }
+        .feature-highlight {
+            transition: all 0.3s ease;
+        }
+        .feature-highlight:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-10 text-center">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Journey Dashboard Redesign</h1>
+            <p class="text-gray-600">Visual comparison of the two proposed dashboard redesigns</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <!-- Option 3 -->
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Option 3: Clean & Organized Dashboard</h2>
+                <div class="dashboard-mockup overflow-hidden">
+                    <!-- Dashboard Layout -->
+                    <div class="flex h-full">
+                        <!-- Sidebar -->
+                        <div class="sidebar w-1/4 bg-white p-4">
+                            <div class="mb-4">
+                                <h3 class="font-bold text-sm text-gray-800">Steps</h3>
+                                <p class="text-xs text-gray-500">Track your journey</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <div class="bg-white p-2 border border-gray-200 rounded text-center">
+                                    <span class="text-xs font-medium text-gray-600">Total</span>
+                                    <div class="text-lg font-bold text-gray-900">18</div>
+                                </div>
+                                <div class="bg-white p-2 border border-blue-200 rounded text-center">
+                                    <span class="text-xs font-medium text-blue-600">Active</span>
+                                    <div class="text-lg font-bold text-blue-800">5</div>
+                                </div>
+                                <div class="bg-white p-2 border border-green-200 rounded text-center">
+                                    <span class="text-xs font-medium text-green-600">Done</span>
+                                    <div class="text-lg font-bold text-green-800">12</div>
+                                </div>
+                                <div class="bg-white p-2 border border-amber-200 rounded text-center">
+                                    <span class="text-xs font-medium text-amber-600">Urgent</span>
+                                    <div class="text-lg font-bold text-amber-800">1</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <h3 class="text-xs font-semibold text-red-600 uppercase">Urgent Steps</h3>
+                                <div class="p-2 border border-red-100 bg-red-50 rounded-md mb-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium">Complete Pitch Deck</span>
+                                        <button class="text-gray-500 hover:text-indigo-600">
+                                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="text-xs text-red-600 mt-1">Due: Jun 15, 2025</div>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                        <div class="bg-red-600 h-1.5 rounded-full" style="width: 70%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="text-xs font-semibold text-blue-600 uppercase">In Progress</h3>
+                                <div class="space-y-2">
+                                    <div class="p-2 border border-blue-100 bg-blue-50 rounded-md">
+                                        <div class="flex justify-between">
+                                            <span class="text-sm font-medium">Customer Interviews</span>
+                                            <button class="text-gray-500 hover:text-indigo-600">
+                                                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div class="text-xs text-gray-600 mb-1">Progress: 40%</div>
+                                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: 40%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Content -->
+                        <div class="w-3/4 bg-gray-50 p-4">
+                            <h2 class="text-xl font-bold text-gray-900 mb-2">Your Founder Journey</h2>
+                            <p class="text-sm text-gray-500 mb-4">Track your progress with personalized guidance</p>
+                            
+                            <!-- Tabs -->
+                            <div class="border-b border-gray-200 mb-4">
+                                <nav class="-mb-px flex space-x-8">
+                                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-indigo-500 font-medium text-sm text-indigo-600">
+                                        Current Work
+                                    </button>
+                                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500">
+                                        Recommended Steps
+                                    </button>
+                                    <button class="whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500">
+                                        Business Health
+                                    </button>
+                                </nav>
+                            </div>
+                            
+                            <!-- Pick up where you left off -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Pick Up Where You Left Off</h3>
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+                                    <div class="flex justify-between mb-4">
+                                        <div>
+                                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 inline-block mb-2">
+                                                Product
+                                            </span>
+                                            <h3 class="text-lg font-semibold text-gray-900">Customer Interviews</h3>
+                                            <p class="text-sm text-gray-500">Last worked on: Today at 9:30 AM</p>
+                                        </div>
+                                        <span class="bg-blue-100 text-blue-800 py-1 px-2 rounded-full text-xs font-medium">
+                                            In Progress
+                                        </span>
+                                    </div>
+                                    <div class="mb-4">
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="text-gray-600">Progress</span>
+                                            <span class="text-indigo-600 font-medium">40%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                            <div class="bg-indigo-600 rounded-full h-1.5" style="width: 40%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                                            Continue
+                                            <svg class="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Domain Progress & Peer Insights -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-4">Domain Progress</h3>
+                                    <div class="space-y-4">
+                                        <div class="p-4 rounded-lg bg-blue-50 border border-blue-100">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center">
+                                                    <div class="p-2 rounded-full mr-3 bg-blue-100">
+                                                        <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-medium text-blue-900">Product</h4>
+                                                        <p class="text-xs text-blue-700">Active Focus Area</p>
+                                                    </div>
+                                                </div>
+                                                <span class="text-sm font-medium">Level 2/5</span>
+                                            </div>
+                                            <div class="w-full flex mb-2 mt-2 gap-1">
+                                                <div class="h-2 flex-1 rounded-sm bg-blue-500"></div>
+                                                <div class="h-2 flex-1 rounded-sm bg-blue-500"></div>
+                                                <div class="h-2 flex-1 rounded-sm bg-gray-200"></div>
+                                                <div class="h-2 flex-1 rounded-sm bg-gray-200"></div>
+                                                <div class="h-2 flex-1 rounded-sm bg-gray-200"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-lg font-medium text-gray-900">Peer Insights</h3>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div class="p-3 border border-gray-200 rounded-lg">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="h-8 w-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-600 font-medium flex-shrink-0">
+                                                    JD
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm text-gray-600">
+                                                        We found customer interviews critical to pivot our product focus early.
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-gray-500">
+                                                        Jane Doe • Insight • Jun 10
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Option 4 -->
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Option 4: Streamlined Focused Dashboard</h2>
+                <div class="dashboard-mockup overflow-hidden">
+                    <!-- Dashboard Layout -->
+                    <div class="flex h-full">
+                        <!-- Sidebar -->
+                        <div class="sidebar w-1/4 bg-white p-4">
+                            <div class="mb-4">
+                                <h3 class="font-bold text-sm text-gray-800">Steps</h3>
+                                <p class="text-xs text-gray-500">Track your journey</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <div class="bg-white p-2 border border-gray-200 rounded text-center">
+                                    <span class="text-xs font-medium text-gray-600">Total</span>
+                                    <div class="text-lg font-bold text-gray-900">18</div>
+                                </div>
+                                <div class="bg-white p-2 border border-blue-200 rounded text-center">
+                                    <span class="text-xs font-medium text-blue-600">Active</span>
+                                    <div class="text-lg font-bold text-blue-800">5</div>
+                                </div>
+                                <div class="bg-white p-2 border border-green-200 rounded text-center">
+                                    <span class="text-xs font-medium text-green-600">Done</span>
+                                    <div class="text-lg font-bold text-green-800">12</div>
+                                </div>
+                                <div class="bg-white p-2 border border-amber-200 rounded text-center">
+                                    <span class="text-xs font-medium text-amber-600">Urgent</span>
+                                    <div class="text-lg font-bold text-amber-800">1</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2 bg-gray-50 rounded-md p-1 mb-4">
+                                <button class="flex-1 text-xs px-2 py-1 rounded bg-white shadow-sm font-medium text-gray-800">
+                                    All
+                                </button>
+                                <button class="flex-1 text-xs px-2 py-1 rounded text-gray-600">
+                                    Urgent
+                                </button>
+                                <button class="flex-1 text-xs px-2 py-1 rounded text-gray-600">
+                                    Active
+                                </button>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-xs font-semibold text-gray-500 uppercase">Current Steps</h3>
+                                    <button class="text-xs text-indigo-600 flex items-center">
+                                        <svg class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        Add
+                                    </button>
+                                </div>
+                                
+                                <ul class="space-y-1">
+                                    <li class="p-2 border border-red-100 bg-red-50 rounded-md">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <span class="font-medium text-sm">Complete Pitch Deck</span>
+                                            <div class="flex space-x-1">
+                                                <button class="p-1 text-gray-500 hover:text-indigo-600" title="View details">
+                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="p-1 text-gray-500 hover:text-indigo-600" title="Open step">
+                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center text-xs text-red-600 mb-1">
+                                            <svg class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Due: Jun 15, 2025
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                            <div class="h-1.5 rounded-full bg-red-600" style="width: 70%"></div>
+                                        </div>
+                                    </li>
+                                    <li class="p-2 border border-blue-100 bg-blue-50 rounded-md">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <span class="font-medium text-sm">Customer Interviews</span>
+                                            <div class="flex space-x-1">
+                                                <button class="p-1 text-gray-500 hover:text-indigo-600" title="View details">
+                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="p-1 text-gray-500 hover:text-indigo-600" title="Open step">
+                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                            <div class="h-1.5 rounded-full bg-blue-600" style="width: 40%"></div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Content -->
+                        <div class="w-3/4 bg-gray-50 p-4 overflow-auto">
+                            <h2 class="text-xl font-bold text-gray-900 mb-2">Your Founder Journey</h2>
+                            <p class="text-sm text-gray-500 mb-6">Track your progress with personalized guidance</p>
+                            
+                            <!-- Pick up where you left off -->
+                            <div class="mb-8">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                                    <svg class="h-5 w-5 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Pick Up Where You Left Off
+                                </h3>
+                                
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div>
+                                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 inline-block mb-2">
+                                                Product
+                                            </span>
+                                            <h3 class="text-lg font-semibold text-gray-900">Customer Interviews</h3>
+                                            <p class="text-sm text-gray-500">
+                                                Last worked on: Today at 9:30 AM
+                                            </p>
+                                        </div>
+                                        <span class="bg-blue-100 text-blue-800 py-1 px-2 rounded-full text-xs font-medium">
+                                            In Progress
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="text-gray-600">Progress</span>
+                                            <span class="text-indigo-600 font-medium">40%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                            <div class="bg-indigo-600 rounded-full h-1.5" style="width: 40%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex justify-end">
+                                        <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                                            Continue
+                                            <svg class="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recommended Next Steps -->
+                            <div class="mb-8">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                                    <svg class="h-5 w-5 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    Recommended Next Steps
+                                </h3>
+                                
+                                <div class="grid gap-4 grid-cols-3 mb-4">
+                                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                        <div class="flex items-start mb-3">
+                                            <div class="bg-blue-100 p-2 rounded-full mr-3 flex-shrink-0">
+                                                <svg class="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 inline-block mb-1">
+                                                    Product
+                                                </span>
+                                                <h3 class="font-semibold text-gray-900">Create User Personas</h3>
+                                            </div>
+                                        </div>

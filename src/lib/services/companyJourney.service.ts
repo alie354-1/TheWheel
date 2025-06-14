@@ -1,16 +1,48 @@
 /**
- * Company Journey Customization Service
- * - Clone global journey map for a company
- * - CRUD for company-specific steps and tools
- * - Reorder, add, remove, or dismiss steps
- * - Used by company dashboard for custom journeys
- * - Track step completion and focus areas
+ * Company Journey Service
+ * 
+ * Manages company-specific journey customization including:
+ * - Company step CRUD operations
+ * - Step progress tracking
+ * - Custom step creation
+ * - Journey path management
+ * - Step customization and overrides
  */
 
 import { supabase } from '../supabase';
+import {
+  CompanyJourneyStep,
+  CompanyStepProgress,
+  CompanyJourneyPath,
+  CompanyStepArrangement,
+  CompanyCustomTool,
+  step_status,
+  JourneyStep,
+  JourneyPhase,
+  JourneyDomain
+} from '../types/journey-unified.types';
 
-// Define journey step status directly here until TypeScript picks up the journey.types.ts file
-type journey_step_status = 'not_started' | 'in_progress' | 'completed' | 'skipped';
+export interface CompanyStepFilters {
+  phaseId?: string;
+  domainId?: string;
+  status?: step_status;
+  search?: string;
+  includeCustom?: boolean;
+}
+
+export interface CreateCustomStepData {
+  companyId: string;
+  name: string;
+  description?: string;
+  phaseId: string;
+  domainId: string;
+  orderIndex?: number;
+  difficulty?: string;
+  timeEstimate?: number;
+  contentMarkdown?: string;
+  checklist?: any[];
+  resources?: any[];
+}
 
 export const companyJourneyService = {
   /**
@@ -42,7 +74,7 @@ export const companyJourneyService = {
         const { data, error } = await supabase
           .from('company_progress')
           .update({
-            status: 'completed' as journey_step_status,
+            status: 'completed' as step_status,
             completed_at: now,
             updated_at: now
           })
@@ -63,7 +95,7 @@ export const companyJourneyService = {
           .insert({
             company_id: companyId,
             step_id: stepId,
-            status: 'completed' as journey_step_status,
+            status: 'completed' as step_status,
             completed_at: now
           })
           .select()
@@ -92,7 +124,7 @@ export const companyJourneyService = {
     try {
       // Check if this is the company formation step
       const { data: step, error: stepError } = await supabase
-        .from('journey_steps')
+        .from('journey_canonical_steps')
         .select('is_company_formation_step')
         .eq('id', stepId)
         .single();
@@ -385,7 +417,7 @@ export const companyJourneyService = {
             company_id: companyId,
             step_id: stepId,
             notes,
-            status: 'not_started' as journey_step_status
+            status: 'not_started' as step_status
           })
           .select()
           .single();
@@ -433,7 +465,7 @@ export const companyJourneyService = {
         const { data, error } = await supabase
           .from('company_progress')
           .update({
-            status: 'skipped' as journey_step_status,
+            status: 'skipped' as step_status,
             updated_at: now
           })
           .eq('id', existingProgress.id)
@@ -453,7 +485,7 @@ export const companyJourneyService = {
           .insert({
             company_id: companyId,
             step_id: stepId,
-            status: 'skipped' as journey_step_status
+            status: 'skipped' as step_status
           })
           .select()
           .single();
@@ -711,7 +743,7 @@ export const companyJourneyService = {
   async addCustomStep(companyJourneyMapId: string, stepData: Record<string, any>) {
     // Insert into company_journey_steps with is_custom = true
     const { data, error } = await supabase
-      .from('company_journey_steps')
+      .from('company_journey_steps_new')
       .insert({
         company_journey_map_id: companyJourneyMapId,
         ...stepData,
@@ -739,7 +771,7 @@ export const companyJourneyService = {
   async activateConsideration(companyJourneyMapId: string, stepId: string, domainId: string, companyId: string) {
     // Insert a new company_journey_step for the consideration
     const { data, error } = await supabase
-      .from('company_journey_steps')
+      .from('company_journey_steps_new')
       .insert({
         company_journey_map_id: companyJourneyMapId,
         step_id: stepId,
@@ -762,7 +794,7 @@ export const companyJourneyService = {
   async dismissStep(companyJourneyStepId: string) {
     // Set is_dismissed = true for the company_journey_step
     const { data, error } = await supabase
-      .from('company_journey_steps')
+      .from('company_journey_steps_new')
       .update({ is_dismissed: true })
       .eq('id', companyJourneyStepId)
       .select()

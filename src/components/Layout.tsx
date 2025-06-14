@@ -175,7 +175,7 @@ export default function Layout() { // Remove children prop
         { name: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard, isEnabled: navState(featureFlags?.companyDashboard) !== 'hidden', badge: navState(featureFlags?.companyDashboard) === 'comingSoon' ? 'Coming Soon' : undefined },
         { name: 'Profile', href: companyId ? `/company/profile/${companyId}` : '/company/profile', icon: UserCircle, isEnabled: navState(featureFlags?.companyProfile) !== 'hidden' && !!companyId, badge: navState(featureFlags?.companyProfile) === 'comingSoon' ? 'Coming Soon' : undefined },
         { name: 'Members', href: '/company/members', icon: Users, isEnabled: navState(featureFlags?.companyMembers) !== 'hidden', badge: navState(featureFlags?.companyMembers) === 'comingSoon' ? 'Coming Soon' : undefined },
-        { name: 'Journey', href: '/company/journey', icon: Map, isEnabled: navState(featureFlags?.companyJourney) !== 'hidden', badge: navState(featureFlags?.companyJourney) === 'comingSoon' ? 'Coming Soon' : undefined }
+        { name: 'Journey', href: '/company/new-journey', icon: Map, isEnabled: navState(featureFlags?.companyJourney) !== 'hidden', badge: navState(featureFlags?.companyJourney) === 'comingSoon' ? 'Coming Soon' : undefined }
       ]
     },
     { name: 'Messages', href: '/messages', icon: MessageSquare, isEnabled: navState(featureFlags?.messages) !== 'hidden', badge: navState(featureFlags?.messages) === 'comingSoon' ? 'Coming Soon' : undefined },

@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# Make Journey System Executable
-# This script makes all the journey system scripts executable
+# Make all journey system scripts executable
+echo "Making journey system scripts executable..."
 
-echo "Making Journey System scripts executable..."
+chmod +x supabase/apply_journey_step_data.sh
+chmod +x supabase/apply_complete_journey_system.sh
 
-# Make the journey integration scripts executable
-chmod +x apply_journey_integration.sh
-chmod +x apply_journey_sample_data.sh
-chmod +x apply_all_journey_integration.sh
-
-echo "Journey System scripts are now executable!"
+echo "Journey system scripts are now executable!"

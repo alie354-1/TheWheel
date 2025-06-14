@@ -1,9 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-// TODO: Replace with your actual Supabase URL and anon key, or use a shared client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "../supabase"; // Using the singleton implementation
 
 // Types for analytics data
 export interface AnalyticsEvent {
