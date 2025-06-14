@@ -1,16 +1,16 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login.tsx';
+import Signup from './pages/Signup.tsx';
+import PrivateRoute from './components/PrivateRoute.tsx';
 
 // Layout components
-import Layout from './components/Layout';
-import CommunityRoutes from './routes/CommunityRoutes';
+import Layout from './components/Layout.tsx';
+import CommunityRoutes from './routes/CommunityRoutes.tsx';
 
 // Static (eagerly loaded) pages
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard.tsx';
 import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
 import OnboardingPage from './pages/OnboardingPage';
@@ -34,6 +34,7 @@ import ToolImplementationGuide from './business-ops-hub/components/ToolImplement
 const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage'));
 const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage'));
 const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage'));
+const DeckBuilderReorgPage = lazy(() => import('./pages/DeckBuilderReorgPage'));
 
 // Lazily loaded pages for better initial load performance
 const IdeaHub = lazy(() => import('./pages/IdeaHub'));
@@ -204,6 +205,7 @@ const App: React.FC = () => {
               </Route>
               
               {/* Demo & Development */}
+              <Route path="deck-builder-reorg" element={<DeckBuilderReorgPage />} />
               <Route path="terminology-demo" element={<TerminologyDemoPage />} />
               <Route path="test-deck-builder" element={<TestDeckBuilderPage />} />
               <Route path="simple-drag-test" element={<SimpleDragTestPage />} />
