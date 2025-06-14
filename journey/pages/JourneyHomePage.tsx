@@ -17,8 +17,6 @@ import CommunityStepsModal from "../components/step/CommunityStepsModal";
 import { StepDetailWireframe } from "../components/step/StepDetailWireframe";
 import StepRelationshipManager from "../components/step/StepRelationshipManager";
 import { supabase } from "../../lib/supabase";
-import { useCompany } from "../../lib/hooks/useCompany";
-import { toast } from "../../lib/utils/toast";
 
 // Placeholder for companyMetadata (replace with real context/provider as needed)
 const companyMetadata = {
@@ -26,7 +24,6 @@ const companyMetadata = {
 };
 
 const JourneyHomePage: React.FC = () => {
-  const { currentCompany, loading: companyLoading } = useCompany();
   const [domains, setDomains] = useState<any[]>([]);
   const [phases, setPhases] = useState<any[]>([]);
 
@@ -51,27 +48,12 @@ const JourneyHomePage: React.FC = () => {
   const [steps, setSteps] = useState<any[]>([]);
   const [allSteps, setAllSteps] = useState<any[]>([]);
 
-  // Get company ID from the company context
-  const companyId = currentCompany?.id;
-  
-  // Add debug logging
-  useEffect(() => {
-    console.log("JourneyHomePage: companyId prop at render", companyId);
-  }, [companyId]);
-  
-  // Helper function to check if a string is a valid UUID
-  const isValidUUID = (uuid: string) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-  };
+  // Company ID (replace with real company context/provider as needed)
+  const companyId = "YOUR_COMPANY_ID_HERE"; // TODO: Replace with actual company ID from context
 
   // Fetch only company steps from DB
   const fetchCompanySteps = async () => {
-    if (!companyId || !isValidUUID(companyId)) {
-      console.log("Skipping fetchCompanySteps: Invalid or missing company ID");
-      setSteps([]);
-      return;
-    }
+    if (!companyId) return;
     const { data: cjs, error: cjsError } = await supabase
       .from("company_journey_steps")
       .select("step_id")
@@ -100,12 +82,7 @@ const JourneyHomePage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (companyId && isValidUUID(companyId)) {
-      fetchCompanySteps();
-    } else {
-      console.log("Skipping fetchCompanySteps in useEffect: Invalid or missing company ID");
-      setSteps([]);
-    }
+    fetchCompanySteps();
   }, [companyId]);
 
   // Fetch all steps for the "View All Steps" modal
@@ -138,10 +115,7 @@ const JourneyHomePage: React.FC = () => {
   // Fetch tools, nextSteps, prereqSteps for step-detail view
   useEffect(() => {
     async function fetchStepDetailData() {
-      if (!stepDetailStep || !stepDetailStep.id || !isValidUUID(stepDetailStep.id)) {
-        console.log("Skipping fetchStepDetailData: Invalid or missing step ID");
-        return;
-      }
+      if (!stepDetailStep) return;
       setStepDetailTools(JourneyService.getToolsForStep(stepDetailStep.id));
       // Next steps
       const { data: nextData, error: nextError } = await supabase
@@ -238,64 +212,21 @@ const JourneyHomePage: React.FC = () => {
   }, [steps]);
 
   // Handler for creating a new step
-  async function handleCreateStep(newStep: Partial<Step> & { share: boolean }) {
-    if (!companyId || !isValidUUID(companyId)) {
-      toast.error("No company selected. Please select a company first.");
-      return;
-    }
-
-    try {
-      // First, create the step in the steps table
-      const id = crypto.randomUUID();
-      const stepData = {
+  function handleCreateStep(newStep: Partial<Step> & { share: boolean }) {
+    // For demo, just add to local steps array
+    const id = crypto.randomUUID();
+    setSteps(prev => [
+      ...prev,
+      {
         ...newStep,
         id,
         created_at: new Date().toISOString(),
         active: true,
         snippet_references: newStep.snippet_references || [],
         resource_links: newStep.resource_links || [],
-      } as Step;
-
-      // Insert into steps table
-      const { error: stepError } = await supabase
-        .from("steps")
-        .insert([stepData]);
-
-      if (stepError) {
-        console.error("Failed to create step:", stepError);
-        toast.error("Failed to create step: " + stepError.message);
-        return;
-      }
-
-      // Then create the company_journey_steps entry
-      const { error: cjsError } = await supabase
-        .from("company_journey_steps")
-        .insert([
-          {
-            company_id: companyId,
-            step_id: id,
-            status: "ready"
-          }
-        ]);
-
-      if (cjsError) {
-        console.error("Failed to link step to company:", cjsError);
-        toast.error("Failed to link step to company: " + cjsError.message);
-        return;
-      }
-
-      // Update local state
-      setSteps(prev => [...prev, stepData]);
-      toast.success("Step created successfully!");
-
-      // Handle sharing logic if needed
-      if (newStep.share) {
-        // Implement sharing logic here if needed
-      }
-    } catch (error) {
-      console.error("Error creating step:", error);
-      toast.error("An unexpected error occurred while creating the step.");
-    }
+      } as Step,
+    ]);
+    // Optionally: handle sharing logic here
   }
 
   // Filter shared steps (for demo, any step with share === true)
@@ -426,10 +357,7 @@ const JourneyHomePage: React.FC = () => {
                   onClose={() => setAllStepsModalOpen(false)}
                   onViewDetails={async (step) => {
                     // Add to company_journey_steps if not already present
-                    if (!companyId || !isValidUUID(companyId)) {
-                      toast.error("No company selected. Please select a company first.");
-                      return;
-                    }
+                    if (!companyId) return;
                     const { data: existing, error: existingError } = await supabase
                       .from("company_journey_steps")
                       .select("id")
@@ -462,20 +390,6 @@ const JourneyHomePage: React.FC = () => {
                   domains={domains}
                   phases={phases}
                 />
-                {!companyId && createStepModalOpen && (
-                  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
-                      <h3 className="text-lg font-bold mb-4">Company Required</h3>
-                      <p className="mb-4">You need to select a company before creating steps.</p>
-                      <button
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
-                        onClick={() => setCreateStepModalOpen(false)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                )}
               </AIProvider>
             </div>
             {/* Peer Insights and Progress */}

@@ -18,10 +18,6 @@ interface AllStepsModalProps {
   onClose: () => void;
   onViewDetails: (step: Step) => void;
   onStartStep: (step: Step) => void; // NEW PROP
-  selectedDomain: string;
-  selectedPhase: string;
-  onSelectedDomainChange: (domain: string) => void;
-  onSelectedPhaseChange: (phase: string) => void;
 }
 
 const AllStepsModal: React.FC<AllStepsModalProps> = ({
@@ -33,11 +29,9 @@ const AllStepsModal: React.FC<AllStepsModalProps> = ({
   onClose,
   onViewDetails,
   onStartStep,
-  selectedDomain,
-  selectedPhase,
-  onSelectedDomainChange,
-  onSelectedPhaseChange,
 }) => {
+  const [selectedDomain, setSelectedDomain] = React.useState<string>("");
+  const [selectedPhase, setSelectedPhase] = React.useState<string>("");
 
   if (!open) return null;
 
@@ -54,36 +48,38 @@ const AllStepsModal: React.FC<AllStepsModalProps> = ({
         };
   });
 
+  // Get unique domains and phases from steps (for fallback)
+  const uniqueDomains = Array.from(
+    new Set(
+      steps.flatMap(s => [s.primary_domain_id, s.secondary_domain_id].filter(Boolean))
+    )
+  );
+  const uniquePhases = Array.from(
+    new Set(
+      steps.flatMap(s => [s.primary_phase_id, s.secondary_phase_id].filter(Boolean))
+    )
+  );
+
   // Filtered steps
   const filteredStepsWithStatus = allStepsWithStatus.filter(s => {
     if (selectedDomain) {
       if (
-        s.step.domain_id !== selectedDomain
+        s.step.primary_domain_id !== selectedDomain &&
+        s.step.secondary_domain_id !== selectedDomain
       ) {
         return false;
       }
     }
     if (selectedPhase) {
       if (
-        s.step.phase_id !== selectedPhase
+        s.step.primary_phase_id !== selectedPhase &&
+        s.step.secondary_phase_id !== selectedPhase
       ) {
         return false;
       }
     }
     return true;
   });
-
-  // Get unique domains and phases from steps (for fallback)
-  const uniqueDomains = Array.from(
-    new Set(
-      filteredStepsWithStatus.flatMap(s => [s.step.domain_id].filter(Boolean))
-    )
-  );
-  const uniquePhases = Array.from(
-    new Set(
-      filteredStepsWithStatus.flatMap(s => [s.step.phase_id].filter(Boolean))
-    )
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -102,7 +98,7 @@ const AllStepsModal: React.FC<AllStepsModalProps> = ({
             <select
               className="border rounded px-2 py-1"
               value={selectedDomain}
-              onChange={e => onSelectedDomainChange(e.target.value)}
+              onChange={e => setSelectedDomain(e.target.value)}
             >
               <option value="">All</option>
               {domains.length > 0
@@ -119,7 +115,7 @@ const AllStepsModal: React.FC<AllStepsModalProps> = ({
             <select
               className="border rounded px-2 py-1"
               value={selectedPhase}
-              onChange={e => onSelectedPhaseChange(e.target.value)}
+              onChange={e => setSelectedPhase(e.target.value)}
             >
               <option value="">All</option>
               {phases.length > 0

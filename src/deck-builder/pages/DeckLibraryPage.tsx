@@ -1,15 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DeckLibrary } from '../components/DeckLibrary';
-import { TemplateSelector } from '../components/TemplateSelector';
-import { DeckService } from '../services/deckService';
+import { DeckLibrary } from '../components/DeckLibrary.tsx';
+import { TemplateSelector } from '../components/TemplateSelector.tsx';
+import { DeckService } from '../services/deckService.ts';
 // import { DeckPreview } from '../components/DeckPreview'; // No longer directly used here
-import DeckPreviewer from '../preview/components/DeckPreviewer'; // Import DeckPreviewer
-import { supabase } from '../../lib/supabase';
-import { Deck, DeckSection } from '../types/index';
+import DeckPreviewer from '../preview/components/DeckPreviewer.tsx'; // Import DeckPreviewer
+import { supabase } from '../../lib/supabase.ts';
+import { Deck, DeckSection } from '../types/index.ts';
 import { ArrowLeft, Sparkles, Eye, Edit3, FileText, UploadCloud, X } from 'lucide-react';
-import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter';
-import { generateUUID } from '../utils/uuid';
+import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter.ts';
+import { generateUUID } from '../utils/uuid.ts';
 
 type FlowStep = 'library' | 'templates' | 'preview' | 'creating' | 'htmlImport';
 

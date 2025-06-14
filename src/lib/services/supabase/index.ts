@@ -2,12 +2,33 @@
  * Supabase Client Service
  * 
  * This module provides the Supabase client instance for use across the application.
- * It ensures we have a single, consistent way to access Supabase by using the
- * singleton implementation from src/lib/supabase.ts.
+ * It ensures we have a single, consistent way to access Supabase.  
  */
 
-import { supabase } from '../../supabase';
+import { createClient } from '@supabase/supabase-js';
 import { loggingService } from '../logging.service';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  if (typeof loggingService?.error === 'function') {
+    loggingService.error(
+      'Missing Supabase environment variables',
+      new Error('Missing Supabase environment variables'), 
+      { context: 'supabaseClient' }
+    );
+  }
+  console.error('Missing required environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Application cannot start.');
+  // Throw an error to halt execution if critical env vars are missing
+  throw new Error('Supabase URL and/or Anon Key are missing. Check environment variables.');
+}
+
+/**
+ * Create a Supabase client instance
+ */
+// This line will only be reached if supabaseUrl and supabaseAnonKey are present
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Supabase service to be registered in the service registry

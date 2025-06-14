@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { supabase } from "../supabase"; // Using the singleton implementation
+import { supabase } from "../supabase";
 
 type Company = {
   id: string;
@@ -75,46 +75,74 @@ export const useCompany = () => {
             console.log("[useCompany] setCurrentCompany:", companies[0]);
           }
 
-          // Fetch teams regardless of current company state
-          const { data: teamMemberships, error: teamError } = await supabase
-            .from("team_members")
-            .select("team_id")
-            .eq("user_id", user.id);
+          // If there's a current company, fetch teams
+          // --- FIX: If no currentCompany, but we have companies and teams, sync company from team
+          let effectiveCompany = currentCompany;
+          if (!currentCompany && companies?.length) {
+            // Try to infer company from team memberships
+            const { data: teamMemberships, error: teamError } = await supabase
+              .from("team_members")
+              .select("team_id")
+              .eq("user_id", user.id);
 
-          if (teamError) throw teamError;
+            if (teamError) throw teamError;
 
-          if (teamMemberships?.length) {
-            const teamIds = teamMemberships.map(
-              (membership) => membership.team_id
-            );
+            if (teamMemberships?.length) {
+              const teamIds = teamMemberships.map(
+                (membership) => membership.team_id
+              );
 
-            // Fetch team details
-            const { data: teams, error: teamsError } = await supabase
-              .from("teams")
-              .select("*")
-              .in("id", teamIds);
+              // Fetch team details
+              const { data: teams, error: teamsError } = await supabase
+                .from("teams")
+                .select("*")
+                .in("id", teamIds);
 
-            if (teamsError) throw teamsError;
+              if (teamsError) throw teamsError;
 
-            setUserTeams(teams || []);
+              setUserTeams(teams || []);
 
-            // Handle team-company relationship in a separate effect
-            if (!currentCompany && companies?.length && teams?.length) {
-              // If no current company but we have teams, find a matching company
-              const firstTeam = teams[0];
-              const teamCompany = companies.find(c => c.id === firstTeam.company_id);
-              
-              if (teamCompany) {
-                setCurrentCompany(teamCompany);
-                setCurrentTeam(firstTeam);
-                console.log("[useCompany] Initial setup - Company:", teamCompany, "Team:", firstTeam);
+              // If we have a team, set currentTeam and sync currentCompany to its company_id
+              if (teams?.length && !currentTeam) {
+                setCurrentTeam(teams[0]);
+                const teamCompany = companies.find(c => c.id === teams[0].company_id);
+                if (teamCompany) {
+                  setCurrentCompany(teamCompany);
+                  effectiveCompany = teamCompany;
+                  console.log("[useCompany] setCurrentCompany (from team):", teamCompany);
+                }
+                console.log("[useCompany] setCurrentTeam:", teams[0]);
               }
-            } else if (currentCompany && teams?.length && !currentTeam) {
-              // If we have a company but no team, find teams for this company
-              const companyTeams = teams.filter(t => t.company_id === currentCompany.id);
-              if (companyTeams.length > 0) {
-                setCurrentTeam(companyTeams[0]);
-                console.log("[useCompany] Setting initial team:", companyTeams[0]);
+            }
+          } else if (currentCompany) {
+            // Existing logic if currentCompany is already set
+            const { data: teamMemberships, error: teamError } = await supabase
+              .from("team_members")
+              .select("team_id")
+              .eq("user_id", user.id);
+
+            if (teamError) throw teamError;
+
+            if (teamMemberships?.length) {
+              const teamIds = teamMemberships.map(
+                (membership) => membership.team_id
+              );
+
+              // Fetch team details
+              const { data: teams, error: teamsError } = await supabase
+                .from("teams")
+                .select("*")
+                .in("id", teamIds)
+                .eq("company_id", currentCompany.id);
+
+              if (teamsError) throw teamsError;
+
+              setUserTeams(teams || []);
+
+              // Set current team to first one if not already set
+              if (teams?.length && !currentTeam) {
+                setCurrentTeam(teams[0]);
+                console.log("[useCompany] setCurrentTeam:", teams[0]);
               }
             }
           }
@@ -130,7 +158,7 @@ export const useCompany = () => {
     };
 
     fetchCompanies();
-  }, [user]); // Remove currentCompany?.id from dependencies
+  }, [user, currentCompany?.id]);
 
   const switchCompany = async (companyId: string) => {
     if (!user) return;
@@ -172,25 +200,18 @@ export const useCompany = () => {
   };
 
   // Ensure currentCompany always matches the company_id of the currentTeam, if set
-  // Only run this effect when currentTeam changes, not on every render
   useEffect(() => {
-    // Skip if no team or no companies
-    if (!currentTeam || userCompanies.length === 0) return;
-    
-    // Skip if we already have the correct company selected
-    if (currentCompany?.id === currentTeam.company_id) return;
-    
-    console.log("[useCompany] Team changed, syncing company...");
-    
-    const matchingCompany = userCompanies.find(
-      (c) => c.id === currentTeam.company_id
-    );
-    
-    if (matchingCompany) {
-      console.log("[useCompany] Syncing company to match team:", matchingCompany.name);
-      setCurrentCompany(matchingCompany);
+    console.log("[useCompany] sync effect: currentTeam =", currentTeam, "userCompanies =", userCompanies, "currentCompany =", currentCompany);
+    if (currentTeam && userCompanies.length > 0) {
+      const matchingCompany = userCompanies.find(
+        (c) => c.id === currentTeam.company_id
+      );
+      if (matchingCompany && currentCompany?.id !== matchingCompany.id) {
+        setCurrentCompany(matchingCompany);
+        console.log("[useCompany] Synced currentCompany to match currentTeam.company_id:", matchingCompany);
+      }
     }
-  }, [currentTeam?.id]); // Only depend on the team ID, not the entire objects
+  }, [currentTeam, userCompanies]);
 
   return {
     currentCompany,

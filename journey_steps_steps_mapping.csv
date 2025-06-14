@@ -1,8 +1,0 @@
-journey_steps_name,journey_steps_id,journey_steps_domain_id,journey_steps_phase_id,steps_name,steps_id,steps_domain_id,steps_phase_id,match_type
-Market Research,0f2c4640-4d8c-4b7c-b163-4ded9cc10989,,d1a471e3-1ee6-481e-b445-cac5a9c2e5ea,Conduct Market Research,0005eb82-5a12-4efd-83d0-bc335ec0328e,4b79ce8b-35ee-41fe-842b-db5bbbffc1a2,cde121c1-4d02-478c-b809-621debc79539,fuzzy
-Set Up Accounting Software,2210b3bb-da19-4d62-8fc8-b9d11e02a95a,,f2c8e9f6-dcd3-47d7-bab0-327d4cf358f9,Integrate Invoicing & Expense Tracking,3447e736-4b7d-4889-b4a5-0cc9760bfe90,e5a79823-0e7f-4a90-8b0e-dfde17cccd0d,d4b83ba9-6ecb-49d6-9fd5-670b9ffa401b,fuzzy
-Officially Launch!,18571226-268c-41fe-853b-3a22b1b37aad,,8e4706b2-bdd1-46af-acc0-1ab8025d5fbf,Execute Official Product Launch,fb6cba36-6b34-45e1-86df-eff76b31fea9,261d9c44-0e23-465d-a5d8-9b82a6c70052,d4b83ba9-6ecb-49d6-9fd5-670b9ffa401b,fuzzy
-Customer Acquisition,349e8d9b-dcbe-4375-bf8c-657e2cde1f15,,8e4706b2-bdd1-46af-acc0-1ab8025d5fbf,Identify Top Acquisition Channels,b77d4970-8aaf-4d25-9857-e62b29aa5b86,9d2156af-bfa5-40f1-9683-8b5f18048c6a,cde121c1-4d02-478c-b809-621debc79539,fuzzy
-Set Up Payroll System,58d53a09-7b16-46a8-ae3c-91dc49cfbb81,,f2c8e9f6-dcd3-47d7-bab0-327d4cf358f9,,,,unmatched_journey_step
-Launch Paid & Organic Campaigns,,,,Launch Paid & Organic Campaigns,9ecf36d0-96c0-4edd-873c-a18889b00d41,9d2156af-bfa5-40f1-9683-8b5f18048c6a,0ea48a45-66fa-44d5-9d3a-3f5758ce7175,unmatched_step
-...
