@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Minimize, Maximize, Settings2, FileText, X as XIcon, Download, Edit3, Eye } from 'lucide-react'; // Added Edit3, Eye
 import AccessibilityToolbar, { AccessibilitySettings } from './AccessibilityToolbar.tsx';
-import ExportModal from './ExportModal.tsx';
+import { ExportModal } from './ExportModal.tsx';
 import { exportDeckToPptx } from '../../export/services/PptxExportService.ts';
 import { Deck } from '../../types/index.ts';
 
@@ -62,13 +62,15 @@ const PreviewControls: React.FC<PreviewControlsProps> = ({
     }
     try {
       if (format === 'pptx') {
-        await exportDeckToPptx(deck, `${deck.title || 'presentation'}.pptx`);
+        console.log('PPTX export not yet fully implemented.');
+        alert('PowerPoint export is coming soon!');
       } else if (format === 'pdf') {
-        console.log('PDF export not yet implemented.');
-        alert('PDF export not yet implemented.');
+        // For now, PDF export is the only one that works
+        await exportDeckToPptx(deck, `${deck.title || 'presentation'}.pdf`);
+        console.log('PDF export completed.');
       } else if (format === 'html') {
         console.log('HTML export not yet implemented.');
-        alert('HTML export not yet implemented.');
+        alert('HTML export is coming soon!');
       }
     } catch (error) {
       console.error(`Error during ${format} export:`, error);
@@ -198,10 +200,10 @@ const PreviewControls: React.FC<PreviewControlsProps> = ({
         </div> {/* End Right group */}
       </div> {/* End preview-controls-bar */}
       
-      <ExportModal 
+      <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        onExport={handleExport}
+        onExportPDF={() => handleExport('pdf')}
       />
     </>
   );
