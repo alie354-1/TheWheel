@@ -20,6 +20,7 @@ export default function DeckLibraryPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [deckTitle, setDeckTitle] = useState<string>('');
   const [isCreating, setIsCreating] = useState(false);
+  const [showHtmlImportModal, setShowHtmlImportModal] = useState(false);
   const [htmlInput, setHtmlInput] = useState('');
   const [htmlDeckTitle, setHtmlDeckTitle] = useState('Imported HTML Deck');
 
@@ -27,6 +28,11 @@ export default function DeckLibraryPage() {
     setCurrentStep('templates');
   };
 
+  const handleShowHtmlImportModal = () => {
+    setHtmlDeckTitle(`Imported Deck ${new Date().toLocaleTimeString()}`); // Default title
+    setHtmlInput('');
+    setShowHtmlImportModal(true);
+  };
 
   const handleHtmlImport = async () => {
     if (!htmlDeckTitle.trim()) {
@@ -74,6 +80,7 @@ export default function DeckLibraryPage() {
         user.id
       ).catch((logError: any) => console.error("Logging failed for DECK_CREATE_FROM_HTML:", logError));
       
+      setShowHtmlImportModal(false);
       setHtmlInput('');
       setHtmlDeckTitle('');
       setIsCreating(false);
@@ -173,7 +180,81 @@ export default function DeckLibraryPage() {
         <DeckLibrary 
           onCreateNew={handleCreateNew}
           onOpenDeck={handleOpenDeck}
+          onImportFromHtml={handleShowHtmlImportModal}
         />
+        {showHtmlImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out">
+            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-2xl transform transition-all duration-300 ease-in-out scale-100">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+                  <UploadCloud className="h-6 w-6 mr-3 text-indigo-600" />
+                  Create Deck from HTML
+                </h2>
+                <button
+                  onClick={() => setShowHtmlImportModal(false)}
+                  className="p-2 text-slate-500 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <label htmlFor="htmlDeckTitle" className="block text-sm font-medium text-slate-700 mb-1">Deck Title</label>
+                  <input
+                    type="text"
+                    id="htmlDeckTitle"
+                    value={htmlDeckTitle}
+                    onChange={(e) => setHtmlDeckTitle(e.target.value)}
+                    placeholder="Enter title for the new deck"
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="htmlInput" className="block text-sm font-medium text-slate-700 mb-1">HTML Content</label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Use <code>{'<section class="slide">'}</code> to define each slide. The first heading (h1-h6) inside will be the slide title.
+                  </p>
+                  <textarea
+                    id="htmlInput"
+                    className="w-full h-60 p-3 border border-slate-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    value={htmlInput}
+                    onChange={(e) => setHtmlInput(e.target.value)}
+                    placeholder="<h1>Slide 1 Title</h1><p>Content...</p>"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-slate-200">
+                <button
+                  onClick={() => setShowHtmlImportModal(false)}
+                  className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  disabled={isCreating}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleHtmlImport}
+                  disabled={isCreating || !htmlInput.trim() || !htmlDeckTitle.trim()}
+                  className="flex items-center px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Convert and Create Deck
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -199,9 +280,8 @@ export default function DeckLibraryPage() {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden">
             <TemplateSelector
               onSelectTemplate={handleSelectTemplate}
-              onCreateEmpty={handleCreateNew}
-              onCancel={() => setCurrentStep('library')}
-              onImportHtml={handleHtmlImport}
+              onCreateEmpty={handleCreateEmpty}
+              onCancel={handleBack}
             />
           </div>
         </div>

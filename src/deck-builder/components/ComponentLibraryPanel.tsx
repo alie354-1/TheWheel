@@ -12,7 +12,7 @@ import {
   Quote as QuoteLucideIcon, // For VisualQuote
   GalleryHorizontal as GalleryHorizontalIcon, // For ImageGallery
 } from "lucide-react"; 
-import { BLOCK_REGISTRY, BlockType, BlockMeta } from "../types/blocks.ts";
+import { BLOCK_REGISTRY, BlockType } from "../types/blocks";
 
 export interface Component { // Define and export Component interface
   id: string;
@@ -170,7 +170,7 @@ export function ComponentLibraryPanel({
 
   // Generate the full list of components from BLOCK_REGISTRY
   // Dynamically generate all components from BLOCK_REGISTRY, grouped by category
-  const components = Object.entries(BLOCK_REGISTRY).map(([type, meta]: [string, BlockMeta]) => {
+  const components = Object.entries(BLOCK_REGISTRY).map(([type, meta]) => {
     const IconComponent = ICON_MAP[type] || ICON_MAP.default; // Use direct component reference
     return {
       id: type,
@@ -204,12 +204,14 @@ export function ComponentLibraryPanel({
       <div className="p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900">Components</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 focus:outline-none"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Search */}
