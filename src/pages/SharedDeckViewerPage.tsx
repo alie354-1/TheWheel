@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { DeckService } from '../deck-builder/services/deckService';
-import { Deck, SmartShareLink, ReviewerSession, DeckComment, ShareType } from '../deck-builder/types'; // Removed ExpertiseLevel as it's not used here
-import { AnonymousCommentForm } from '../deck-builder/components/sharing';
-import ReviewerInfoModal from '../deck-builder/components/sharing/ReviewerInfoModal'; // Import the new modal
+import { HelpCircle } from 'lucide-react';
+import { DeckService } from '../deck-builder/services/deckService.ts';
+import { Deck, SmartShareLink, ReviewerSession, DeckComment, ShareType } from '../deck-builder/types/index.ts';
+import { AnonymousCommentForm } from '../deck-builder/components/sharing/AnonymousCommentForm.tsx';
+import { SharedFeedbackPanel } from '../deck-builder/components/feedback/SharedFeedbackPanel.tsx';
+import ReviewerInfoModal from '../deck-builder/components/sharing/ReviewerInfoModal.tsx';
+import { AuthorNoteModal } from '../deck-builder/components/sharing/AuthorNoteModal.tsx';
+import { InteractiveTutorialModal } from '../deck-builder/components/sharing/InteractiveTutorialModal.tsx';
 // import { DeckPreview } from '../deck-builder/components/DeckPreview'; // Old Preview
-import DeckPreviewer from '../deck-builder/preview/components/DeckPreviewer'; // New Advanced Previewer
+import DeckPreviewer from '../deck-builder/preview/components/DeckPreviewer.tsx';
 
 interface SharedDeckViewData {
   deck: Deck;
@@ -13,7 +17,8 @@ interface SharedDeckViewData {
 }
 
 const SharedDeckViewerPage: React.FC = () => {
-  const { shareToken } = useParams<{ shareToken: string }>();
+  const { shareToken } = useParams<{ shareToken?: string }>();
+  
   const [deckViewData, setDeckViewData] = useState<SharedDeckViewData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +26,11 @@ const SharedDeckViewerPage: React.FC = () => {
   const [currentReviewerSession, setCurrentReviewerSession] = useState<ReviewerSession | null>(null);
   const [showReviewerInfoModal, setShowReviewerInfoModal] = useState(false);
   const [isSubmittingReviewerInfo, setIsSubmittingReviewerInfo] = useState(false);
+  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
+  const [showAuthorNoteModal, setShowAuthorNoteModal] = useState(false);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [hasViewedAuthorNote, setHasViewedAuthorNote] = useState(false);
+  const [shouldCheckReviewerDetails, setShouldCheckReviewerDetails] = useState(false);
 
   const getSessionId = (): string => {
     let sessionId = localStorage.getItem('reviewerSessionId');
@@ -58,9 +68,23 @@ const SharedDeckViewerPage: React.FC = () => {
     }
   }, []);
 
+  // First, check for author note when deck data is loaded
+  useEffect(() => {
+    if (deckViewData && shareLinkAllowsCommenting(deckViewData.shareLink)) {
+      if (deckViewData.shareLink.author_note && !hasViewedAuthorNote) {
+        console.log('[SharedDeckViewerPage] Showing author note modal first');
+        setShowAuthorNoteModal(true);
+      } else {
+        // No author note, we can check reviewer details
+        setShouldCheckReviewerDetails(true);
+      }
+    }
+  }, [deckViewData, hasViewedAuthorNote]);
+
+  // Then, check for reviewer details only after author note is handled
   useEffect(() => {
     console.log('[SharedDeckViewerPage] currentReviewerSession updated:', currentReviewerSession);
-    if (currentReviewerSession && deckViewData && shareLinkAllowsCommenting(deckViewData.shareLink)) {
+    if (shouldCheckReviewerDetails && currentReviewerSession && deckViewData && shareLinkAllowsCommenting(deckViewData.shareLink)) {
       // Use camelCase for ReviewerSession type properties
       if (!currentReviewerSession.reviewerName || !currentReviewerSession.reviewerEmail) {
         console.log('[SharedDeckViewerPage] Reviewer details missing, showing modal.');
@@ -69,7 +93,7 @@ const SharedDeckViewerPage: React.FC = () => {
         setShowReviewerInfoModal(false);
       }
     }
-  }, [currentReviewerSession, deckViewData]);
+  }, [currentReviewerSession, deckViewData, shouldCheckReviewerDetails]);
 
 
   const shareLinkAllowsCommenting = (link: SmartShareLink | undefined): boolean => {
@@ -186,7 +210,7 @@ const SharedDeckViewerPage: React.FC = () => {
   console.log('[SharedDeckViewerPage] Props for DeckPreviewer:', {
     deckId: deck.id,
     enableCommenting: canComment,
-    shareToken: shareToken,
+    shareToken: shareToken || '',
     reviewerSessionId: currentReviewerSession?.id,
     reviewerDisplayName: currentReviewerSession?.reviewerName,
     reviewerEmail: currentReviewerSession?.reviewerEmail,
@@ -194,12 +218,28 @@ const SharedDeckViewerPage: React.FC = () => {
   if (shareLinkAllowsCommenting(shareLink)) {
     console.log('[SharedDeckViewerPage] Props for AnonymousCommentForm:', {
       deckId: deck.id,
-      shareToken: shareToken,
+      shareToken: shareToken || '',
       reviewerSessionId: currentReviewerSession?.id,
       reviewerDisplayName: currentReviewerSession?.reviewerName,
       // disabled: !canComment, // Keep disabled logic based on canComment
     });
   }
+
+  const handleAuthorNoteClose = () => {
+    setShowAuthorNoteModal(false);
+    setHasViewedAuthorNote(true);
+    setShouldCheckReviewerDetails(true);
+  };
+
+  const handleShowTutorial = () => {
+    setShowAuthorNoteModal(false);
+    setHasViewedAuthorNote(true);
+    setShowTutorialModal(true);
+  };
+
+  const handleTutorialClose = () => {
+    setShowTutorialModal(false);
+  };
 
   return (
     <div style={styles.pageLayout}>
@@ -210,34 +250,69 @@ const SharedDeckViewerPage: React.FC = () => {
           onSubmit={handleSaveReviewerDetails}
         />
       )}
+      
+      {showAuthorNoteModal && deckViewData?.shareLink.author_note && (
+        <AuthorNoteModal
+          authorNote={deckViewData.shareLink.author_note}
+          deckTitle={deckViewData.deck.title}
+          onContinue={handleAuthorNoteClose}
+          onShowTutorial={handleShowTutorial}
+          hasSeenSystemBefore={false} // TODO: Track if user has seen the system before
+        />
+      )}
+      
+      {showTutorialModal && (
+        <InteractiveTutorialModal
+          isOpen={showTutorialModal}
+          onClose={handleTutorialClose}
+        />
+      )}
       <header style={styles.header}>
-        <h1>{deck.title}</h1>
-        <p>Shared for: {shareLink.shareType.replace('_', ' ')}</p>
-        {/* Use camelCase for display from ReviewerSession type */}
-        {currentReviewerSession?.reviewerName && (
-          <p style={{fontSize: '0.9em', color: '#555'}}>
-            Viewing as: {currentReviewerSession.reviewerName} 
-            {currentReviewerSession.reviewerEmail ? ` (${currentReviewerSession.reviewerEmail})` : ''}
-          </p>
-        )}
+        <div style={styles.headerContent}>
+          <div style={styles.headerInfo}>
+            <h1>{deck.title}</h1>
+            <p>Shared for: {shareLink.shareType.replace('_', ' ')}</p>
+            {/* Use camelCase for display from ReviewerSession type */}
+            {currentReviewerSession?.reviewerName && (
+              <p style={{fontSize: '0.9em', color: '#555'}}>
+                Viewing as: {currentReviewerSession.reviewerName} 
+                {currentReviewerSession.reviewerEmail ? ` (${currentReviewerSession.reviewerEmail})` : ''}
+              </p>
+            )}
+          </div>
+          
+          {shareLinkAllowsCommenting(shareLink) && (
+            <button 
+              onClick={() => setShowTutorialModal(true)}
+              style={styles.helpButton}
+              title="How to use the feedback system"
+            >
+              <HelpCircle size={20} />
+              <span style={styles.helpButtonText}>Help</span>
+            </button>
+          )}
+        </div>
       </header>
       
       <main style={styles.mainContent}>
         <div style={styles.deckRenderArea}>
-          <DeckPreviewer
-            deckId={deck.id}
-            isPublicView={true}
-            enableCommenting={canComment}
-            shareToken={shareToken!} 
-            reviewerSessionId={currentReviewerSession?.id}
-            reviewerDisplayName={currentReviewerSession?.reviewerName}
-            reviewerEmail={currentReviewerSession?.reviewerEmail}
-            onLayerCommentAdded={handleCommentSubmitted}
-            disableActions={true} // Disable actions like export and presenter notes for shared view
-          />
+          {shareToken && (
+            <DeckPreviewer
+              deckId={deck.id}
+              isPublicView={true}
+              enableCommenting={canComment}
+              shareToken={shareToken || ''}
+              reviewerSessionId={currentReviewerSession?.id}
+              reviewerDisplayName={currentReviewerSession?.reviewerName}
+              reviewerEmail={currentReviewerSession?.reviewerEmail}
+              onLayerCommentAdded={handleCommentSubmitted}
+              disableActions={true} // Disable actions like export and presenter notes for shared view
+              onSlideChange={(slideId: string | null) => setSelectedSlideId(slideId)}
+            />
+          )}
         </div>
 
-        {shareLinkAllowsCommenting(shareLink) && (
+        {shareLinkAllowsCommenting(shareLink) && currentReviewerSession && (
           <aside style={styles.commentsSidebar}>
             <h2>Feedback</h2>
             {!canComment && !showReviewerInfoModal && (
@@ -245,27 +320,48 @@ const SharedDeckViewerPage: React.FC = () => {
                 Please provide your details to enable commenting.
               </p>
             )}
-            <AnonymousCommentForm
+            <SharedFeedbackPanel
               deckId={deck.id}
-              shareToken={shareToken!} 
-              reviewerSessionId={currentReviewerSession?.id}
-              reviewerDisplayName={currentReviewerSession?.reviewerName}
-              onCommentSubmitted={handleCommentSubmitted}
               currentDeck={deck}
-              shareLink={shareLink}
-              disabled={!canComment}
+              comments={comments}
+              onCommentSubmit={(text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any, feedbackCategory?: any, componentId?: string, slideId?: string | null) => {
+                // Compose a new comment object and call handleCommentSubmitted
+                const newComment: DeckComment = {
+                  id: `shared_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  deckId: deck.id,
+                  slideId: slideId || '',
+                  textContent: text,
+                  authorUserId: currentReviewerSession?.id ?? 'anon',
+                  authorDisplayName: currentReviewerSession?.reviewerName || 'Anonymous',
+                  parentCommentId: parentCommentId,
+                  voiceNoteUrl: voiceNoteUrl,
+                  markupData: markupData,
+                  commentType: 'General',
+                  urgency: 'None',
+                  status: 'Open',
+                  feedback_category: feedbackCategory || 'General',
+                  component_id: componentId,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  replies: [],
+                  reactions: [],
+                  reviewerSessionId: currentReviewerSession?.id ?? undefined,
+                };
+                handleCommentSubmitted(newComment);
+              }}
+              onCommentDelete={() => {}}
+              onCommentStatusUpdate={() => {}}
+              onCommentsNeedRefresh={() => {}}
+              isAdminOrDeckOwnerView={false}
+              currentUserId={currentReviewerSession?.id ?? ''}
+              currentUserDisplayName={currentReviewerSession?.reviewerName || ''}
+              selectedSlideId={selectedSlideId}
+              isSubmittingComment={false}
+              highlightedCommentId={null}
+              onProposalsGenerated={() => {}}
+              showAggregatedInsights={false}
+              showOnlyOwnComments={true}
             />
-            <div style={styles.commentsList}>
-              {comments.length === 0 && <p>No feedback yet.</p>}
-              {comments.map(comment => (
-                <div key={comment.id} style={styles.commentItem}>
-                  <strong>{comment.authorDisplayName || 'Anonymous'}</strong>
-                  {comment.declaredRole && <em> ({comment.declaredRole})</em>}:
-                  <p>{comment.textContent}</p>
-                  <small>{new Date(comment.createdAt).toLocaleString()}</small>
-                </div>
-              ))}
-            </div>
           </aside>
         )}
       </main>
@@ -288,6 +384,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '10px 20px',
     backgroundColor: '#f0f0f0',
     borderBottom: '1px solid #ddd',
+  },
+  headerContent: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  helpButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    backgroundColor: 'white',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#374151',
+    transition: 'all 0.2s',
+  },
+  helpButtonText: {
+    fontWeight: 500,
   },
   mainContent: {
     display: 'flex',

@@ -5,8 +5,7 @@ import tsconfigPaths from 'vite-tsconfig-paths'; // Import the plugin
 export default defineConfig({
   plugins: [react(), tsconfigPaths()], // Add the plugin to the array
   server: {
-    port: 5173,
-    strictPort: true
+    port: 3001
   },
   base: '/',
   build: {

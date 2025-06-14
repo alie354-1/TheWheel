@@ -6,7 +6,6 @@ import { useAuth } from '../../lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import EvaluationHistory, { EvaluationHistoryEntry } from '../../components/company/journey/ToolSelector/EvaluationHistory';
 import * as toolSelectionService from '../../lib/services/toolSelection.service';
 
 function CompanyToolsPage() {
@@ -16,7 +15,6 @@ function CompanyToolsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedToolId, setExpandedToolId] = useState<string | null>(null);
-  const [evaluationHistories, setEvaluationHistories] = useState<Record<string, EvaluationHistoryEntry[]>>({});
 
   useEffect(() => {
     if (companyId) {
@@ -42,23 +40,8 @@ function CompanyToolsPage() {
     }
   }
 
-  async function handleExpandTool(toolId: string) {
+  function handleExpandTool(toolId: string) {
     setExpandedToolId(expandedToolId === toolId ? null : toolId);
-    if (!evaluationHistories[toolId]) {
-      // Fetch evaluation history for this tool
-      const evalRes = await toolSelectionService.getToolEvaluations(toolId, "");
-      const docRes = await toolSelectionService.getToolDocuments(toolId);
-      // Merge evaluations and documents by user/evaluation
-      const evals = (evalRes.data || []).map((e: any) => ({
-        id: e.id,
-        user: { id: e.user?.id, name: e.user?.full_name || "Unknown" },
-        created_at: e.created_at,
-        scorecard: e.responses,
-        notes: e.notes,
-        documents: (docRes.data || []).filter((d: any) => d.user_id === e.user_id && d.tool_id === toolId)
-      }));
-      setEvaluationHistories((prev) => ({ ...prev, [toolId]: evals }));
-    }
   }
 
   return (
@@ -94,11 +77,7 @@ function CompanyToolsPage() {
                       {expandedToolId === ct.tool_id ? "Hide Evaluation History" : "View Evaluation History"}
                     </Button>
                   </CardFooter>
-                  {expandedToolId === ct.tool_id && (
-                    <CardContent>
-                      <EvaluationHistory entries={evaluationHistories[ct.tool_id] || []} />
-                    </CardContent>
-                  )}
+                  {/* Evaluation history feature is deprecated and has been removed */}
                 </Card>
               ))}
             </div>

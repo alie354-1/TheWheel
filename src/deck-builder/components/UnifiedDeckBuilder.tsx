@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { SectionType, DeckSection, Deck, VisualComponent, VisualComponentLayout, DeckTheme } from '../types/index.ts';
+import { SectionType, DeckSection, Deck, VisualComponent, VisualComponentLayout, DeckTheme, FeedbackCategory } from '../types/index.ts';
 import { useDeck } from '../hooks/useDeck.ts';
 import { TemplateSelector } from './TemplateSelector.tsx';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel.tsx';
@@ -15,7 +15,9 @@ import { DeckComment } from '../types/index.ts';
 import { ComponentEditingBar } from './ComponentEditingBar.tsx';
 import { DeckService } from '../services/deckService.ts';
 import PreviewSlide from '../preview/components/PreviewSlide.tsx';
+import { ClickToCommentLayer } from './feedback/ClickToCommentLayer.tsx';
 import { FontSelection } from './FontSelection.tsx';
+import { GradientBackgroundSelector } from './GradientBackgroundSelector.tsx';
 import { 
   Eye, 
   Edit, 
@@ -33,8 +35,12 @@ import {
   Maximize,
   GripVertical,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Share2,
+  Download
 } from 'lucide-react';
+import { EnhancedSharingModal } from './sharing/EnhancedSharingModal.tsx';
+import { ExportModal } from '../preview/components/ExportModal.tsx';
 import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter.ts';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelectToolbar } from './MultiSelectToolbar.tsx';
@@ -106,7 +112,8 @@ const CollapsibleSlideNavigator: React.FC<{
   onMoveSection: (fromIndex: number, toIndex: number) => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
-}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, onMoveSection, isCollapsed, onToggleCollapsed }) => {
+  setShowHtmlImportModal: (show: boolean) => void;
+}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, onMoveSection, isCollapsed, onToggleCollapsed, setShowHtmlImportModal }) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [hoveredSlide, setHoveredSlide] = useState<string | null>(null);
 
@@ -136,7 +143,10 @@ const CollapsibleSlideNavigator: React.FC<{
                     {(['hero', 'problem', 'solution', 'market', 'business-model', 'competition', 'team', 'financials', 'funding', 'next-steps', 'problemSolution', 'demoGallery', 'ctaCard', 'blank', 'executiveSummary', 'productRoadmap', 'keyMetricsDashboard', 'faqSlide', 'contactUs'] as SectionType[]).map(type => (
                        <button
                         key={type}
-                        onClick={() => { onAddSection(type); setShowAddMenu(false); }}
+                        onClick={() => {
+                          onAddSection(type);
+                          setShowAddMenu(false);
+                        }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 capitalize"
                        >
                         {type.replace('-', ' ')} Slide
@@ -180,9 +190,6 @@ const CollapsibleSlideNavigator: React.FC<{
                       <div className="text-sm font-medium text-gray-900 truncate">
                         <SafeTextRenderer html={section.title || 'Untitled Slide'} />
                       </div>
-                      <p className="text-xs text-gray-500 truncate">
-                        {section.type.replace('-', ' ')}
-                      </p>
                     </div>
                     <div className="flex flex-col ml-2">
                       <button
@@ -237,7 +244,9 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [currentUserDisplayNameState, setCurrentUserDisplayNameState] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('vertical');
   const [activePanel, setActivePanel] = useState<PanelMode>('components');
-  const [previewMode, setPreviewMode] = useState(false);
+  const previewMode = false;
+  const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
+  const [arePanelsCollapsed, setArePanelsCollapsed] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [comments, setComments] = useState<DeckComment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -248,13 +257,55 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [htmlInput, setHtmlInput] = useState('');
   const [resizingCanvas, setResizingCanvas] = useState(false); 
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isClickToCommentMode, setIsClickToCommentMode] = useState(false);
+  const [showCommentBubbles, setShowCommentBubbles] = useState(true);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  const handleExportPDF = () => {
+    // This is a placeholder. We will implement the actual PDF generation logic later.
+    alert('PDF export is not yet implemented.');
+  };
+
+  const handlePanelToggle = (panel: PanelMode) => {
+    setActivePanel(prev => {
+      const newPanel = prev === panel ? null : panel;
+      if (newPanel === 'feedback') {
+        setArePanelsCollapsed(false);
+        setIsClickToCommentMode(true);
+      }
+      return newPanel;
+    });
+  };
   
+  useEffect(() => {
+    if (activePanel === 'feedback') {
+      setShowCommentBubbles(true);
+    } else {
+      setShowCommentBubbles(false);
+    }
+  }, [activePanel]);
+
   const slideViewportRef = useRef<HTMLDivElement>(null);
   const previewContentViewportRef = useRef<HTMLDivElement>(null);
   const slideCanvasContainerRef = useRef<HTMLDivElement>(null);
   const slideCanvasContainerSplitRef = useRef<HTMLDivElement>(null);
 
   const { isCollapsed: isNavigatorCollapsed, toggleCollapsed: toggleNavigatorCollapsed } = useCollapsibleNavigator();
+
+  // Memoized close handler to prevent constant recreation and useEffect loops
+  const handleCloseSharingModal = useCallback(() => {
+    console.log('Closing sharing modal from UnifiedDeckBuilder - current state:', isSharingModalOpen);
+    
+    // Immediate state reset
+    setIsSharingModalOpen(false);
+    console.log('Called setIsSharingModalOpen(false)');
+    
+    // Backup force close mechanism - ensure modal is really closed
+    setTimeout(() => {
+      console.log('Backup close check - forcing modal state to false');
+      setIsSharingModalOpen(false);
+    }, 100);
+  }, [isSharingModalOpen]);
   
   const {
     deck,
@@ -299,7 +350,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const handleUpdateComponentStyle = useCallback((style: Partial<React.CSSProperties>) => {
     if (selectedComponentIds.size === 0 || !currentSection || !updateSection) return;
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         return { ...c, style: { ...c.style, ...style } };
       }
@@ -474,10 +525,26 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (deck?.sections.length && !selectedSectionId) {
       setSelectedSectionId(deck.sections[0].id);
     }
-    if (deck?.id) {
-      fetchComments(deck.id);
+
+    if (!deck?.id) {
+      setComments([]);
+      return;
     }
-  }, [deck?.id, deck?.sections, selectedSectionId]);
+
+    // Initial fetch
+    fetchComments(deck.id);
+
+    // Set up real-time subscription
+    const unsubscribe = DeckService.subscribeToDeckComments(deck.id, (updatedComments) => {
+      console.log('Real-time update received in UnifiedDeckBuilder, setting comments:', updatedComments);
+      setComments(updatedComments);
+    });
+
+    // Cleanup subscription on component unmount or when deck.id changes
+    return () => {
+      unsubscribe();
+    };
+  }, [deck?.id]);
 
   const handleResizeCanvasMove = useCallback((e: MouseEvent) => {
     if (!resizingCanvas || !currentSection) return;
@@ -564,13 +631,13 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     };
   }, [resizingCanvas, handleResizeCanvasMove, handleResizeCanvasEnd]);
 
-  const handleAddComment = async (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any) => {
+  const handleAddComment = async (text: string, parentCommentId?: string, voiceNoteUrl?: string, markupData?: any, feedbackCategory?: FeedbackCategory, componentId?: string) => {
     if (!deck || !deck.id || !currentUserId) return;
     setIsSubmittingComment(true);
     try {
       const newCommentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' | 'reviewerSessionId' | 'feedbackWeight' | 'aiSentimentScore' | 'aiExpertiseScore' | 'aiImprovementCategory'> = {
         deckId: deck.id,
-        slideId: selectedSectionId!, 
+        slideId: selectedSectionId!,
         textContent: text,
         authorUserId: currentUserId,
         authorDisplayName: currentUserDisplayNameState || 'User',
@@ -580,9 +647,11 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         commentType: 'General',
         urgency: 'None',
         status: 'Open',
+        feedback_category: feedbackCategory || 'General',
+        component_id: componentId,
       };
       await DeckService.addComment(deck.id, newCommentData);
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error adding comment:", error);
     } finally {
@@ -590,13 +659,19 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     }
   };
 
-  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status'>>) => {
-    if (!deck || !deck.id) return;
+  const handleUpdateComment = async (commentId: string, updates: Partial<Pick<DeckComment, 'textContent' | 'status' | 'feedback_category'>>): Promise<void> => {
+    console.log('handleUpdateComment called in UnifiedDeckBuilder', { commentId, updates });
+    if (!deck || !deck.id) {
+      console.error('handleUpdateComment aborted: deck or deck.id is missing.');
+      return;
+    }
     try {
       await DeckService.updateComment(commentId, updates);
-      if (deck?.id) fetchComments(deck.id); 
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error updating comment:", error);
+      // Optionally re-throw or handle the error appropriately
+      throw error;
     }
   };
 
@@ -604,7 +679,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!deck || !deck.id) return;
     try {
       await DeckService.updateComment(commentId, { status });
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error(`Error updating comment ${commentId} status to ${status}:`, error);
     }
@@ -614,7 +689,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!deck || !deck.id) return;
     try {
       await DeckService.deleteComment(commentId, deck.id, currentUserId ? currentUserId : undefined);
-      if (deck?.id) fetchComments(deck.id);
+      // No longer need to manually fetch, subscription will handle it.
     } catch (error) {
       console.error("Error deleting comment:", error);
     }
@@ -626,7 +701,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   };
 
   const handleAddSection = (sectionType: SectionType) => {
-    const newSectionId = addSection(sectionType); 
+    const currentIndex = deck?.sections.findIndex(s => s.id === selectedSectionId) ?? -1;
+    const newSectionId = addSection(sectionType, currentIndex + 1);
     if (newSectionId) setSelectedSectionId(newSectionId);
   };
 
@@ -636,32 +712,30 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     console.log('[UnifiedDeckBuilder] deck present?:', !!deck);
     console.log('[UnifiedDeckBuilder] hasUnsavedChanges:', hasUnsavedChanges);
 
-    if (!currentUserId) { 
-      alert('Please log in to save your deck'); 
+    if (!currentUserId) {
+      alert('Please log in to save your deck');
       console.log('[UnifiedDeckBuilder] Save aborted: no currentUserId.');
-      return; 
+      return;
     }
-    if (!deck) { 
-      alert('No deck to save.'); 
+    if (!deck) {
+      alert('No deck to save.');
       console.log('[UnifiedDeckBuilder] Save aborted: no deck.');
-      return; 
+      return;
     }
     console.log('[UnifiedDeckBuilder] About to call saveDeck with userId:', currentUserId);
     try {
       console.log('[UnifiedDeckBuilder] saveDeck function exists?', typeof saveDeck === 'function');
       console.log('[UnifiedDeckBuilder] Starting saveDeck call...');
-      // Force save even if hasUnsavedChanges is false - this ensures the save button always works
       const success = await saveDeck(currentUserId);
       console.log('[UnifiedDeckBuilder] saveDeck returned:', success);
       if (success) alert('Deck saved successfully!');
-    } catch (err) { 
-      // Properly type the error for TypeScript
+    } catch (err) {
       const error = err as Error;
       console.error('[UnifiedDeckBuilder] Save error details:', error);
       console.error('[UnifiedDeckBuilder] Error name:', error.name);
-      console.error('[UnifiedDeckBuilder] Error message:', error.message); 
+      console.error('[UnifiedDeckBuilder] Error message:', error.message);
       console.error('[UnifiedDeckBuilder] Error stack:', error.stack);
-      alert('Failed to save deck. Please try again.'); 
+      alert('Failed to save deck. Please try again.');
     }
   };
 
@@ -692,7 +766,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   
   const handleComponentUpdate = (componentId: string, newData: any) => {
     if (!currentSection) return;
-    const updatedComponents = (currentSection.components || []).map(c => 
+    const updatedComponents = (currentSection.components || []).map((c: any) => 
       c.id === componentId ? { ...c, data: newData } : c
     );
     updateSection(currentSection.id, { ...currentSection, components: updatedComponents });
@@ -854,7 +928,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     };
 
     // Create a new components array with the updated component
-    const updatedComponents = (currentSection.components || []).map(c =>
+    const updatedComponents = (currentSection.components || []).map((c: any) =>
       c.id === componentId ? updatedComponent : c
     );
 
@@ -916,7 +990,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         break;
     }
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         const newLayout = { ...c.layout };
         if (targetX !== undefined) {
@@ -949,8 +1023,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
     if (!currentSection || selectedComponentIds.size < 3) return;
 
     const componentsToUpdate = (currentSection.components || [])
-      .filter(c => selectedComponentIds.has(c.id))
-      .sort((a, b) => distribution === 'horizontal' ? a.layout.x - b.layout.x : a.layout.y - b.layout.y);
+      .filter((c: any) => selectedComponentIds.has(c.id))
+      .sort((a: any, b: any) => distribution === 'horizontal' ? a.layout.x - b.layout.x : a.layout.y - b.layout.y);
 
     if (componentsToUpdate.length < 3) return;
 
@@ -978,8 +1052,8 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       }
     }
 
-    const updatedComponents = (currentSection.components || []).map(c => {
-      const updated = componentsToUpdate.find(uc => uc.id === c.id);
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
+      const updated = componentsToUpdate.find((uc: any) => uc.id === c.id);
       return updated || c;
     });
 
@@ -994,7 +1068,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
 
     const firstComponentLayout = componentsToUpdate[0].layout;
 
-    const updatedComponents = (currentSection.components || []).map(c => {
+    const updatedComponents = (currentSection.components || []).map((c: any) => {
       if (selectedComponentIds.has(c.id)) {
         const newLayout = { ...c.layout };
         if (dimension === 'width' || dimension === 'both') {
@@ -1013,6 +1087,30 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
 
   const handleGroup = () => {
     // Grouping logic here
+  };
+
+  const handleJumpToSlide = (slideId: string) => {
+    const sectionExists = deck?.sections.some(s => s.id === slideId);
+    if (sectionExists) {
+      setSelectedSectionId(slideId);
+      // Optionally, you can scroll the navigator to the slide
+      const slideElement = document.querySelector(`[data-rbd-draggable-id="${slideId}"]`);
+      slideElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      console.warn(`Attempted to jump to non-existent slideId: ${slideId}`);
+    }
+  };
+
+  const handleJumpToComment = (commentId: string) => {
+    // The commentId can be a single ID or a comma-separated list of IDs
+    const ids = commentId.split(',');
+    const firstId = ids[0];
+    
+    const comment = comments.find(c => c.id === firstId);
+    if (comment && comment.slideId) {
+      handleJumpToSlide(comment.slideId);
+      setHighlightedCommentId(commentId);
+    }
   };
 
   const handleUngroup = () => {
@@ -1058,6 +1156,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             setShowTemplateSelector(false);
           }}
           onCancel={() => { if (deck) setShowTemplateSelector(false); }}
+          onImportHtml={() => setShowHtmlImportModal(true)}
         />
       </div>
     );
@@ -1151,64 +1250,15 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Slide Background (Gradient/Image URL)</label>
-        <input
-          type="text"
-          value={currentSection?.slideStyle?.background || ''}
-          onChange={(e) => {
+        <GradientBackgroundSelector
+          onSelect={(background) => {
             if (currentSection && updateSection) {
-              const newSlideStyle = { ...currentSection.slideStyle };
-              if (e.target.value) {
-                newSlideStyle.background = e.target.value;
-                delete newSlideStyle.backgroundColor; // Clear solid color if setting gradient/image
-              } else {
-                delete newSlideStyle.background; // Clear gradient/image if input is empty
-              }
+              const newSlideStyle = { ...currentSection.slideStyle, background };
+              delete newSlideStyle.backgroundColor;
               updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
             }
           }}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
-          placeholder="e.g., linear-gradient(...) or url(...)"
         />
-      </div>
-      <div className="mt-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Slide Background Color (Solid)</label>
-        <div className="flex items-center">
-          <input
-            type="color"
-            value={currentSection?.slideStyle?.backgroundColor || '#ffffff'}
-            onChange={(e) => {
-              if (currentSection && updateSection) {
-                // When setting a solid color, clear the general 'background' property
-                const newSlideStyle = { ...currentSection.slideStyle, backgroundColor: e.target.value };
-                delete newSlideStyle.background; 
-                updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
-              }
-            }}
-            className="w-8 h-8 p-0 border-none rounded cursor-pointer"
-          />
-          <span className="ml-2 text-xs text-gray-600">{currentSection?.slideStyle?.backgroundColor || 'No solid color set'}</span>
-           <button
-            onClick={() => {
-              if (currentSection && updateSection) {
-                const newSlideStyle = { ...currentSection.slideStyle };
-                delete newSlideStyle.backgroundColor;
-                // Also delete 'background' to fully revert to theme default for this aspect
-                delete newSlideStyle.background; 
-                // If slideStyle becomes empty, it will correctly fall back to theme
-                if (Object.keys(newSlideStyle).length === 0) {
-                  updateSection(currentSection.id, { ...currentSection, slideStyle: undefined });
-                } else {
-                  updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
-                }
-              }
-            }}
-            className="ml-3 text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-            title="Clear solid background color"
-          >
-            Clear Color
-          </button>
-        </div>
       </div>
       <div className="mt-4">
         <FontSelection
@@ -1321,40 +1371,40 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
               <LayoutIcon size={16} />
               <span className="hidden sm:inline">Vertical</span>
             </button>
-            <button
-              onClick={() => setViewMode('split')}
-              title="Split View"
-              className={`px-2 py-1 text-xs font-medium rounded-r-md flex items-center space-x-1 ${
-                viewMode === 'split' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <Monitor size={16} />
-              <span className="hidden sm:inline">Split</span>
-            </button>
-          </div>
           <button
-            onClick={() => setActivePanel(activePanel === 'components' ? null : 'components')}
-            title="Components"
-            className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
-              activePanel === 'components' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+            onClick={() => setViewMode('split')}
+            title="Split View"
+            className={`px-2 py-1 text-xs font-medium rounded-r-md flex items-center space-x-1 ${
+              viewMode === 'split' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Library size={18} />
-            <span className="hidden lg:inline">Components</span>
+            <Monitor size={16} />
+            <span className="hidden sm:inline">Split</span>
           </button>
-          <button
-            onClick={() => setActivePanel(activePanel === 'themes' ? null : 'themes')}
-            title="Themes"
-            className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
-              activePanel === 'themes' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Palette size={18} />
-            <span className="hidden lg:inline">Themes</span>
-          </button>
-          <button
-            onClick={() => setActivePanel(activePanel === 'feedback' ? null : 'feedback')}
-            title="Feedback"
+        </div>
+        <button
+          onClick={() => handlePanelToggle('components')}
+          title="Components"
+          className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
+            activePanel === 'components' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <Library size={18} />
+          <span className="hidden lg:inline">Components</span>
+        </button>
+        <button
+          onClick={() => handlePanelToggle('themes')}
+          title="Themes"
+          className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
+            activePanel === 'themes' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <Palette size={18} />
+          <span className="hidden lg:inline">Themes</span>
+        </button>
+        <button
+          onClick={() => handlePanelToggle('feedback')}
+          title="Toggle Feedback & Comments"
             className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
               activePanel === 'feedback' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -1372,26 +1422,23 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             <Save size={16} />
             <span className="hidden sm:inline">Save</span>
           </button>
+          {/* HTML import button removed from top bar and moved to slide component options */}
           <button
-            onClick={() => setPreviewMode(!previewMode)}
-            title={previewMode ? "Exit Preview Mode" : "Enter Preview Mode"}
-            className={`p-2 text-sm font-medium rounded-md flex items-center space-x-1 ${
-              previewMode ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Eye size={18} />
-            <span className="hidden lg:inline">{previewMode ? "Preview On" : "Preview Off"}</span>
-          </button>
-          <button
-            onClick={() => setShowHtmlImportModal(true)}
-            title="Import from HTML"
+            onClick={() => setIsExportModalOpen(true)}
+            title="Download"
             className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
           >
-            <FileText size={18} />
-            <span className="hidden lg:inline">Import HTML</span>
+            <Download size={18} />
+            <span className="hidden lg:inline">Download</span>
           </button>
         </div>
       </div>
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExportPDF={handleExportPDF}
+      />
 
       {showHtmlImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
@@ -1428,7 +1475,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
         </div>
       )}
 
-      <div className="flex-1 flex w-full min-h-0 overflow-x-auto border-t border-gray-300">
+      <div className="flex-1 flex flex-row w-full min-h-0 overflow-hidden border-t border-gray-300">
         <CollapsibleSlideNavigator
           sections={deck.sections}
           selectedSectionId={selectedSectionId}
@@ -1437,280 +1484,294 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           onMoveSection={(from, to) => moveSection(from, to)}
           isCollapsed={isNavigatorCollapsed}
           onToggleCollapsed={toggleNavigatorCollapsed}
+          setShowHtmlImportModal={setShowHtmlImportModal}
         />
-
-        <div className="flex-1 flex flex-col min-w-0 bg-gray-200 overflow-hidden"> 
-        {/* Editing Bar */}
-        {selectedComponent && (
-          <ComponentEditingBar
-            component={selectedComponent}
-            onUpdateLayout={layout => handleUpdateComponentLayout(selectedComponent.id, layout)}
-            onUpdateStyle={handleUpdateComponentStyle}
-            onUpdateData={data => handleComponentUpdate(selectedComponent.id, data)}
-          />
-        )}
-          <div 
-            ref={slideViewportRef} 
-            className="flex-1 flex flex-col overflow-auto p-4 space-y-4"
-            id={viewMode === 'vertical' ? "slide-preview-area-vertical" : undefined}
-          >
-            {viewMode === 'vertical' ? (
-              <>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex-shrink-0">
-                  <h2 className="text-md sm:text-lg font-semibold mb-3 text-gray-800 flex items-center">
-                    <Edit size={20} className="mr-2 text-blue-600" />
-                    Edit Slide
-                  </h2>
-                  {editorPaneContent}
-                </div>
-                
-                <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
-                    <h2 className="text-md sm:text-lg font-semibold text-gray-800 flex items-center">
-                      <Eye size={20} className="mr-2 text-blue-600" />
-                      Preview
-                    </h2>
-                    <div className="flex items-center space-x-2">
-                      {previewMode && (
-                        <div className="flex items-center space-x-2">
-                          <label htmlFor="preview-zoom" className="text-xs text-gray-600">Zoom:</label>
-                          <input
-                            id="preview-zoom"
-                            type="range"
-                            min="0.1"
-                            max="2"
-                            step="0.05"
-                            value={previewZoom}
-                            onChange={(e) => setPreviewZoom(parseFloat(e.target.value))}
-                            className="w-24"
-                          />
-                          <span className="text-xs text-gray-600">{Math.round(previewZoom * 100)}%</span>
-                        </div>
-                      )}
-                      {deck && deck.id && (
-                        <button
-                          onClick={handleSaveDeck}
-                          disabled={false}
-                          title="Save Deck"
-                          className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
-                        >
-                          <Save size={18} />
-                        </button>
-                      )}
-                      {deck && deck.id && (
-                        <button
-                          onClick={() => navigate(`/deck-builder/preview/${deck.id}`)}
-                          title="Full Screen Preview"
-                          className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
-                        >
-                          <Maximize size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div 
-                    ref={previewContentViewportRef}
-                    className={`overflow-hidden flex-1 flex justify-center items-center ${
-                      previewMode ? '' : 'p-4 bg-gray-100'
-                    }`}
-                    style={{ 
-                      width: '100%',
-                      height: '100%'
-                    }} 
-                  >
-{currentSection ? (
-  previewMode ? (
-    <div
-      ref={slideCanvasContainerRef}
-      id="slide-canvas-container"
-      className="relative w-full h-full overflow-hidden"
-      style={{
-        // Let the slide background show through - no black background
-      }}
-    >
-                    <PreviewSlide
-                      key={currentSection.id}
-                      section={currentSection}
-                      theme={currentDeckThemeForPreview}
-                      zoomLevel={previewZoom}
-                      logicalWidth={currentSection.width || 960}
-                      logicalHeight={currentSection.height || 540}
-                      previewMode={true}
-                      onSelect={undefined}
-                      onUpdateLayout={undefined}
-                      onOpenEditor={undefined}
-                      onDeleteComponent={undefined}
-                      selectedComponentIds={undefined}
-                      onAddComponentRequested={undefined}
-                    />
-                  </div>
-  ) : (
-    <div 
-      ref={slideCanvasContainerRef} 
-      id="slide-canvas-container" 
-      className="relative bg-white" 
-      style={{ 
-        width: `${currentSection?.width || 960}px`, 
-        height: `${currentSection?.height || 540}px`,
-        minWidth: '960px', 
-        minHeight: '540px',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-        transform: `scale(${zoomLevel})`,
-        transformOrigin: 'top left',
-      }}
-    >
-      <PreviewSlide
-        key={currentSection.id}
-        section={currentSection}
-        theme={currentDeckThemeForPreview}
-        zoomLevel={zoomLevel} 
-        logicalWidth={currentSection?.width || 960} 
-        logicalHeight={currentSection?.height || 540} 
-        previewMode={false}
-        onSelect={handleSelectComponent}
-        onUpdateLayout={handleUpdateComponentLayout}
-        onOpenEditor={(id: string) => {
-          const component = currentSection.components?.find(c => c.id === id);
-          if (component) handleOpenComponentEditor(component);
-        }}
-        onDeleteComponent={(id: string) => handleComponentDelete(id)}
-        selectedComponentIds={selectedComponentIds}
-      />
-      <div
-        ref={slideCanvasContainerRef}
-        className="resize-handle-wrapper"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: '24px',
-          height: '24px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div
-          className="resize-handle"
-          style={{
-            width: '6px',
-            height: '6px',
-            backgroundColor: 'rgba(59, 130, 246, 0.9)',
-            borderRadius: '50%',
-            border: '2px solid white',
-            boxShadow: '0 0 3px rgba(0,0,0,0.5)',
-            cursor: 'nwse-resize',
-            zIndex: 1000,
-          }}
-          onMouseDown={handleResizeCanvasStart}
-          title="Resize Slide Canvas"
-        />
-      </div>
-    </div>
-  )
-) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
-                  </div>
-                </div>
-              </>
-            ) : ( 
-              <div className="flex-1 flex min-h-0 h-full"> 
-                <div className="w-1/2 min-w-[350px] p-0 border-r border-gray-300 overflow-auto h-full"> 
-                  <div className="bg-white rounded-lg shadow p-4 sm:p-6 h-full">
+        <div className="flex-1 flex flex-row min-w-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 bg-gray-200 overflow-auto">
+            {/* Editing Bar */}
+            {selectedComponent && (
+              <ComponentEditingBar
+                component={selectedComponent}
+                onUpdateLayout={layout => handleUpdateComponentLayout(selectedComponent.id, layout)}
+                onUpdateStyle={handleUpdateComponentStyle}
+                onUpdateData={data => handleComponentUpdate(selectedComponent.id, data)}
+              />
+            )}
+            <div 
+              ref={slideViewportRef} 
+              className="flex-1 flex flex-col overflow-auto p-4 space-y-4"
+              id={viewMode === 'vertical' ? "slide-preview-area-vertical" : undefined}
+            >
+              {viewMode === 'vertical' ? (
+                <>
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex-shrink-0">
                     <h2 className="text-md sm:text-lg font-semibold mb-3 text-gray-800 flex items-center">
                       <Edit size={20} className="mr-2 text-blue-600" />
                       Edit Slide
                     </h2>
                     {editorPaneContent}
                   </div>
-                </div>
-                <div 
-                  id="slide-preview-area-split" 
-                  ref={viewMode === 'split' ? slideViewportRef : null} 
-                  className="w-1/2 min-w-[350px] p-0 overflow-auto max-w-full h-full flex justify-center items-center bg-gray-100"
-                > 
-                  {currentSection ? (
-                    <div 
-                      ref={slideCanvasContainerSplitRef} 
-                      id="slide-canvas-container-split" 
-                      className="relative bg-white" 
-                      style={{ 
-                        width: `${currentSection?.width || 960}px`, 
-                        height: `${currentSection?.height || 540}px`,
-                        minWidth: '960px', 
-                        minHeight: '540px',
-                        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                        transform: `scale(${zoomLevel})`,
-                        transformOrigin: 'top left',
-                      }}
-                    >
-                      <PreviewSlide
-                        section={currentSection}
-                        theme={currentDeckThemeForPreview}
-                        zoomLevel={zoomLevel} 
-                        logicalWidth={currentSection?.width || 960}
-                        logicalHeight={currentSection?.height || 540}
-                        previewMode={previewMode}
-                        onSelect={!previewMode ? handleSelectComponent : undefined}
-                        onUpdateLayout={!previewMode ? handleUpdateComponentLayout : undefined}
-                        onOpenEditor={!previewMode ? (id: string) => {
-                          const component = currentSection.components?.find(c => c.id === id);
-                          if (component) handleOpenComponentEditor(component);
-                        } : undefined}
-        onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
-        selectedComponentIds={!previewMode ? selectedComponentIds : undefined}
-      />
-      {!previewMode && (
-        <div
-                          className="resize-handle-wrapper"
-                          style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            right: 0,
-                            width: '24px',
-                            height: '24px',
-                            zIndex: 1000,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <div
-                            className="resize-handle"
-                            style={{
-                              width: '6px',
-                              height: '6px',
-                              backgroundColor: 'rgba(59, 130, 246, 0.9)',
-                              borderRadius: '50%',
-                              border: '2px solid white',
-                              boxShadow: '0 0 3px rgba(0,0,0,0.5)',
-                              cursor: 'nwse-resize',
-                              zIndex: 1000,
-                            }}
-                            onMouseDown={handleResizeCanvasStart}
-                            title="Resize Slide Canvas"
-                          />
-                        </div>
-                      )}
+                  
+                  <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 flex-shrink-0 sticky top-0 bg-white z-10">
+                      <h2 className="text-md sm:text-lg font-semibold text-gray-800 flex items-center">
+                        <Eye size={20} className="mr-2 text-blue-600" />
+                        Preview
+                      </h2>
+                      <div className="flex items-center space-x-2">
+                        {previewMode && (
+                          <div className="flex items-center space-x-2">
+                            <label htmlFor="preview-zoom" className="text-xs text-gray-600">Zoom:</label>
+                            <input
+                              id="preview-zoom"
+                              type="range"
+                              min="0.1"
+                              max="2"
+                              step="0.05"
+                              value={previewZoom}
+                              onChange={(e) => setPreviewZoom(parseFloat(e.target.value))}
+                              className="w-24"
+                            />
+                            <span className="text-xs text-gray-600">{Math.round(previewZoom * 100)}%</span>
+                          </div>
+                        )}
+                        {deck && deck.id && (
+                          <button
+                            onClick={handleSaveDeck}
+                            disabled={false}
+                            title="Save Deck"
+                            className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+                          >
+                            <Save size={18} />
+                          </button>
+                        )}
+                        {deck && deck.id && (
+                          <button
+                            onClick={() => navigate(`/deck-builder/preview/${deck.id}`)}
+                            title="Full Screen Preview"
+                            className="p-1.5 text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+                          >
+                            <Maximize size={18} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
+                    <div 
+                      ref={previewContentViewportRef}
+                      className={`overflow-hidden flex-1 flex flex-col ${
+                        previewMode ? '' : 'p-4 bg-gray-100'
+                      }`}
+                      style={{ 
+                        width: '100%',
+                        height: '100%'
+                      }} 
+                    >
+                      <div className="flex justify-center items-start pt-4 flex-grow">
+                        {currentSection ? (
+                          previewMode ? (
+                            <div
+                              ref={slideCanvasContainerRef}
+                              id="slide-canvas-container"
+                              className="relative w-full h-full overflow-hidden"
+                              style={{
+                                // Let the slide background show through - no black background
+                              }}
+                            >
+                              <PreviewSlide
+                                key={currentSection.id}
+                                section={currentSection}
+                                theme={currentDeckThemeForPreview}
+                                zoomLevel={previewZoom}
+                                logicalWidth={currentSection.width || 960}
+                                logicalHeight={currentSection.height || 540}
+                                previewMode={true}
+                                onSelect={undefined}
+                                onUpdateLayout={undefined}
+                                onOpenEditor={undefined}
+                                onDeleteComponent={undefined}
+                                selectedComponentIds={undefined}
+                                onAddComponentRequested={undefined}
+                              />
+                            </div>
+                          ) : (
+                            <div 
+                              ref={slideCanvasContainerRef} 
+                              id="slide-canvas-container" 
+                              className="relative bg-white" 
+                              style={{ 
+                                width: `${currentSection?.width || 960}px`, 
+                                height: `${currentSection?.height || 540}px`,
+                                minWidth: '960px', 
+                                minHeight: '540px',
+                                boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                                transform: `scale(${zoomLevel})`,
+                                transformOrigin: 'top left',
+                              }}
+                            >
+                              <PreviewSlide
+                                key={currentSection.id}
+                                section={currentSection}
+                                theme={currentDeckThemeForPreview}
+                                zoomLevel={zoomLevel} 
+                                logicalWidth={currentSection?.width || 960} 
+                                logicalHeight={currentSection?.height || 540} 
+                                previewMode={false}
+                                onSelect={handleSelectComponent}
+                                onUpdateLayout={handleUpdateComponentLayout}
+                                onOpenEditor={(id: string) => {
+                                  const component = currentSection.components?.find(c => c.id === id);
+                                  if (component) handleOpenComponentEditor(component);
+                                }}
+                                onDeleteComponent={(id: string) => handleComponentDelete(id)}
+                                selectedComponentIds={selectedComponentIds}
+                                comments={showCommentBubbles ? comments.filter(c => c.slideId === currentSection.id) : []}
+                                highlightedCommentId={highlightedCommentId}
+                              />
+                              {isClickToCommentMode && currentSection && (
+                                <ClickToCommentLayer
+                                  slideId={currentSection.id}
+                                  onCommentSubmit={handleAddComment}
+                                  isCommentingEnabled={isClickToCommentMode}
+                                  slideDimensions={{ width: currentSection.width || 960, height: currentSection.height || 540 }}
+                                  currentUserDisplayName={currentUserDisplayNameState}
+                                />
+                              )}
+                              <div
+                                className="resize-handle-wrapper"
+                                style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  right: 0,
+                                  width: '24px',
+                                  height: '24px',
+                                  zIndex: 1000,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <div
+                                  className="resize-handle"
+                                  style={{
+                                    width: '6px',
+                                    height: '6px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+                                    borderRadius: '50%',
+                                    border: '2px solid white',
+                                    boxShadow: '0 0 3px rgba(0,0,0,0.5)',
+                                    cursor: 'nwse-resize',
+                                    zIndex: 1000,
+                                  }}
+                                  onMouseDown={handleResizeCanvasStart}
+                                  title="Resize Slide Canvas"
+                                />
+                              </div>
+                            </div>
+                          )
+                        ) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : ( 
+                <div className="flex-1 flex min-h-0 h-full"> 
+                  <div className="w-1/2 min-w-[350px] p-0 border-r border-gray-300 overflow-auto h-full"> 
+                    <div className="bg-white rounded-lg shadow p-4 sm:p-6 h-full">
+                      <h2 className="text-md sm:text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                        <Edit size={20} className="mr-2 text-blue-600" />
+                        Edit Slide
+                      </h2>
+                      {editorPaneContent}
+                    </div>
+                  </div>
+                  <div 
+                    id="slide-preview-area-split" 
+                    ref={viewMode === 'split' ? slideViewportRef : null} 
+                    className="w-1/2 min-w-[350px] p-0 overflow-auto max-w-full h-full flex justify-center items-center bg-gray-100"
+                  > 
+                    {currentSection ? (
+                      <div 
+                        ref={slideCanvasContainerSplitRef} 
+                        id="slide-canvas-container-split" 
+                        className="relative bg-white" 
+                        style={{ 
+                          width: `${currentSection?.width || 960}px`, 
+                          height: `${currentSection?.height || 540}px`,
+                          minWidth: '960px', 
+                          minHeight: '540px',
+                          boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                          transform: `scale(${zoomLevel})`,
+                          transformOrigin: 'top left',
+                        }}
+                      >
+                        <PreviewSlide
+                          section={currentSection}
+                          theme={currentDeckThemeForPreview}
+                          zoomLevel={zoomLevel} 
+                          logicalWidth={currentSection?.width || 960}
+                          logicalHeight={currentSection?.height || 540}
+                          previewMode={previewMode}
+                          onSelect={!previewMode ? handleSelectComponent : undefined}
+                          onUpdateLayout={!previewMode ? handleUpdateComponentLayout : undefined}
+                          onOpenEditor={!previewMode ? (id: string) => {
+                            const component = currentSection.components?.find(c => c.id === id);
+                            if (component) handleOpenComponentEditor(component);
+                          } : undefined}
+                          onDeleteComponent={!previewMode ? (id: string) => handleComponentDelete(id) : undefined}
+                          selectedComponentIds={!previewMode ? selectedComponentIds : undefined}
+                          comments={showCommentBubbles ? comments.filter(c => c.slideId === currentSection.id) : []}
+                          highlightedCommentId={highlightedCommentId}
+                        />
+                        {isClickToCommentMode && currentSection && (
+                          <ClickToCommentLayer
+                            slideId={currentSection.id}
+                            onCommentSubmit={handleAddComment}
+                            isCommentingEnabled={isClickToCommentMode}
+                            slideDimensions={{ width: currentSection.width || 960, height: currentSection.height || 540 }}
+                            currentUserDisplayName={currentUserDisplayNameState}
+                          />
+                        )}
+                        {!previewMode && (
+                          <div
+                            className="resize-handle-wrapper"
+                            style={{
+                              position: 'absolute',
+                              bottom: 0,
+                              right: 0,
+                              width: '24px',
+                              height: '24px',
+                              zIndex: 1000,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <div
+                              className="resize-handle"
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                backgroundColor: 'rgba(59, 130, 246, 0.9)',
+                                borderRadius: '50%',
+                                border: '2px solid white',
+                                boxShadow: '0 0 3px rgba(0,0,0,0.5)',
+                                cursor: 'nwse-resize',
+                                zIndex: 1000,
+                              }}
+                              onMouseDown={handleResizeCanvasStart}
+                              title="Resize Slide Canvas"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : <p className="p-8 text-center text-gray-500">Select a slide to preview.</p>}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-
-        {activePanel && (
-          <div
-            className={`
-              bg-white border-l border-gray-300 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
-              ${activePanel ? 'w-72 sm:w-80' : 'w-0'}
-              fixed right-0 top-0 h-full z-50 shadow-lg
-              lg:static lg:z-auto lg:shadow-none
-            `}
-            style={{ width: 'clamp(288px, 22vw, 400px)', maxWidth: '100vw' }}
-          >
-            <div className="flex-1 overflow-y-auto p-1">
+          {(activePanel === 'components' || activePanel === 'themes') && !arePanelsCollapsed && (
+            <div className="w-72 bg-white border-l border-gray-200 flex-shrink-0 overflow-y-auto">
               {activePanel === 'components' && (
                 <ComponentLibraryPanel onAddComponent={handleAddComponent} />
               )}
@@ -1722,64 +1783,43 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
                   onClose={() => setActivePanel(null)}
                 />
               )}
-              {activePanel === 'feedback' && deck && deck.id && (
-                <div className="flex flex-col h-full">
-                  <div className="p-2 border-b border-gray-200">
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => setActiveFeedbackView('comments')}
-                        className={`px-3 py-1.5 text-xs rounded-md ${activeFeedbackView === 'comments' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      >
-                        Comments
-                      </button>
-                      <button
-                        onClick={() => setActiveFeedbackView('proposals')}
-                        className={`px-3 py-1.5 text-xs rounded-md ${activeFeedbackView === 'proposals' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      >
-                        AI Suggestions
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-grow overflow-y-auto">
-                    {activeFeedbackView === 'comments' && (
-                      <FeedbackPanel
-                        deckId={deck.id}
-                        currentDeck={deck}
-                        comments={comments}
-                        onCommentSubmit={handleAddComment}
-                        onCommentUpdate={handleUpdateComment} 
-                        onCommentDelete={handleDeleteComment}
-                        onCommentStatusUpdate={handleCommentStatusUpdate} 
-                        onCommentsNeedRefresh={() => deck?.id && fetchComments(deck.id)}
-                        isAdminOrDeckOwnerView={true} 
-                        currentUserId={currentUserId}
-                        currentUserDisplayName={currentUserDisplayNameState}
-                        selectedSlideId={selectedSectionId}
-                        isSubmittingComment={isSubmittingComment}
-                        highlightedCommentId={highlightedCommentId}
-                        onProposalsGenerated={() => {
-                          console.log('Proposals generated, refreshing panel and switching view.');
-                          setProposalPanelRefreshKey(prevKey => prevKey + 1);
-                          setActiveFeedbackView('proposals');
-                        }}
-                      />
-                    )}
-                    {activeFeedbackView === 'proposals' && currentSection && ( 
-                      <AIProposalsPanel 
-                        deckId={deck.id}
-                        selectedSlideId={currentSection.id} 
-                        refreshKey={proposalPanelRefreshKey}
-                      />
-                    )}
-                    {activeFeedbackView === 'proposals' && !currentSection && (
-                       <p className="p-4 text-sm text-gray-500">Select a slide to see AI suggestions.</p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-        )}
+          )}
+          {activePanel === 'feedback' && !arePanelsCollapsed && (
+            <div
+              className="bg-white border-l border-gray-300 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden w-72 sm:w-80"
+              style={{ width: 'clamp(288px, 22vw, 400px)', maxWidth: '100vw' }}
+            >
+              <div className="flex-1 overflow-y-auto p-1">
+                <FeedbackPanel
+                  deckId={deck.id}
+                  currentDeck={deck}
+                  comments={comments}
+                  onCommentSubmit={handleAddComment}
+                  onCommentDelete={handleDeleteComment}
+                  onCommentStatusUpdate={handleCommentStatusUpdate}
+                  onCommentsNeedRefresh={() => deck?.id && fetchComments(deck.id)}
+                  onJumpToSlide={handleJumpToSlide}
+                  onJumpToComment={handleJumpToComment}
+                  isAdminOrDeckOwnerView={true}
+                  currentUserId={currentUserId}
+                  currentUserDisplayName={currentUserDisplayNameState}
+                  selectedSlideId={selectedSectionId}
+                  isSubmittingComment={isSubmittingComment}
+                  highlightedCommentId={highlightedCommentId}
+                  isClickToCommentMode={isClickToCommentMode}
+                  onClickToCommentToggle={setIsClickToCommentMode}
+                  onProposalsGenerated={() => {
+                    setProposalPanelRefreshKey(prevKey => prevKey + 1);
+                  }}
+                  showCommentBubbles={showCommentBubbles}
+                  onShowCommentBubblesToggle={setShowCommentBubbles}
+                  onClose={() => setActivePanel(null)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <VisualComponentEditorModal
@@ -1810,7 +1850,14 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           onDelete={handleDeleteSelected}
         />
       )}
-    </div>
+      {isSharingModalOpen && deck && (
+        <EnhancedSharingModal
+          isOpen={isSharingModalOpen}
+          onClose={handleCloseSharingModal}
+          deck={deck}
+        />
+      )}
+      </div>
     </DragDropContext>
   );
 }

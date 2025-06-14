@@ -1,6 +1,6 @@
 import React from 'react';
 import JourneyHomePage from '../../components/company/journey/pages/JourneyHomePage';
-import { useCompany } from '../../../lib/hooks/useCompany';
+import { useCompany } from "@/lib/hooks/useCompany";
 
 const JourneyPage: React.FC = () => {
   const { currentCompany } = useCompany();

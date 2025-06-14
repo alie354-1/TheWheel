@@ -2,7 +2,7 @@ import {
   Deck, DeckSection, Template, SectionType, VisualComponent, VisualComponentLayout, DeckDataTemplate, 
   DeckComment, DeckAiUpdateProposal,
   // New types for Unified Sharing
-  SmartShareLink, ReviewerSession, ShareType, ExpertiseLevel, AIFeedbackInsight,
+  SmartShareLink, ReviewerSession, ShareType, ExpertiseLevel, AIFeedbackInsight, DeckShareRecipient, FeedbackCategory,
   // Specific proposal data types
   TextEditProposedData, ProposedContentDataType,
   // Types for AI Service interaction
@@ -31,14 +31,6 @@ export interface ViewMetadata {
   sessionDuration?: number;
   sectionsViewed?: number[];
 }
-
-// Define a specific type for the update payload of a comment
-type DeckCommentUpdatePayload = Partial<Pick<DeckComment, 
-  'slideId' | 'elementId' | 'parentCommentId' | 'authorDisplayName' | 
-  'coordinates' | 'textContent' | 'richTextContent' | 'voiceNoteUrl' | 
-  'voiceTranscription' | 'markupData' | 'commentType' | 'urgency' | 
-  'status' | 'declaredRole' | 'focusArea'
->>;
 
 export class DeckService {
   // Template management
@@ -235,7 +227,7 @@ export class DeckService {
       if (deck.sections.length > 0) {
         const sectionsData = deck.sections.map(section => {
           // Deep clone slideStyle to avoid mutation and ensure all keys are serializable
-          let slideStyleToSave = undefined;
+          let slideStyleToSave: any = undefined;
           if (section.slideStyle && typeof section.slideStyle === 'object') {
             slideStyleToSave = { ...section.slideStyle };
             // Remove any undefined values (Supabase/Postgres JSONB does not store undefined)
@@ -431,6 +423,12 @@ export class DeckService {
         ai_analysis_enabled: options.aiAnalysisEnabled !== undefined ? options.aiAnalysisEnabled : true,
         custom_weights: options.customWeights || {},
         expires_at: options.expiresAt,
+        // New fields from schema
+        requires_verification: options.requires_verification || false,
+        allow_anonymous_feedback: options.allow_anonymous_feedback || false,
+        creator_is_anonymous: options.creator_is_anonymous || false,
+        author_note: options.author_note || null,
+        show_tutorial: options.show_tutorial !== undefined ? options.show_tutorial : true,
       };
 
       const { data, error } = await supabase
@@ -463,6 +461,12 @@ export class DeckService {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       expiresAt: data.expires_at,
+      // Map new fields
+      requires_verification: data.requires_verification,
+      allow_anonymous_feedback: data.allow_anonymous_feedback,
+      creator_is_anonymous: data.creator_is_anonymous,
+      author_note: data.author_note,
+      show_tutorial: data.show_tutorial,
     };
   }
   // If all attempts fail, throw an error
@@ -494,6 +498,12 @@ export class DeckService {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       expiresAt: data.expires_at,
+      // Map new fields
+      requires_verification: data.requires_verification,
+      allow_anonymous_feedback: data.allow_anonymous_feedback,
+      creator_is_anonymous: data.creator_is_anonymous,
+      author_note: data.author_note,
+      show_tutorial: data.show_tutorial,
     };
   }
   
@@ -510,6 +520,100 @@ export class DeckService {
     if (!deck) return null;
 
     return { deck, shareLink };
+  }
+
+  static async getFeedbackWithClassification(deckId: string): Promise<{ content: DeckComment[]; form: DeckComment[]; general: DeckComment[] }> {
+    const comments = await this.getComments(deckId);
+    const content = comments.filter(c => c.feedback_category === 'Content');
+    const form = comments.filter(c => c.feedback_category === 'Form');
+    const general = comments.filter(c => c.feedback_category === 'General');
+    return { content, form, general };
+  }
+
+  static async getAIInsightsWithWeighting(deckId: string): Promise<any> {
+    // This is a placeholder for a more complex implementation
+    // that would involve calling the AI service with weighted feedback.
+    console.log(`Fetching AI insights with weighting for deck ${deckId}`);
+    const insights = await this.generateAndStoreAggregatedInsights(deckId);
+    return insights;
+  }
+
+  static async addShareRecipients(shareLinkId: string, recipients: Omit<DeckShareRecipient, 'id' | 'share_link_id' | 'created_at' | 'verified_at'>[]): Promise<DeckShareRecipient[]> {
+    if (!recipients || recipients.length === 0) {
+      return [];
+    }
+
+    const recipientsData = recipients.map(r => ({
+      share_link_id: shareLinkId,
+      email: r.email,
+      phone: r.phone,
+      role: r.role,
+      feedback_weight: r.feedback_weight,
+      access_code: r.access_code,
+    }));
+
+    const { data, error } = await supabase
+      .from('deck_share_recipients')
+      .insert(recipientsData)
+      .select();
+
+    if (error) {
+      console.error('Error adding share recipients:', error);
+      throw new Error('Failed to add share recipients.');
+    }
+
+    return data.map(r => ({
+      id: r.id,
+      share_link_id: r.share_link_id,
+      email: r.email,
+      phone: r.phone,
+      role: r.role,
+      feedback_weight: r.feedback_weight,
+      access_code: r.access_code,
+      verified_at: r.verified_at,
+      created_at: r.created_at,
+    }));
+  }
+
+  static async verifyRecipientAccess(shareToken: string, emailOrPhone: string, accessCode: string): Promise<{ success: boolean; message: string }> {
+    const shareLink = await this.getSmartShareLink(shareToken);
+    if (!shareLink) {
+      return { success: false, message: 'Invalid or expired share link.' };
+    }
+
+    const isEmail = emailOrPhone.includes('@');
+    const columnToQuery = isEmail ? 'email' : 'phone';
+
+    const { data, error } = await supabase
+      .from('deck_share_recipients')
+      .select('id, access_code, verified_at')
+      .eq('share_link_id', shareLink.id)
+      .eq(columnToQuery, emailOrPhone)
+      .single();
+
+    if (error || !data) {
+      return { success: false, message: 'You are not on the recipient list for this deck.' };
+    }
+
+    if (data.verified_at) {
+      return { success: true, message: 'Already verified.' };
+    }
+
+    if (data.access_code !== accessCode) {
+      return { success: false, message: 'Invalid access code.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('deck_share_recipients')
+      .update({ verified_at: new Date().toISOString() })
+      .eq('id', data.id);
+
+    if (updateError) {
+      console.error('Error updating recipient verification status:', updateError);
+      return { success: false, message: 'Verification failed. Please try again.' };
+    }
+
+    return { success: true, message: 'Verification successful.' };
   }
 
   static async createOrUpdateReviewerSession(
@@ -1133,10 +1237,10 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
 
   static async addComment(
     deckId: string,
-    commentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' | 
-                              'reviewerSessionId' | 'feedbackWeight' | 
+    commentData: Omit<DeckComment, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'reactions' |
+                              'reviewerSessionId' | 'feedbackWeight' |
                               'aiSentimentScore' | 'aiExpertiseScore' | 'aiImprovementCategory'>,
-    shareToken?: string, 
+    shareToken?: string,
     reviewerSessionId?: string
   ): Promise<DeckComment> {
     try {
@@ -1241,6 +1345,9 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         ai_sentiment_score: aiSentimentScore,
         ai_expertise_score: aiExpertiseScore,
         ai_improvement_category: aiImprovementCategory,
+        // Add new classification fields
+        feedback_category: commentData.feedback_category || 'General',
+        component_id: commentData.component_id,
       };
 
       const { data, error } = await supabase
@@ -1286,6 +1393,10 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
+        is_edited: data.is_edited,
+        edit_history: data.edit_history,
       };
     } catch (error) {
       console.error('Exception in addComment:', error);
@@ -1293,34 +1404,49 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
     }
   }
 
-  static async updateComment( 
+  static async updateComment(
     commentId: string,
-    updates: DeckCommentUpdatePayload
+    updates: Partial<DeckComment>
   ): Promise<DeckComment> {
     try {
-      const dbUpdates: Record<string, any> = {};
-      if (updates.textContent !== undefined) dbUpdates.text_content = updates.textContent;
-      if (updates.richTextContent !== undefined) dbUpdates.rich_text_content = updates.richTextContent;
-      if (updates.voiceNoteUrl !== undefined) dbUpdates.voice_note_url = updates.voiceNoteUrl;
-      if (updates.voiceTranscription !== undefined) dbUpdates.voice_transcription = updates.voiceTranscription;
-      if (updates.markupData !== undefined) dbUpdates.markup_data = updates.markupData;
-      if (updates.commentType !== undefined) dbUpdates.comment_type = updates.commentType;
-      if (updates.urgency !== undefined) dbUpdates.urgency = updates.urgency;
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if (updates.coordinates !== undefined) {
-        dbUpdates.coordinates_x = updates.coordinates.x;
-        dbUpdates.coordinates_y = updates.coordinates.y;
+      const existingComment = await this.getCommentById(commentId);
+      if (!existingComment) {
+        throw new Error(`Comment with ID ${commentId} not found.`);
       }
-      if (updates.declaredRole !== undefined) dbUpdates.declared_role = updates.declaredRole;
-      if (updates.focusArea !== undefined) dbUpdates.focus_area = updates.focusArea;
+
+      const dbUpdates: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (updates.textContent !== undefined && updates.textContent !== existingComment.textContent) {
+        dbUpdates.text_content = updates.textContent;
+        dbUpdates.is_edited = true;
+      }
       
-      if (Object.keys(dbUpdates).length === 0) {
-        const existingComment = await this.getCommentById(commentId);
-        if (!existingComment) throw new Error('Comment not found for no-op update.');
+      if (updates.feedback_category !== undefined && updates.feedback_category !== existingComment.feedback_category) {
+        dbUpdates.feedback_category = updates.feedback_category;
+      }
+
+      if (updates.status !== undefined && updates.status !== existingComment.status) {
+        dbUpdates.status = updates.status;
+      }
+
+      if (dbUpdates.is_edited) {
+        const editHistoryEntry = {
+          timestamp: existingComment.updatedAt,
+          oldValues: {
+            textContent: existingComment.textContent,
+          },
+        };
+        const newEditHistory = Array.isArray(existingComment.edit_history)
+          ? [...existingComment.edit_history, editHistoryEntry]
+          : [editHistoryEntry];
+        dbUpdates.edit_history = newEditHistory;
+      }
+
+      if (Object.keys(dbUpdates).length === 1) {
         return existingComment;
       }
-      
-      dbUpdates.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
         .from('deck_comments')
@@ -1330,19 +1456,10 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         .single();
 
       if (error) {
-        console.error('Error updating comment:', error);
+        console.error(`Error updating comment ${commentId}:`, error);
         throw new Error('Failed to update comment');
       }
-      
-      DeckService.logContentInteraction(
-        data.deck_id, 
-        'COMMENT_UPDATE',
-        { commentId: data.id, updatedFields: Object.keys(dbUpdates) },
-        data.author_user_id, 
-        data.slide_id,
-        data.element_id
-      ).catch(logError => console.error("Logging failed for COMMENT_UPDATE:", logError));
-      
+
       return {
         id: data.id,
         deckId: data.deck_id,
@@ -1369,9 +1486,69 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
+        is_edited: data.is_edited,
+        edit_history: data.edit_history,
       };
     } catch (error) {
-      console.error('Exception in updateComment:', error);
+      console.error(`Exception in updateComment for comment ${commentId}:`, error);
+      throw error;
+    }
+  }
+
+  static async updateCommentContent(commentId: string, textContent: string, feedbackCategory: FeedbackCategory): Promise<DeckComment> {
+    try {
+      const { data, error } = await supabase
+        .from('deck_comments')
+        .update({
+          text_content: textContent,
+          feedback_category: feedbackCategory,
+          updated_at: new Date().toISOString(),
+          is_edited: true,
+        })
+        .eq('id', commentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Error updating comment content for comment ${commentId}:`, error);
+        throw new Error('Failed to update comment content');
+      }
+
+      return {
+        id: data.id,
+        deckId: data.deck_id,
+        slideId: data.slide_id,
+        elementId: data.element_id,
+        parentCommentId: data.parent_comment_id,
+        authorUserId: data.author_user_id,
+        authorDisplayName: data.author_display_name,
+        coordinates: (data.coordinates_x !== null && data.coordinates_y !== null) ? { x: data.coordinates_x, y: data.coordinates_y } : undefined,
+        textContent: data.text_content,
+        richTextContent: data.rich_text_content,
+        voiceNoteUrl: data.voice_note_url,
+        voiceTranscription: data.voice_transcription,
+        markupData: data.markup_data,
+        commentType: data.comment_type as DeckComment['commentType'],
+        urgency: data.urgency as DeckComment['urgency'],
+        status: data.status as DeckComment['status'],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        reviewerSessionId: data.reviewer_session_id,
+        declaredRole: data.declared_role,
+        feedbackWeight: data.feedback_weight,
+        aiSentimentScore: data.ai_sentiment_score,
+        aiExpertiseScore: data.ai_expertise_score,
+        aiImprovementCategory: data.ai_improvement_category,
+        focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
+        is_edited: data.is_edited,
+        edit_history: data.edit_history,
+      };
+    } catch (error) {
+      console.error(`Exception in updateCommentContent for comment ${commentId}:`, error);
       throw error;
     }
   }
@@ -1446,11 +1623,44 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: c.ai_expertise_score,
         aiImprovementCategory: c.ai_improvement_category,
         focusArea: c.focus_area,
+        feedback_category: c.feedback_category as FeedbackCategory,
+        component_id: c.component_id,
+        is_edited: c.is_edited,
+        edit_history: c.edit_history,
       }));
     } catch (error) {
       console.error('Exception in getComments:', error);
       throw error;
     }
+  }
+
+  static subscribeToDeckComments(deckId: string, callback: (comments: DeckComment[]) => void): () => void {
+    const channel = supabase.channel(`deck-comments-${deckId}`);
+  
+    const subscription = channel
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'deck_comments', filter: `deck_id=eq.${deckId}` },
+        async (payload) => {
+          console.log('Real-time change received:', payload);
+          // Refetch all comments for the deck to ensure consistency
+          const updatedComments = await this.getComments(deckId);
+          callback(updatedComments);
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Subscribed to deck comments for deck ${deckId}`);
+        }
+        if (err) {
+          console.error(`Error subscribing to deck comments for deck ${deckId}:`, err);
+        }
+      });
+  
+    return () => {
+      console.log(`Unsubscribing from deck comments for deck ${deckId}`);
+      supabase.removeChannel(channel);
+    };
   }
   
   private static async getCommentById(commentId: string): Promise<DeckComment | null> {
@@ -1490,6 +1700,10 @@ Expertise: High ${expertiseLevels.high}, Mid ${expertiseLevels.mid}, Low ${exper
         aiExpertiseScore: data.ai_expertise_score,
         aiImprovementCategory: data.ai_improvement_category,
         focusArea: data.focus_area,
+        feedback_category: data.feedback_category as FeedbackCategory,
+        component_id: data.component_id,
+        is_edited: data.is_edited,
+        edit_history: data.edit_history,
       };
   }
 

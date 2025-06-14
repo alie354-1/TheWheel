@@ -11,79 +11,31 @@ import CommunityRoutes from './routes/CommunityRoutes.tsx';
 
 // Static (eagerly loaded) pages
 import Dashboard from './pages/Dashboard.tsx';
-import Profile from './pages/Profile.tsx';
-import ProfileSetup from './pages/ProfileSetup.tsx';
-import OnboardingPage from './pages/OnboardingPage.tsx';
-import InitialOnboardingPage from './pages/InitialOnboardingPage.tsx';
-import UserSettingsPage from './pages/UserSettingsPage.tsx';
+import Profile from './pages/Profile';
+import ProfileSetup from './pages/ProfileSetup';
+import OnboardingPage from './pages/OnboardingPage';
+import InitialOnboardingPage from './pages/InitialOnboardingPage';
+import UserSettingsPage from './pages/UserSettingsPage';
 
-import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage.tsx';
-import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage.tsx';
-import DomainDetail from './business-ops-hub/pages/DomainDetail.tsx';
-import StepDetailPage from './components/company/journey/pages/StepDetailPage.tsx';
-import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage.tsx';
-import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage.tsx';
+import BusinessOperationsHubPage from './business-ops-hub/pages/BusinessOperationsHubPage';
+import UnifiedTaskListPage from './business-ops-hub/pages/UnifiedTaskListPage';
+import DomainDetail from './business-ops-hub/pages/DomainDetail';
+import StepDetailPage from './components/company/journey/pages/StepDetailPage';
+import BusinessOpsAnalyticsPage from './business-ops-hub/pages/BusinessOpsAnalyticsPage';
+import BusinessOpsAutomationsPage from './business-ops-hub/pages/BusinessOpsAutomationsPage';
 
 // Sprint 13-16 feature components
-import TeamManager from './business-ops-hub/components/team/TeamManager.tsx';
-import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository.tsx';
-import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager.tsx';
-import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide.tsx';
+import TeamManager from './business-ops-hub/components/team/TeamManager';
+import KnowledgeRepository from './business-ops-hub/components/knowledge/KnowledgeRepository';
+import WorkspaceTemplateManager from './business-ops-hub/components/WorkspaceTemplateManager';
+import ToolImplementationGuide from './business-ops-hub/components/ToolImplementationGuide';
 
-// Test pages
-const TestDeckBuilderPage = lazy(() => import('./pages/TestDeckBuilderPage.tsx'));
-const SimpleDragTestPage = lazy(() => import('./pages/SimpleDragTestPage.tsx'));
-const ManualDragTestPage = lazy(() => import('./pages/ManualDragTestPage.tsx'));
-const JourneySystemTestPage = lazy(() => import('./pages/JourneySystemTestPage.tsx'));
-const JourneyDashboardDemo = lazy(() => import('./pages/JourneyDashboardDemo.tsx'));
-const NewJourneyRouter = lazy(() => import('./components/company/new_journey/NewJourneyRouter.tsx'));
-
-// Lazily loaded pages for better initial load performance
-const IdeaHub = lazy(() => import('./pages/IdeaHub.tsx'));
-const EnhancedIdeaHubPage = lazy(() => import('./pages/EnhancedIdeaHubPage.tsx'));
-// const DeckBuilderPage = lazy(() => import('./pages/DeckBuilderPage.tsx')); // Phase 1 Deck Builder - REMOVED
-// const VisualDeckBuilderPage = lazy(() => import('./pages/VisualDeckBuilderPage.tsx')); // Visual Deck Builder - REMOVED
-const DeckLibraryPage = lazy(() => import('./deck-builder/pages/DeckLibraryPage.tsx')); // Phase 2 Deck Library
-const DeckEditPage = lazy(() => import('./deck-builder/pages/DeckEditPage.tsx')); // Phase 2 Deck Edit
-// const DeckPreviewPage = lazy(() => import('./deck-builder/pages/DeckPreviewPage.tsx')); // Phase 2 Deck Preview - REPLACED
-const DeckPreviewHostPage = lazy(() => import('./deck-builder/pages/DeckPreviewHostPage.tsx')); // New Preview Host Page
-const SharedDeckViewerPage = lazy(() => import('./pages/SharedDeckViewerPage.tsx')); // Added for Unified Sharing
-const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage.tsx'));
-const CompanySetup = lazy(() => import('./pages/company/CompanySetup.tsx'));
-const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard.tsx'));
-// Removed RefactoredCompanyDashboard import - old component not in use
-const CompanyBudgetPage = lazy(() => import('./pages/company/CompanyBudgetPage.tsx'));
-const CompanyMembersPage = lazy(() => import('./pages/company/CompanyMembersPage.tsx'));
-const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage.tsx'));
-const JourneyPage = lazy(() => import('./pages/company/JourneyPage.tsx'));
-// Removed RefactoredJourneyPage import - old component not in use
-const JourneyStepsPage = lazy(() => import('./pages/company/JourneyStepsPage.tsx'));
-const JourneyStepPage = lazy(() => import('./pages/company/JourneyStepPage.tsx'));
-const JourneyMapPage = lazy(() => import('./pages/company/JourneyMapPage.tsx'));
-const JourneyOverviewPage = lazy(() => import('./pages/company/JourneyOverviewPage.tsx'));
-const CompanyToolsPage = lazy(() => import('./pages/company/CompanyToolsPage.tsx'));
-const CompanyToolEvaluationPage = lazy(() => import('./pages/company/CompanyToolEvaluationPage.tsx'));
-const FinancialHubPage = lazy(() => import('./pages/FinancialHubPage.tsx'));
-const ToolsMarketplacePage = lazy(() => import('./pages/ToolsMarketplacePage.tsx'));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage.tsx'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel.tsx'));
-const AdminAppSettingsPage = lazy(() => import('./pages/AdminAppSettingsPage.tsx'));
-const AdminToolModerationPage = lazy(() => import('./pages/AdminToolModerationPage.tsx'));
-const AdminJourneyContentPage = lazy(() => import('./pages/AdminJourneyContentPage.tsx'));
-const PhaseManager = lazy(() => import('./pages/admin/journey/PhaseManager.tsx'));
-const AskWheelRequestsPage = lazy(() => import('./pages/admin/AskWheelRequestsPage.tsx'));
-const DeckAdminDashboardPage = lazy(() => import('./pages/admin/DeckAdminDashboardPage.tsx')); // Added for Deck Admin
-const CommunitySubmissionsPage = lazy(() => import('./pages/admin/CommunitySubmissionsPage.tsx'));
-const TerminologyDemoPage = lazy(() => import('./pages/TerminologyDemoPage.tsx'));
-const SimplifiedDashboard = lazy(() => import('./pages/SimplifiedDashboard.tsx'));
-const SubmitStepPage = lazy(() => import('./pages/journey/SubmitStepPage.tsx'));
-const CommunityStepsPage = lazy(() => import('./pages/journey/CommunityStepsPage.tsx'));
 
 // Idea Hub pages
-const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration.tsx'));
-const Refinement = lazy(() => import('./pages/idea-hub/Refinement.tsx'));
-const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage.tsx'));
-const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot.tsx'));
+const QuickGeneration = lazy(() => import('./pages/idea-hub/QuickGeneration'));
+const Refinement = lazy(() => import('./pages/idea-hub/Refinement'));
+const SavedIdeasPage = lazy(() => import('./pages/idea-hub/SavedIdeasPage'));
+const CofounderBot = lazy(() => import('./pages/idea-hub/CofounderBot'));
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -93,9 +45,9 @@ const LoadingFallback = () => (
 );
 
 // Import our AppProvider
-import { AppProvider } from './lib/contexts/AppProvider.tsx';
+import { AppProvider } from './lib/contexts/AppProvider';
 import { Provider as TooltipProvider } from '@radix-ui/react-tooltip';
-import JourneyHomePage from './components/company/journey/pages/JourneyHomePage.tsx';
+import JourneyHomePage from './components/company/journey/pages/JourneyHomePage';
 
 const App: React.FC = () => {
   return (
@@ -219,6 +171,7 @@ const App: React.FC = () => {
               </Route>
               
               {/* Demo & Development */}
+              <Route path="deck-builder-reorg" element={<DeckBuilderReorgPage />} />
               <Route path="terminology-demo" element={<TerminologyDemoPage />} />
               <Route path="test-deck-builder" element={<TestDeckBuilderPage />} />
               <Route path="simple-drag-test" element={<SimpleDragTestPage />} />
