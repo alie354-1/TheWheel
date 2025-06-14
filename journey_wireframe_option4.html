@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Option 4: Journey Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+  <div class="flex">
+    <!-- Company Steps Sidebar -->
+    <div class="w-1/4 p-4 bg-white rounded-lg shadow-md">
+      <h3 class="text-lg font-bold mb-4">Company Steps</h3>
+      <ul>
+        <li class="mb-2"><a href="#" class="text-blue-600">Define Problem Statement</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600">Map Customer Journey</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600">Interview 5 users</a></li>
+      </ul>
+    </div>
+
+    <!-- Main Kanban Board -->
+    <div class="w-3/4 ml-8">
+      <h2 class="text-2xl font-bold mb-4">Journey Kanban</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <!-- To Do Column -->
+        <div class="bg-gray-200 p-4 rounded-lg">
+          <h3 class="font-bold mb-2">To Do</h3>
+          <div class="step-card bg-white rounded-lg shadow p-4 border mb-4">
+            <span class="font-bold">Interview 5 users</span>
+            <div class="text-sm text-gray-500 mt-2">Get feedback on your MVP</div>
+          </div>
+        </div>
+        <!-- In Progress Column -->
+        <div class="bg-blue-100 p-4 rounded-lg">
+          <h3 class="font-bold mb-2">In Progress</h3>
+          <div class="step-card bg-white rounded-lg shadow p-4 border mb-4">
+            <span class="font-bold">Map Customer Journey</span>
+            <div class="text-sm text-gray-500 mt-2">Understand your user's experience</div>
+          </div>
+        </div>
+        <!-- Done Column -->
+        <div class="bg-green-100 p-4 rounded-lg">
+          <h3 class="font-bold mb-2">Done</h3>
+          <div class="step-card bg-white rounded-lg shadow p-4 border mb-4">
+            <span class="font-bold">Define Problem Statement</span>
+            <div class="text-sm text-gray-500 mt-2">A clear problem statement</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

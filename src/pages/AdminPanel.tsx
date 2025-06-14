@@ -10,11 +10,19 @@ import BulkDomainStepMapper from '../components/admin/BulkDomainStepMapper';
 import { useAuthStore } from '../lib/store';
 
 import StepToDomainAIMapping from '../components/admin/StepToDomainAIMapping';
+import CommunitySubmissionsPage from './admin/CommunitySubmissionsPage';
+import PhaseManager from './admin/journey/PhaseManager';
+import DomainManager from './admin/journey/DomainManager';
+import ToolManager from './admin/journey/ToolManager';
+import StepTemplateManager from './admin/journey/StepTemplateManager';
+import StepManager from './admin/journey/StepManager';
 
 const TABS = [
+  { key: "journey", label: "Journey" },
   { key: "users", label: "User Management" },
   { key: "domains", label: "Domain & Step Mapping" },
   { key: "stepToDomainAI", label: "Step-to-Domain AI Mapping" },
+  { key: "community", label: "Community Submissions" },
   { key: "flags", label: "Feature Flags" },
   { key: "terminology", label: "Terminology" },
   { key: "models", label: "Model Management" },
@@ -26,6 +34,7 @@ const AdminPanel: React.FC = () => {
   const { user, profile } = useAuthStore();
   const [activeTab, setActiveTab] = useState("users");
   const [showBulkMapper, setShowBulkMapper] = useState(false);
+  const [journeySubTab, setJourneySubTab] = useState("phases");
 
   // Check if user has admin privileges
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'Platform Admin' || 
@@ -63,6 +72,38 @@ const AdminPanel: React.FC = () => {
         </nav>
       </div>
       <div>
+        {activeTab === "journey" && (
+          <div>
+            <div className="mb-4 border-b">
+              <nav className="flex gap-4">
+                {["phases", "domains", "tools", "templates", "steps"].map(subTab => (
+                  <button
+                    key={subTab}
+                    className={`px-3 py-1 border-b-2 ${subTab === journeySubTab ? "border-blue-600 text-blue-700 font-semibold" : "border-transparent text-gray-600"}`}
+                    onClick={() => setJourneySubTab(subTab)}
+                  >
+                    {subTab === "phases"
+                      ? "Phases"
+                      : subTab === "domains"
+                      ? "Domains"
+                      : subTab === "tools"
+                      ? "Tools"
+                      : subTab === "templates"
+                      ? "Templates"
+                      : "Steps"}
+                  </button>
+                ))}
+              </nav>
+            </div>
+            <div>
+              {journeySubTab === "phases" && <PhaseManager />}
+              {journeySubTab === "domains" && <DomainManager />}
+              {journeySubTab === "tools" && <ToolManager />}
+              {journeySubTab === "templates" && <StepTemplateManager />}
+              {journeySubTab === "steps" && <StepManager />}
+            </div>
+          </div>
+        )}
         {activeTab === "users" && <UserManagement />}
         {activeTab === "domains" && (
           <div>
@@ -83,6 +124,7 @@ const AdminPanel: React.FC = () => {
           </div>
         )}
         {activeTab === "stepToDomainAI" && <StepToDomainAIMapping />}
+        {activeTab === "community" && <CommunitySubmissionsPage />}
         {activeTab === "flags" && <EnhancedFeatureFlagsSettings />}
         {activeTab === "terminology" && <TerminologyManagement />}
         {activeTab === "models" && <ModelManagementPanel />}

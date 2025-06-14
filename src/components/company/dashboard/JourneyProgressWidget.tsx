@@ -93,7 +93,7 @@ const JourneyProgressWidget: React.FC<JourneyProgressWidgetProps> = ({ companyId
             <div className="card-actions justify-end mt-4"> {/* Increased margin */}
               {/* TODO: Update this link/action if tab navigation changes */}
               {/* Consider using Link component if routing is set up */}
-              <Link to="/company/journey" className="btn btn-sm btn-primary btn-outline">
+              <Link to="/company/new-journey" className="btn btn-sm btn-primary btn-outline">
                 View Full Journey
               </Link>
             </div>

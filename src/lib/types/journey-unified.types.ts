@@ -5,26 +5,217 @@
  * consolidating the previous steps and challenges models into a single, consistent system.
  */
 
-export type step_status = 'not_started' | 'in_progress' | 'completed' | 'skipped';
-export type StepStatus = step_status; // Alias for backward compatibility
-export type difficulty_level = 1 | 2 | 3 | 4 | 5;
+/**
+ * =============================
+ * CANONICAL FRAMEWORK ENTITIES
+ * =============================
+ */
+
+export interface JourneyPhase {
+  id: string;
+  name: string;
+  description?: string;
+  order_index: number;
+  icon_url?: string;
+  color?: string;
+  is_active?: boolean;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JourneyDomain {
+  id: string;
+  name: string;
+  description?: string;
+  icon_url?: string;
+  color?: string;
+  is_active?: boolean;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JourneyStepTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Very Hard';
+  category?: string;
+  tags?: string[];
+  version: number;
+  is_latest: boolean;
+  previous_version_id?: string;
+  content_markdown?: string;
+  expected_outcomes?: string[];
+  prerequisites?: string[];
+  checklist?: any[];
+  resources?: any[];
+  applicable_stages?: string[];
+  applicable_industries?: string[];
+  is_active?: boolean;
+  is_community_created?: boolean;
+  creator_id?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JourneyStep {
+  id: string;
+  template_id?: string; // Link to canonical template
+  phase_id: string;
+  domain_id: string;
+  name: string;
+  description?: string;
+  estimated_time_days?: number;
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Very Hard';
+  order_index: number;
+  is_required?: boolean;
+  dependencies?: string[];
+  release_conditions?: Record<string, any>;
+  applicable_startup_stages?: string[];
+  content_override_markdown?: string;
+  is_active?: boolean;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
 
 /**
- * Tool definition
+ * =============================
+ * COMPANY-SPECIFIC ENTITIES
+ * =============================
  */
+
+export interface CompanyJourneyStep {
+  id: string;
+  company_id: string;
+  canonical_step_id: string; // Link to canonical step
+  name: string;
+  description?: string;
+  phase_id: string;
+  domain_id: string;
+  order_index: number;
+  status: step_status;
+  notes?: string;
+  custom_difficulty?: string;
+  custom_time_estimate?: number;
+  completion_percentage?: number;
+  is_custom?: boolean;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  // Customization fields
+  content_override_markdown?: string;
+  checklist_override?: any[];
+  resources_override?: any[];
+}
+
+export interface CompanyJourneyPath {
+  id: string;
+  company_id: string;
+  name: string;
+  description?: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyStepArrangement {
+  id: string;
+  company_id: string;
+  path_id: string;
+  step_id: string;
+  order_index: number;
+  custom_phase_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyStepProgress {
+  id: string;
+  company_id: string;
+  step_id: string;
+  status: step_status;
+  notes?: string;
+  completion_percentage?: number;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyCustomTool {
+  id: string;
+  company_id: string;
+  step_id: string;
+  name: string;
+  url: string;
+  description?: string;
+  functionality?: string;
+  ai_generated_description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * =============================
+ * SHARED/UTILITY TYPES
+ * =============================
+ */
+
+export type step_status = 'not_started' | 'in_progress' | 'completed' | 'skipped';
+export type difficulty_level = 'Easy' | 'Medium' | 'Hard' | 'Very Hard';
+
 export interface Tool {
   id: string;
   name: string;
   description?: string;
   url?: string;
   logo_url?: string;
-  type: string;
+  type?: string;
   category?: string;
   pricing_model?: string;
-  is_premium: boolean;
+  is_premium?: boolean;
   created_at?: string;
   updated_at?: string;
 }
+
+export interface StepTool {
+  id: string;
+  step_id: string;
+  tool_id: string;
+  relevance_score?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CompanyStepTool {
+  id: string;
+  company_id: string;
+  step_id: string;
+  tool_id: string;
+  is_custom: boolean;
+  rating?: number;
+  notes?: string;
+  is_selected: boolean;
+  selected_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * =============================
+ * LEGACY/ALIAS TYPES (for backward compatibility)
+ * =============================
+ */
+
+export type JourneyChallenge = JourneyStep;
+export type CompanyChallengeProgress = CompanyStepProgress;
 
 /**
  * Filter parameters for steps
@@ -76,210 +267,6 @@ export interface CompanyToolEvaluationUpdate {
   notes?: string;
   rating?: number;
   is_selected?: boolean;
-}
-
-/**
- * Journey Phase
- * Represents a group of related steps in the startup journey
- */
-export interface JourneyPhase {
-  id: string;
-  name: string;
-  description?: string;
-  order_index: number;
-  color?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Journey Step
- * Represents a specific task or milestone in the startup journey
- * (Combines previous step and challenge concepts)
- */
-export interface JourneyStep {
-  id: string;
-  name: string;
-  description?: string;
-  phase_id: string;
-  difficulty_level: difficulty_level;
-  estimated_time_min: number;
-  estimated_time_max: number;
-  key_outcomes?: string[];
-  prerequisite_steps?: string[];
-  order_index: number;
-  created_at: string;
-  updated_at: string;
-  is_custom?: boolean;
-}
-
-/**
- * Company's progress/customization for a journey step
- */
-export interface CompanyJourneyStep {
-  id: string;
-  company_id: string;
-  step_id: string;
-  status: step_status;
-  notes?: string;
-  custom_difficulty?: number;
-  custom_time_estimate?: number;
-  completion_percentage?: number;
-  order_index: number;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string;
-}
-
-/**
- * Tool recommendation or selection for a step
- */
-export interface StepTool {
-  id: string;
-  step_id: string;
-  tool_id: string;
-  relevance_score: number;
-  created_at: string;
-}
-
-/**
- * Company's tool selection and evaluation for a specific step
- */
-export interface CompanyStepTool {
-  id: string;
-  company_id: string;
-  step_id: string;
-  tool_id: string;
-  is_custom: boolean;
-  rating?: number;
-  notes?: string;
-  is_selected: boolean;
-  selected_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Journey step with additional company-specific information
- */
-export interface CompanyJourneyStepWithDetails extends JourneyStep {
-  phase_name?: string;
-  phase_color?: string;
-  company_progress?: {
-    status: step_status;
-    notes?: string;
-    completion_percentage?: number;
-    completed_at?: string;
-  };
-  recommended_tools?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    relevance_score: number;
-  }>;
-}
-
-/**
- * Step with phase information
- */
-export interface JourneyStepWithPhase extends JourneyStep {
-  phase_name: string;
-  phase_color?: string;
-}
-
-/**
- * Complete step with all associated data
- */
-export interface JourneyStepComplete extends JourneyStepWithPhase {
-  tools?: Tool[];
-  prerequisites?: JourneyStep[];
-  prerequisite_step_details?: JourneyStep[];
-  company_progress?: CompanyJourneyStep;
-  progress?: CompanyJourneyStep; // Alias for company_progress
-  phase?: JourneyPhase;
-  selected_tool?: Tool;
-}
-
-/**
- * Phase with progress information for a specific company
- */
-export interface PhaseWithProgress extends JourneyPhase {
-  steps_count: number;
-  completed_steps: number;
-  in_progress_steps: number;
-  completion_percentage: number;
-}
-
-/**
- * Legacy type aliases for backward compatibility
- */
-export type JourneyChallenge = JourneyStep;
-export type CompanyChallengeProgress = CompanyJourneyStep;
-
-/**
- * Sprint 4 Drag and Drop & Custom Arrangement Types
- */
-
-/**
- * Custom Step Arrangement
- * Represents a saved custom ordering of steps
- */
-export interface CustomStepArrangement {
-  id: string;
-  company_id: string;
-  user_id: string;
-  name: string;
-  description?: string;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Custom Step Order
- * Represents the order of a step within a custom arrangement
- */
-export interface CustomStepOrder {
-  id: string;
-  arrangement_id: string;
-  step_id: string;
-  order_index: number;
-  custom_phase_id?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Custom Phase
- * Represents a user-defined grouping of steps
- */
-export interface CustomPhase {
-  id: string;
-  company_id: string;
-  user_id: string;
-  name: string;
-  description?: string;
-  color?: string;
-  order_index: number;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * Step Batch Operation
- * Records a batch operation performed on multiple steps
- */
-export interface StepBatchOperation {
-  id: string;
-  company_id: string;
-  user_id: string;
-  operation_type: string;
-  affected_steps: string[];
-  source_arrangement_id?: string;
-  target_arrangement_id?: string;
-  operation_data?: Record<string, any>;
-  created_at: string;
 }
 
 /**

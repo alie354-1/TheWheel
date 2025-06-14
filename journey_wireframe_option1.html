@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Option 1: Journey Dashboard + Step Details Modal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; }
+    .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body class="bg-gray-100 p-8">
+
+  <div class="flex">
+    <!-- Company Steps Sidebar -->
+    <div class="w-1/4 p-4 bg-white rounded-lg shadow-md">
+      <h3 class="text-lg font-bold mb-4">Company Steps</h3>
+      <ul>
+        <li class="mb-2"><a href="#" class="text-blue-600" onclick="openModal('step-modal')">Define Problem Statement</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600" onclick="openModal('step-modal')">Map Customer Journey</a></li>
+        <li class="mb-2"><a href="#" class="text-blue-600" onclick="openModal('step-modal')">Interview 5 users</a></li>
+      </ul>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="w-3/4 ml-8">
+      <div class="p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Journey Dashboard</h2>
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold">Overall Progress: 40%</h3>
+          <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+            <div class="bg-blue-600 h-4 rounded-full" style="width: 40%"></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">Next Step:</h3>
+          <p class="mt-2">Interview 5 users</p>
+          <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700" onclick="openModal('step-modal')">View Details</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step Details Modal -->
+  <div id="step-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('step-modal')">&times;</span>
+      <h2 class="text-xl font-bold mb-4">Step: Interview 5 users</h2>
+      <div class="mb-4">
+        <h4 class="font-semibold">Tasks:</h4>
+        <ul class="list-disc list-inside">
+          <li><input type="checkbox" class="mr-2">Schedule interviews</li>
+          <li><input type="checkbox" class="mr-2">Record findings</li>
+        </ul>
+      </div>
+      <div class="mb-4">
+        <h4 class="font-semibold">Tools/Templates:</h4>
+        <ul class="list-disc list-inside">
+          <li><a href="#" class="text-blue-600">Interview Script Template</a></li>
+        </ul>
+      </div>
+      <div class="mb-4">
+        <h4 class="font-semibold">Community Examples:</h4>
+        <ul class="list-disc list-inside">
+          <li><a href="#" class="text-blue-600">How a SaaS startup conducted user interviews</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold">Expert Help:</h4>
+        <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700">Ask an Expert</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) { document.getElementById(id).style.display = "block"; }
+    function closeModal(id) { document.getElementById(id).style.display = "none"; }
+  </script>
+
+</body>
+</html>
