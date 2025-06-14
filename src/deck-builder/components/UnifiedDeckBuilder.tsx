@@ -17,7 +17,6 @@ import { DeckService } from '../services/deckService.ts';
 import PreviewSlide from '../preview/components/PreviewSlide.tsx';
 import { ClickToCommentLayer } from './feedback/ClickToCommentLayer.tsx';
 import { FontSelection } from './FontSelection.tsx';
-import { GradientBackgroundSelector } from './GradientBackgroundSelector.tsx';
 import { 
   Eye, 
   Edit, 
@@ -36,11 +35,9 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
-  Share2,
-  Download
+  Share2
 } from 'lucide-react';
 import { EnhancedSharingModal } from './sharing/EnhancedSharingModal.tsx';
-import { ExportModal } from '../preview/components/ExportModal.tsx';
 import { convertHtmlToDeckSections } from '../services/HtmlToDeckConverter.ts';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelectToolbar } from './MultiSelectToolbar.tsx';
@@ -112,8 +109,7 @@ const CollapsibleSlideNavigator: React.FC<{
   onMoveSection: (fromIndex: number, toIndex: number) => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
-  setShowHtmlImportModal: (show: boolean) => void;
-}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, onMoveSection, isCollapsed, onToggleCollapsed, setShowHtmlImportModal }) => {
+}> = ({ sections, selectedSectionId, onSectionSelect, onAddSection, onMoveSection, isCollapsed, onToggleCollapsed }) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [hoveredSlide, setHoveredSlide] = useState<string | null>(null);
 
@@ -143,10 +139,7 @@ const CollapsibleSlideNavigator: React.FC<{
                     {(['hero', 'problem', 'solution', 'market', 'business-model', 'competition', 'team', 'financials', 'funding', 'next-steps', 'problemSolution', 'demoGallery', 'ctaCard', 'blank', 'executiveSummary', 'productRoadmap', 'keyMetricsDashboard', 'faqSlide', 'contactUs'] as SectionType[]).map(type => (
                        <button
                         key={type}
-                        onClick={() => {
-                          onAddSection(type);
-                          setShowAddMenu(false);
-                        }}
+                        onClick={() => { onAddSection(type); setShowAddMenu(false); }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 capitalize"
                        >
                         {type.replace('-', ' ')} Slide
@@ -190,6 +183,9 @@ const CollapsibleSlideNavigator: React.FC<{
                       <div className="text-sm font-medium text-gray-900 truncate">
                         <SafeTextRenderer html={section.title || 'Untitled Slide'} />
                       </div>
+                      <p className="text-xs text-gray-500 truncate">
+                        {section.type.replace('-', ' ')}
+                      </p>
                     </div>
                     <div className="flex flex-col ml-2">
                       <button
@@ -259,12 +255,6 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isClickToCommentMode, setIsClickToCommentMode] = useState(false);
   const [showCommentBubbles, setShowCommentBubbles] = useState(true);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-
-  const handleExportPDF = () => {
-    // This is a placeholder. We will implement the actual PDF generation logic later.
-    alert('PDF export is not yet implemented.');
-  };
 
   const handlePanelToggle = (panel: PanelMode) => {
     setActivePanel(prev => {
@@ -701,8 +691,7 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
   };
 
   const handleAddSection = (sectionType: SectionType) => {
-    const currentIndex = deck?.sections.findIndex(s => s.id === selectedSectionId) ?? -1;
-    const newSectionId = addSection(sectionType, currentIndex + 1);
+    const newSectionId = addSection(sectionType); 
     if (newSectionId) setSelectedSectionId(newSectionId);
   };
 
@@ -1156,7 +1145,6 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             setShowTemplateSelector(false);
           }}
           onCancel={() => { if (deck) setShowTemplateSelector(false); }}
-          onImportHtml={() => setShowHtmlImportModal(true)}
         />
       </div>
     );
@@ -1250,15 +1238,64 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
       </div>
 
       <div className="mt-4">
-        <GradientBackgroundSelector
-          onSelect={(background) => {
+        <label className="block text-sm font-medium text-gray-700 mb-1">Slide Background (Gradient/Image URL)</label>
+        <input
+          type="text"
+          value={currentSection?.slideStyle?.background || ''}
+          onChange={(e) => {
             if (currentSection && updateSection) {
-              const newSlideStyle = { ...currentSection.slideStyle, background };
-              delete newSlideStyle.backgroundColor;
+              const newSlideStyle = { ...currentSection.slideStyle };
+              if (e.target.value) {
+                newSlideStyle.background = e.target.value;
+                delete newSlideStyle.backgroundColor; // Clear solid color if setting gradient/image
+              } else {
+                delete newSlideStyle.background; // Clear gradient/image if input is empty
+              }
               updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
             }
           }}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+          placeholder="e.g., linear-gradient(...) or url(...)"
         />
+      </div>
+      <div className="mt-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Slide Background Color (Solid)</label>
+        <div className="flex items-center">
+          <input
+            type="color"
+            value={currentSection?.slideStyle?.backgroundColor || '#ffffff'}
+            onChange={(e) => {
+              if (currentSection && updateSection) {
+                // When setting a solid color, clear the general 'background' property
+                const newSlideStyle = { ...currentSection.slideStyle, backgroundColor: e.target.value };
+                delete newSlideStyle.background; 
+                updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
+              }
+            }}
+            className="w-8 h-8 p-0 border-none rounded cursor-pointer"
+          />
+          <span className="ml-2 text-xs text-gray-600">{currentSection?.slideStyle?.backgroundColor || 'No solid color set'}</span>
+           <button
+            onClick={() => {
+              if (currentSection && updateSection) {
+                const newSlideStyle = { ...currentSection.slideStyle };
+                delete newSlideStyle.backgroundColor;
+                // Also delete 'background' to fully revert to theme default for this aspect
+                delete newSlideStyle.background; 
+                // If slideStyle becomes empty, it will correctly fall back to theme
+                if (Object.keys(newSlideStyle).length === 0) {
+                  updateSection(currentSection.id, { ...currentSection, slideStyle: undefined });
+                } else {
+                  updateSection(currentSection.id, { ...currentSection, slideStyle: newSlideStyle });
+                }
+              }
+            }}
+            className="ml-3 text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            title="Clear solid background color"
+          >
+            Clear Color
+          </button>
+        </div>
       </div>
       <div className="mt-4">
         <FontSelection
@@ -1422,23 +1459,27 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
             <Save size={16} />
             <span className="hidden sm:inline">Save</span>
           </button>
-          {/* HTML import button removed from top bar and moved to slide component options */}
           <button
-            onClick={() => setIsExportModalOpen(true)}
-            title="Download"
+            onClick={() => setShowHtmlImportModal(true)}
+            title="Import from HTML"
             className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
           >
-            <Download size={18} />
-            <span className="hidden lg:inline">Download</span>
+            <FileText size={18} />
+            <span className="hidden lg:inline">Import HTML</span>
+          </button>
+          <button
+            onClick={() => {
+              setArePanelsCollapsed(true);
+              setActivePanel(null);
+            }}
+            title="Collapse All Panels"
+            className="p-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 flex items-center space-x-1"
+          >
+            <ChevronRight size={18} />
+            <span className="hidden lg:inline">Collapse All</span>
           </button>
         </div>
       </div>
-
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        onExportPDF={handleExportPDF}
-      />
 
       {showHtmlImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
@@ -1484,7 +1525,6 @@ export function UnifiedDeckBuilder({ initialDeck, onDeckUpdate }: UnifiedDeckBui
           onMoveSection={(from, to) => moveSection(from, to)}
           isCollapsed={isNavigatorCollapsed}
           onToggleCollapsed={toggleNavigatorCollapsed}
-          setShowHtmlImportModal={setShowHtmlImportModal}
         />
         <div className="flex-1 flex flex-row min-w-0 overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0 bg-gray-200 overflow-auto">

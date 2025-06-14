@@ -1,16 +1,15 @@
 import React from 'react';
-import { DeckDataTemplate, SectionType, DeckSection } from '../types/index.ts';
-import { DeckService } from '../services/deckService.ts';
+import { DeckDataTemplate, SectionType, DeckSection } from '../types'; // Added DeckSection for explicit typing
+import { DeckService } from '../services/deckService';
 import { Sparkles, ArrowRight, CheckCircle, FileText } from 'lucide-react';
 
 interface TemplateSelectorProps {
   onSelectTemplate: (templateId: string, title: string) => void;
-  onCreateEmpty?: (title: string) => void;
+  onCreateEmpty?: (title: string) => void; // Made onCreateEmpty prop optional
   onCancel: () => void;
-  onImportHtml: () => void;
 }
 
-export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel, onImportHtml }: TemplateSelectorProps) {
+export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel }: TemplateSelectorProps) {
   const [selectedTemplate, setSelectedTemplate] = React.useState<string>('');
   const [deckTitle, setDeckTitle] = React.useState<string>('');
   
@@ -131,41 +130,6 @@ export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel, on
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
-            
-            {/* Import from HTML Option */}
-            <div
-              key="import-from-html"
-              className="group relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-amber-100 via-orange-100 to-amber-100 border-amber-200 hover:border-amber-300"
-              onClick={onImportHtml}
-            >
-              {selectedTemplate === 'import-from-html' && (
-                <div className="absolute -top-2 -right-2 z-10">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-              )}
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-white/90 rounded-2xl shadow-lg flex items-center justify-center text-2xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                    <FileText className="h-9 w-9 text-amber-500" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-amber-600 transition-colors">
-                    Import from HTML
-                  </h3>
-                  <p className="text-slate-700 mb-4 leading-relaxed">
-                    Convert existing HTML content into a presentation.
-                  </p>
-                  <div className="flex items-center space-x-2 text-blue-600">
-                    <span className="text-sm font-medium">Selected</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </div>
 
             {templates.map((template) => (
               <div
@@ -269,7 +233,7 @@ export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel, on
             Back to Library
           </button>
           <button
-            type="button"
+            type="button" 
             onClick={() => {
               if (deckTitle.trim()) {
                 if (selectedTemplate === 'start-from-scratch') {
@@ -277,12 +241,6 @@ export function TemplateSelector({ onSelectTemplate, onCreateEmpty, onCancel, on
                     onCreateEmpty(deckTitle.trim());
                   } else {
                     console.error('onCreateEmpty function is not provided');
-                  }
-                } else if (selectedTemplate === 'import-from-html') {
-                  if (onImportHtml) {
-                    onImportHtml();
-                  } else {
-                    console.error('onImportHtml function is not provided');
                   }
                 } else if (selectedTemplate) {
                   onSelectTemplate(selectedTemplate, deckTitle.trim());

@@ -1,51 +1,106 @@
 import React from 'react';
-import { X, FileText, FileImage, Code } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExportPDF: () => void;
+  onExport: (format: 'pdf' | 'pptx' | 'html') => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExportPDF }) => {
-  if (!isOpen) return null;
+const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport }) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleExport = (format: 'pdf' | 'pptx' | 'html') => {
+    onExport(format);
+    onClose(); // Close modal after initiating export
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Export Deck</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded">
-            <X className="h-6 w-6" />
+    <div style={styles.overlay}>
+      <div style={styles.modal}>
+        <h2 style={styles.header}>Export Presentation</h2>
+        <div style={styles.buttonGroup}>
+          <button 
+            style={styles.button} 
+            onClick={() => handleExport('pdf')}
+          >
+            Export as PDF
+          </button>
+          <button 
+            style={styles.button} 
+            onClick={() => handleExport('pptx')}
+          >
+            Export as PowerPoint (.pptx)
+          </button>
+          <button 
+            style={styles.button} 
+            onClick={() => handleExport('html')}
+          >
+            Export as HTML Bundle
           </button>
         </div>
-        <div className="space-y-4">
-          <button
-            onClick={onExportPDF}
-            className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
-          >
-            <FileText className="h-5 w-5 mr-2" />
-            Download as PDF
-          </button>
-          <div className="text-center">
-            <span className="text-sm text-gray-500">More formats coming soon!</span>
-          </div>
-          <button
-            disabled
-            className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-400 bg-gray-200 rounded-md cursor-not-allowed"
-          >
-            <FileImage className="h-5 w-5 mr-2" />
-            Download as PowerPoint (Coming Soon)
-          </button>
-          <button
-            disabled
-            className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-400 bg-gray-200 rounded-md cursor-not-allowed"
-          >
-            <Code className="h-5 w-5 mr-2" />
-            Download as HTML (Coming Soon)
-          </button>
-        </div>
+        <button style={styles.closeButton} onClick={onClose}>
+          Cancel
+        </button>
       </div>
     </div>
   );
 };
+
+// Basic inline styles for the modal (can be moved to a CSS file)
+const styles: { [key: string]: React.CSSProperties } = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    minWidth: '300px',
+    textAlign: 'center',
+  },
+  header: {
+    marginTop: 0,
+    marginBottom: '20px',
+    fontSize: '1.5rem',
+  },
+  buttonGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginBottom: '20px',
+  },
+  button: {
+    padding: '10px 15px',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s',
+  },
+  // button:hover would need to be handled differently for inline styles or moved to CSS
+  closeButton: {
+    padding: '10px 15px',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    backgroundColor: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+  },
+};
+
+export default ExportModal;

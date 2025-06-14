@@ -77,7 +77,7 @@ export function useDeck(
     try {
       setError(null);
       const { updatedDeck, newSectionId } = DeckService.addSection(deck, sectionType, position);
-      setDeck({ ...updatedDeck, updated_at: new Date().toISOString() });
+      setDeck(updatedDeck);
       return newSectionId; // Return the ID of the new section
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add section';
@@ -150,7 +150,7 @@ export function useDeck(
     try {
       setError(null);
       const updatedDeck = DeckService.removeSection(deck, sectionId);
-      setDeck({ ...updatedDeck, updated_at: new Date().toISOString() });
+      setDeck(updatedDeck); // This will now also call onDeckUpdateProp
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to remove section';
       setError(errorMessage);

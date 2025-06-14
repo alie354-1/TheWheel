@@ -18,16 +18,17 @@ import {
   Sparkles,
   Grid3X3,
   List,
-  Filter
+  Filter,
+  UploadCloud // Added for HTML import button
 } from 'lucide-react';
 
 interface DeckLibraryProps {
   onCreateNew?: () => void;
   onOpenDeck?: (deckId: string) => void;
-  onImportHtml?: () => void;
+  onImportFromHtml?: () => void; // New prop for HTML import
 }
 
-export function DeckLibrary({ onCreateNew, onOpenDeck, onImportHtml }: DeckLibraryProps) {
+export function DeckLibrary({ onCreateNew, onOpenDeck, onImportFromHtml }: DeckLibraryProps) {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [decks, setDecks] = useState<Deck[]>([]);
@@ -36,7 +37,7 @@ export function DeckLibrary({ onCreateNew, onOpenDeck, onImportHtml }: DeckLibra
   const [selectedDecks, setSelectedDecks] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'updated_at' | 'created_at' | 'title'>('updated_at');
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [previewDeck, setPreviewDeck] = useState<string | null>(null);
 
   useEffect(() => {
@@ -184,11 +185,20 @@ export function DeckLibrary({ onCreateNew, onOpenDeck, onImportHtml }: DeckLibra
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mb-2">
-                My Decks
+                My Pitch Decks
               </h1>
               <p className="text-lg text-slate-600">Create and manage your presentations with modern tools</p>
             </div>
             <div className="flex items-center space-x-3">
+              {onImportFromHtml && (
+                <button
+                  onClick={onImportFromHtml}
+                  className="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 text-white rounded-2xl hover:from-teal-600 hover:via-cyan-600 hover:to-sky-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <UploadCloud className="h-5 w-5 mr-2 group-hover:animate-pulse" />
+                  Create from HTML
+                </button>
+              )}
               <button
                 onClick={onCreateNew}
                 className="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
@@ -376,7 +386,7 @@ function DeckCard({ deck, isSelected, onSelect, onDelete, onDuplicate, onPreview
                   <Calendar className="h-4 w-4 mr-1" />
                   Modified {formatDate(deck.updated_at)}
                 </span>
-                <span>{deck.sections?.length ?? 0} slides</span>
+                <span>{deck.sections?.length || 0} sections</span>
               </div>
             </div>
           </div>
@@ -499,7 +509,7 @@ function DeckCard({ deck, isSelected, onSelect, onDelete, onDuplicate, onPreview
               <FileText className="h-8 w-8 text-blue-600" />
             </div>
             <p className="text-sm font-medium text-slate-700">
-              {deck.sections?.length || 0} slide{(deck.sections?.length || 0) !== 1 ? 's' : ''}
+              {deck.sections?.length || 0} section{(deck.sections?.length || 0) !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
