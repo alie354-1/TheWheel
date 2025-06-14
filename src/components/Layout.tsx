@@ -188,6 +188,8 @@ export default function Layout() { // Remove children prop
     { name: 'Utilities', href: '#', icon: Wrench, isEnabled: navState(featureFlags?.utilities) !== 'hidden', badge: navState(featureFlags?.utilities) === 'comingSoon' ? 'Coming Soon' : undefined },
     { name: 'Idea Hub', href: '/idea-hub', icon: Lightbulb, isEnabled: navState(featureFlags?.ideaHub) !== 'hidden', badge: navState(featureFlags?.ideaHub) === 'comingSoon' ? 'Coming Soon' : undefined },
     { name: 'Deck Builder', href: '/deck-builder', icon: Presentation, isEnabled: navState(featureFlags?.deckBuilder) !== 'hidden', badge: navState(featureFlags?.deckBuilder) === 'comingSoon' ? 'Coming Soon' : undefined },
+    { name: 'Deck Builder (Reorg)', href: '/deck-builder-reorg', icon: Presentation, isEnabled: true },
+    { name: 'Deck Templates', href: '/deck-builder/templates', icon: FileText, isEnabled: true },
     { name: 'Finance Hub', href: '/financial-hub', icon: PiggyBank, isEnabled: navState(featureFlags?.financeHub) !== 'hidden', badge: navState(featureFlags?.financeHub) === 'comingSoon' ? 'Coming Soon' : undefined },
     { name: 'Business Operations Hub', href: '/business-ops-hub', icon: Construction, isEnabled: navState(featureFlags?.businessOpsHub) !== 'hidden', badge: navState(featureFlags?.businessOpsHub) === 'comingSoon' ? 'Coming Soon' : undefined },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, isEnabled: navState(featureFlags?.analytics) !== 'hidden', badge: navState(featureFlags?.analytics) === 'comingSoon' ? 'Coming Soon' : undefined },

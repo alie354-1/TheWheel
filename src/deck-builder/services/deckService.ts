@@ -427,6 +427,8 @@ export class DeckService {
         requires_verification: options.requires_verification || false,
         allow_anonymous_feedback: options.allow_anonymous_feedback || false,
         creator_is_anonymous: options.creator_is_anonymous || false,
+        author_note: options.author_note || null,
+        show_tutorial: options.show_tutorial !== undefined ? options.show_tutorial : true,
       };
 
       const { data, error } = await supabase
@@ -463,6 +465,8 @@ export class DeckService {
       requires_verification: data.requires_verification,
       allow_anonymous_feedback: data.allow_anonymous_feedback,
       creator_is_anonymous: data.creator_is_anonymous,
+      author_note: data.author_note,
+      show_tutorial: data.show_tutorial,
     };
   }
   // If all attempts fail, throw an error
@@ -498,6 +502,8 @@ export class DeckService {
       requires_verification: data.requires_verification,
       allow_anonymous_feedback: data.allow_anonymous_feedback,
       creator_is_anonymous: data.creator_is_anonymous,
+      author_note: data.author_note,
+      show_tutorial: data.show_tutorial,
     };
   }
   

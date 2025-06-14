@@ -55,6 +55,8 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
   const [allowAnonymousFeedback, setAllowAnonymousFeedback] = useState(false);
   const [creatorIsAnonymous, setCreatorIsAnonymous] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string>('');
+  const [authorNote, setAuthorNote] = useState<string>('');
+  const [showTutorial, setShowTutorial] = useState(true); // Default to true for first-time users
   
   // Step 2: Summary/link
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
@@ -122,6 +124,8 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
         requires_verification: shareType === 'expert_review' ? true : requiresVerification,
         allow_anonymous_feedback: shareType === 'feedback' ? allowAnonymousFeedback : undefined,
         creator_is_anonymous: creatorIsAnonymous,
+        author_note: authorNote || undefined,
+        show_tutorial: showTutorial,
       };
 
       const link = await DeckService.createSmartShareLink(deck.id, user.id, options);
@@ -246,6 +250,31 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
                 style={styles.inputField}
               />
             </div>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+              <div style={styles.groupLabel}>Additional Options</div>
+              <div>
+                <label style={styles.label}>Author Note (Optional):</label>
+                <textarea
+                  placeholder="Leave a note or instructions for reviewers..."
+                  value={authorNote}
+                  onChange={e => setAuthorNote(e.target.value)}
+                  style={{ ...styles.inputField, minHeight: 80, resize: 'vertical' } as React.CSSProperties}
+                />
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={showTutorial}
+                    onChange={e => setShowTutorial(e.target.checked)}
+                  />
+                  Show interactive tutorial for first-time reviewers
+                </label>
+                <div style={{ fontSize: '0.85em', color: '#6b7280', marginLeft: 24, marginTop: 4 }}>
+                  Helps reviewers understand how to add comments, voice notes, and navigate the feedback system
+                </div>
+              </div>
+            </div>
             <div style={{ marginTop: 16 }}>
               <div style={styles.groupLabel}>Invite Specific People (optional)</div>
               {recipients.map((recipient, idx) => (
@@ -342,12 +371,37 @@ export const EnhancedSharingModal: React.FC<EnhancedSharingModalProps> = ({ deck
             </div>
             <div>
               <label style={styles.label}>Expires At (Optional):</label>
-              <input
-                type="datetime-local"
-                value={expiresAt}
-                onChange={e => setExpiresAt(e.target.value)}
-                style={styles.inputField}
-              />
+                <input
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={e => setExpiresAt(e.target.value)}
+                  style={styles.inputField}
+                />
+              </div>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+              <div style={styles.groupLabel}>Additional Options</div>
+              <div>
+                <label style={styles.label}>Author Note (Optional):</label>
+                <textarea
+                  placeholder="Leave a note or instructions for reviewers..."
+                  value={authorNote}
+                  onChange={e => setAuthorNote(e.target.value)}
+                  style={{ ...styles.inputField, minHeight: 80, resize: 'vertical' } as React.CSSProperties}
+                />
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={showTutorial}
+                    onChange={e => setShowTutorial(e.target.checked)}
+                  />
+                  Show interactive tutorial for first-time reviewers
+                </label>
+                <div style={{ fontSize: '0.85em', color: '#6b7280', marginLeft: 24, marginTop: 4 }}>
+                  Helps reviewers understand how to add comments, voice notes, and navigate the feedback system
+                </div>
+              </div>
             </div>
             <div style={{ marginTop: 16 }}>
               <div style={styles.groupLabel}>Invite Experts (required)</div>

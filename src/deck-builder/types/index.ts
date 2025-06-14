@@ -186,6 +186,8 @@ export interface SmartShareLink {
   requires_verification?: boolean;
   allow_anonymous_feedback?: boolean;
   creator_is_anonymous?: boolean;
+  author_note?: string;
+  show_tutorial?: boolean;
 }
 
 export interface DeckShareRecipient {
