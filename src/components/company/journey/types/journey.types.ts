@@ -18,27 +18,20 @@ export interface Domain {
 export interface Step {
   id: string;
   name: string;
+  primary_phase_id: string;
+  primary_domain_id: string;
+  secondary_phase_id?: string;
+  secondary_domain_id?: string;
   description: string;
-  phase_id: string;
-  domain_id: string;
-  suggested_order_index?: number;
-  estimated_time_days?: number;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  startup_principle_id?: string;
-  methodology_category?: string;
-  objectives?: string;
-  success_criteria?: any;
-  deliverables?: any;
-  guidance?: string;
-  resources?: any;
-  applicability_criteria?: any;
-  target_company_stages?: any;
-  target_industries?: any;
-  is_core_step?: boolean;
-  usage_frequency?: number;
-  is_active?: boolean;
+  difficulty: 'Low' | 'Medium' | 'High';
+  time_estimate: string;
+  coverage_notes: string;
+  howto_without_tools: string;
+  audience: string;
+  active: boolean;
+  snippet_references: string[];
+  resource_links: string[];
   created_at: string;
-  updated_at?: string;
 }
 
 export interface Tool {

@@ -159,7 +159,7 @@ const JourneyMapView: React.FC<JourneyMapViewProps> = ({ companyId }) => {
                              {step.status?.replace('_', ' ')}
                            </span>
                            <Link 
-                             to={`/company/new-journey/step/${step.id}`} 
+                             to={`/company/journey/step/${step.id}`} 
                              className="btn btn-xs btn-ghost text-primary flex-shrink-0" 
                              title="Go to step"
                            >

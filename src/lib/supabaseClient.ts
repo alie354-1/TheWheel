@@ -1,11 +1,34 @@
 /**
  * Supabase Client
- * Re-exports the singleton Supabase client from the main implementation
- * This ensures we only have one instance of the Supabase client throughout the application
- * to prevent the "Multiple GoTrueClient instances detected" warning
+ * Creates and exports a Supabase client instance
  */
 
-export { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Get Supabase URL and anon key from environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables. Check your .env file.');
+}
+
+// Create Supabase client with error handling
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    // Add error handling for requests
+    fetch: (...args) => {
+      return fetch(...args).catch(error => {
+        console.error('Supabase request error:', error);
+        throw error;
+      });
+    }
+  }
+});
 
 // Helper function to handle common Supabase errors
 export const handleSupabaseError = (error: any) => {

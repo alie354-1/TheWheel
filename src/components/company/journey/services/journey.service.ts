@@ -9,7 +9,7 @@ import { supabase } from "../../../../lib/supabase.ts";
 export class JourneyService {
   // Fetch phases from the database
   static async getPhases(): Promise<Phase[]> {
-    const { data, error } = await supabase.from("journey_phases").select("*");
+    const { data, error } = await supabase.from("phases").select("*");
     if (error) {
       console.error("Failed to fetch phases from DB:", error);
       return [];
@@ -19,7 +19,7 @@ export class JourneyService {
 
   // Fetch domains from the database
   static async getDomains(): Promise<Domain[]> {
-    const { data, error } = await supabase.from("journey_domains").select("*");
+    const { data, error } = await supabase.from("domains").select("*");
     if (error) {
       console.error("Failed to fetch domains from DB:", error);
       return [];
@@ -29,7 +29,7 @@ export class JourneyService {
 
   // Fetch steps from the database
   static async getSteps(): Promise<Step[]> {
-    const { data, error } = await supabase.from("journey_step_templates").select("*");
+    const { data, error } = await supabase.from("steps").select("*");
     if (error) {
       console.error("Failed to fetch steps from DB:", error);
       return [];
@@ -39,7 +39,7 @@ export class JourneyService {
 
   // Fetch a single step by ID from the database
   static async getStepById(stepId: string): Promise<Step | undefined> {
-    const { data, error } = await supabase.from("journey_step_templates").select("*").eq("id", stepId).single();
+    const { data, error } = await supabase.from("steps").select("*").eq("id", stepId).single();
     if (error) {
       console.error("Failed to fetch step from DB:", error);
       return undefined;

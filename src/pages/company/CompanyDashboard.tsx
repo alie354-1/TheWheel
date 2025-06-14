@@ -73,7 +73,7 @@ const JourneyTab = ({ companyId }: { companyId: string }) => (
    <div className="p-6 bg-base-100 rounded-lg shadow mt-4">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-xl font-semibold">Journey Map</h3>
-  <Link to={`/company/new-journey`} className="btn btn-lg btn-primary font-bold">
+  <Link to={`/company/${companyId}/journey/unified`} className="btn btn-lg btn-primary font-bold">
     🚀 Launch NEW Redesigned Journey Experience
   </Link>
     </div>
@@ -255,7 +255,7 @@ function CompanyDashboard() {
                 'text-base-content hover:text-primary hover:border-base-300'}`}
             onClick={() => {
               if (tab.id === 'journey') {
-                navigate('/company/new-journey');
+                navigate('/company/journey');
               } else {
                 setActiveTab(tab.id);
               }
